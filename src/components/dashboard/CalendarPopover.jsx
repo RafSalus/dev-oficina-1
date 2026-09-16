@@ -1,14 +1,14 @@
 import React, { useState } from 'react'
 import { CaretLeft, CaretRight, Calendar } from '@phosphor-icons/react'
 
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
 
-export function CalendarPopover({ isOpen }) {
+export function CalendarPopover({ isOpen, onMouseEnter, onMouseLeave }) {
   const today = new Date()
   const [viewDate, setViewDate] = useState(new Date())
 
@@ -18,15 +18,18 @@ export function CalendarPopover({ isOpen }) {
   const firstDayIndex = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
-  const prevMonth = () => {
+  const prevMonth = (e) => {
+    e.stopPropagation()
     setViewDate(new Date(year, month - 1, 1))
   }
 
-  const nextMonth = () => {
+  const nextMonth = (e) => {
+    e.stopPropagation()
     setViewDate(new Date(year, month + 1, 1))
   }
 
-  const jumpToToday = () => {
+  const jumpToToday = (e) => {
+    e.stopPropagation()
     setViewDate(new Date())
   }
 
@@ -42,15 +45,17 @@ export function CalendarPopover({ isOpen }) {
 
   return (
     <div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       role="dialog"
-      aria-label="Calendário"
-      className="absolute bottom-full left-0 mb-3 w-72 bg-white rounded-2xl shadow-2xl border border-zinc-200/80 p-4 z-50 text-zinc-800 animate-in fade-in zoom-in-95 duration-200"
+      aria-label="Calendário Interativo"
+      className="absolute bottom-full right-0 mb-3 w-72 bg-white rounded-2xl shadow-xl border border-[#e4e7ec] p-4 z-50 text-[#101828] select-none"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-100">
+      {/* Header com mês e setas */}
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#f2f4f7]">
         <div className="flex items-center gap-2">
-          <Calendar size={18} weight="bold" className="text-zinc-900" />
-          <span className="text-sm font-bold text-zinc-900">
+          <Calendar size={18} weight="bold" className="text-[#101828]" />
+          <span className="text-sm font-bold text-[#101828]">
             {MONTH_NAMES[month]} {year}
           </span>
         </div>
@@ -59,7 +64,7 @@ export function CalendarPopover({ isOpen }) {
             type="button"
             onClick={prevMonth}
             aria-label="Mês anterior"
-            className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-600 hover:text-black transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#f2f4f7] text-[#475467] hover:text-[#101828] transition-colors cursor-pointer"
           >
             <CaretLeft size={16} weight="bold" />
           </button>
@@ -67,23 +72,23 @@ export function CalendarPopover({ isOpen }) {
             type="button"
             onClick={nextMonth}
             aria-label="Próximo mês"
-            className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-600 hover:text-black transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#f2f4f7] text-[#475467] hover:text-[#101828] transition-colors cursor-pointer"
           >
             <CaretRight size={16} weight="bold" />
           </button>
         </div>
       </div>
 
-      {/* Weekdays header */}
-      <div className="grid grid-cols-7 gap-1 text-center mb-1">
-        {WEEKDAYS.map((wd) => (
-          <span key={wd} className="text-[11px] font-semibold text-zinc-400">
+      {/* Cabeçalho dos dias da semana */}
+      <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+        {WEEKDAYS.map((wd, index) => (
+          <span key={index} className="text-[11px] font-bold text-[#98a2b3]">
             {wd}
           </span>
         ))}
       </div>
 
-      {/* Days grid */}
+      {/* Grade dos dias do mês */}
       <div className="grid grid-cols-7 gap-1 text-center">
         {Array.from({ length: firstDayIndex }).map((_, i) => (
           <div key={`empty-${i}`} className="h-7 w-7" />
@@ -97,8 +102,8 @@ export function CalendarPopover({ isOpen }) {
               key={`day-${day}`}
               className={`h-7 w-7 mx-auto flex items-center justify-center text-xs font-medium rounded-full transition-all ${
                 active
-                  ? 'bg-zinc-900 text-white font-bold shadow-xs'
-                  : 'hover:bg-zinc-100 text-zinc-700 cursor-default'
+                  ? 'bg-[#101828] text-white font-bold shadow-xs'
+                  : 'hover:bg-[#f2f4f7] text-[#344054] cursor-default'
               }`}
             >
               {day}
@@ -107,13 +112,15 @@ export function CalendarPopover({ isOpen }) {
         })}
       </div>
 
-      {/* Footer jump to today */}
-      <div className="mt-3 pt-2.5 border-t border-zinc-100 flex items-center justify-between text-[11px]">
-        <span className="text-zinc-400">Hoje é dia {today.getDate()} de {MONTH_NAMES[today.getMonth()]}</span>
+      {/* Rodapé com atalho para hoje */}
+      <div className="mt-3 pt-2.5 border-t border-[#f2f4f7] flex items-center justify-between text-[11px]">
+        <span className="text-[#667085]">
+          Hoje: {today.getDate()} de {MONTH_NAMES[today.getMonth()]}
+        </span>
         <button
           type="button"
           onClick={jumpToToday}
-          className="font-bold text-zinc-900 hover:text-black underline underline-offset-2 transition-colors cursor-pointer"
+          className="font-bold text-[#101828] hover:underline transition-colors cursor-pointer"
         >
           Ir para hoje
         </button>

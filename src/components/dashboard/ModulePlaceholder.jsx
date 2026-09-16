@@ -20,7 +20,7 @@ import {
   ChartLineUp,
   IdentificationBadge,
   GearSix,
-  Sparkle,
+  Globe,
 } from '@phosphor-icons/react'
 import { MENU_CATEGORIES } from '../../constants/dashboardMenus'
 
@@ -44,12 +44,12 @@ const ICONS_MAP = {
   ChartLineUp,
   IdentificationBadge,
   GearSix,
+  Globe,
 }
 
 export function ModulePlaceholder() {
   const location = useLocation()
 
-  // Find the menu item matching the current path
   let currentItem = null
   let currentCategory = null
 
@@ -69,46 +69,46 @@ export function ModulePlaceholder() {
 
   const title = currentItem?.label || 'Módulo'
   const categoryTitle = currentCategory?.title || 'Operações'
-  const description = currentItem?.description || 'Recursos avançados para gestão da oficina.'
+  const description = currentItem?.description || 'Recurso em fase de estruturação e parametrização.'
   const IconComponent = (currentItem && ICONS_MAP[currentItem.icon]) || SquaresFour
 
   return (
-    <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col justify-center items-center">
-      <div className="w-full max-w-2xl bg-white rounded-3xl border border-zinc-200/80 shadow-xs p-8 sm:p-12 text-center flex flex-col items-center">
-        {/* Subtle breadcrumb */}
-        <div className="flex items-center gap-2 text-xs font-semibold text-zinc-400 mb-6 uppercase tracking-wider">
+    <div className="flex-1 p-6 lg:p-10 flex flex-col justify-center items-center select-none">
+      <div className="w-full max-w-xl bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-8 sm:p-12 text-center flex flex-col items-center">
+        {/* Breadcrumb discreto */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#98a2b3] mb-6 uppercase tracking-wider">
           <span>Gestão</span>
-          <span>/</span>
+          <span>•</span>
           <span>{categoryTitle}</span>
-          <span>/</span>
-          <span className="text-zinc-700 font-bold">{title}</span>
+          <span>•</span>
+          <span className="text-[#101828] font-bold">{title}</span>
         </div>
 
-        {/* Minimalist Icon Badge */}
-        <div className="w-16 h-16 rounded-2xl bg-zinc-100 border border-zinc-200/60 flex items-center justify-center mb-6 text-zinc-900 shadow-xs">
-          <IconComponent size={32} weight="duotone" className="text-zinc-800" />
+        {/* Ícone do Módulo */}
+        <div className="w-14 h-14 rounded-2xl bg-[#f2f4f7] border border-[#e4e7ec] flex items-center justify-center mb-5 text-[#101828]">
+          <IconComponent size={28} weight="duotone" className="text-[#101828]" />
         </div>
 
-        {/* Status Pill */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 text-xs font-bold mb-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-zinc-900" />
+        {/* Badge "Em breve" */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f2f4f7] text-[#344054] text-xs font-bold mb-4 border border-[#e4e7ec]/60">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#101828]" />
           Em breve
         </div>
 
-        {/* Heading */}
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight mb-3">
+        {/* Nome do Módulo */}
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#101828] tracking-tight mb-3">
           {title}
         </h1>
 
-        {/* Description */}
-        <p className="text-sm sm:text-base text-zinc-500 max-w-md leading-relaxed mb-8">
+        {/* Descrição simples e objetiva */}
+        <p className="text-sm text-[#475467] max-w-md leading-relaxed mb-8">
           {description}
         </p>
 
-        {/* Action card note */}
-        <div className="w-full bg-zinc-50 border border-zinc-200/60 rounded-2xl p-4 text-xs text-zinc-600 flex items-center justify-center gap-2">
-          <span className="font-semibold text-zinc-900">Módulo em desenvolvimento:</span>
-          <span>Estrutura de sidebar, header e footer totalmente operacionais.</span>
+        {/* Nota explicativa sóbria */}
+        <div className="w-full bg-[#fafafa] border border-[#e4e7ec] rounded-xl p-3.5 text-xs text-[#667085] flex items-center justify-center gap-2">
+          <span className="font-semibold text-[#101828]">Área central em preparação:</span>
+          <span>Header, sidebar retrátil e footer operando normalmente.</span>
         </div>
       </div>
     </div>

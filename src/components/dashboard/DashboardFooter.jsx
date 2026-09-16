@@ -21,13 +21,11 @@ export function DashboardFooter() {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date()
-      // Format time: HH:MM:SS
       const hours = String(now.getHours()).padStart(2, '0')
       const minutes = String(now.getMinutes()).padStart(2, '0')
       const seconds = String(now.getSeconds()).padStart(2, '0')
       setTimeStr(`${hours}:${minutes}:${seconds}`)
 
-      // Format date: Dia da semana, DD de Mês de AAAA
       const weekday = WEEKDAY_NAMES[now.getDay()]
       const day = now.getDate()
       const month = MONTH_NAMES[now.getMonth()]
@@ -48,38 +46,42 @@ export function DashboardFooter() {
   const handleMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       setCalendarOpen(false)
-    }, 150)
+    }, 200)
   }
 
   return (
-    <footer className="h-12 px-6 bg-white/95 backdrop-blur-md border-t border-zinc-200/80 flex items-center justify-between text-xs text-zinc-600 z-20 shrink-0">
-      {/* Left side: System status */}
+    <footer className="h-12 px-6 bg-white border-t border-[#e4e7ec] flex items-center justify-between text-xs text-[#475467] z-20 shrink-0 select-none">
+      {/* Lado Esquerdo: Status do Terminal */}
       <div className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="font-semibold text-zinc-700">Mecânica Gabriel</span>
-        <span className="text-zinc-300">•</span>
-        <span className="text-zinc-400 font-medium hidden sm:inline">Ambiente de Produção</span>
+        <span className="w-2 h-2 rounded-full bg-[#12b76a]" />
+        <span className="font-semibold text-[#101828]">Mecânica Gabriel</span>
+        <span className="text-[#d0d5dd]">•</span>
+        <span className="text-[#667085] font-medium hidden sm:inline">Terminal Operacional</span>
       </div>
 
-      {/* Right side: Interactive Date with Calendar Popover & Live Clock */}
-      <div className="flex items-center gap-4">
-        {/* Date container with hover-triggered calendar */}
+      {/* Lado Direito: Hora e Data com Calendário */}
+      <div className="flex items-center gap-3">
+        {/* Campo Data com Calendário no Hover */}
         <div
           className="relative"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-zinc-100 hover:bg-zinc-200/80 text-zinc-800 font-semibold cursor-pointer transition-colors select-none">
-            <Calendar size={15} weight="bold" className="text-zinc-500" />
-            <span className="tracking-tight">{dateStr}</span>
+          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#f2f4f7] hover:bg-[#e4e7ec] text-[#101828] font-semibold cursor-pointer transition-colors select-none border border-[#e4e7ec]/60">
+            <Calendar size={15} weight="bold" className="text-[#475467]" />
+            <span className="tracking-tight text-xs">{dateStr}</span>
           </div>
 
-          <CalendarPopover isOpen={calendarOpen} />
+          <CalendarPopover
+            isOpen={calendarOpen}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          />
         </div>
 
-        {/* Live Clock */}
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-zinc-900 text-white font-mono font-bold text-xs tracking-wider shadow-xs">
-          <Clock size={14} weight="bold" className="text-zinc-400" />
+        {/* Campo Hora em tempo real */}
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#101828] text-white font-mono font-bold text-xs tracking-wider shadow-xs">
+          <Clock size={14} weight="bold" className="text-[#98a2b3]" />
           <span>{timeStr}</span>
         </div>
       </div>
