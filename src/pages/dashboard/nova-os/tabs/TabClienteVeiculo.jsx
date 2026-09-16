@@ -13,6 +13,7 @@ import {
   WhatsappLogo,
 } from '@phosphor-icons/react'
 import { MOCK_CLIENTES_VEICULOS } from '../../../../constants/mockClientesVeiculos'
+import { GoogleMapsIcon } from '../../../../components/icons/GoogleMapsIcon'
 
 const customSelectStyles = {
   control: (base, state) => ({
@@ -330,19 +331,52 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                   </div>
                 </div>
 
-                {/* Bloco de Endereço Completo em Destaque */}
-                <div className="pt-2 border-t border-[#e4e7ec] flex items-start gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-white border border-[#e4e7ec] flex items-center justify-center text-[#101828] shrink-0 mt-0.5 shadow-2xs">
-                    <MapPin size={16} weight="bold" />
+                {/* Bloco de Endereço Completo com Atalho para Google Maps */}
+                <div className="pt-2 border-t border-[#e4e7ec] flex items-center justify-between gap-2.5">
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    {endereco ? (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          endereco
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-8 h-8 rounded-xl bg-white hover:bg-[#f8f9fa] border border-[#e4e7ec] hover:border-[#4285F4] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs transition-all cursor-pointer group"
+                        title="Clique para abrir endereço no Google Maps"
+                      >
+                        <GoogleMapsIcon className="w-4 h-5 transition-transform group-hover:scale-110" />
+                      </a>
+                    ) : (
+                      <div className="w-8 h-8 rounded-xl bg-white border border-[#e4e7ec] flex items-center justify-center text-[#667085] shrink-0 mt-0.5 shadow-2xs">
+                        <MapPin size={18} weight="bold" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10.5px] uppercase font-extrabold tracking-wider text-[#667085] leading-none mb-1">
+                        Endereço Completo
+                      </p>
+                      <p className="text-xs sm:text-sm font-semibold text-[#101828] leading-relaxed line-clamp-2">
+                        {endereco || 'Endereço residencial ou comercial não informado'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10.5px] uppercase font-extrabold tracking-wider text-[#667085] leading-none mb-1">
-                      Endereço Completo
-                    </p>
-                    <p className="text-xs sm:text-sm font-semibold text-[#101828] leading-relaxed line-clamp-2">
-                      {endereco || 'Endereço residencial ou comercial não informado'}
-                    </p>
-                  </div>
+
+                  {endereco && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        endereco
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-8 px-2.5 rounded-xl bg-white hover:bg-[#f8f9fa] active:bg-[#f2f4f7] border border-[#e4e7ec] hover:border-[#4285F4] flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-2xs group"
+                      title="Abrir localização no Google Maps"
+                    >
+                      <GoogleMapsIcon className="w-3.5 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                      <span className="text-xs font-bold text-[#344054] group-hover:text-[#101828]">
+                        Google Maps
+                      </span>
+                    </a>
+                  )}
                 </div>
               </div>
             ) : (
