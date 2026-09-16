@@ -1,0 +1,15 @@
+services:
+  dev-oficina:
+    container_name: dev-oficina
+    image: dev-oficina:base
+    restart: unless-stopped
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    ports:
+      - "5173:5173"
+      - "4173:4173"
+      - "3000:3000"
+    stdin_open: true
+    tty: true
+    command: bash
