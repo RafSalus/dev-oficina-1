@@ -1,5 +1,6 @@
 import React from 'react'
 import {
+  Wrench,
   Package,
   Calculator,
   Handshake,
@@ -10,8 +11,20 @@ import {
 } from '@phosphor-icons/react'
 
 const TAB_CONFIGS = {
+  diagnostico: {
+    title: 'Diagnóstico Técnico',
+    subtitle: 'Avaliação detalhada e apontamento de avarias',
+    description:
+      'Espaço dedicado para inserção de diagnósticos avançados, testes com scanners automotivos, inspeção de injeção eletrônica e testes de bancada.',
+    icon: Wrench,
+    prevTab: 'checklist',
+    nextTab: 'pecas',
+    prevLabel: 'Checklist',
+    nextLabel: 'Peças',
+    tabIndex: '3 de 8',
+  },
   pecas: {
-    title: 'Peças & Insumos',
+    title: 'Peças e Insumos',
     subtitle: 'Almoxarifado e requisição de peças para a OS',
     description:
       'Nesta etapa você vinculará peças do estoque interno, óleos, filtros e componentes necessários para a execução dos serviços.',
@@ -20,7 +33,7 @@ const TAB_CONFIGS = {
     nextTab: 'cotacao',
     prevLabel: 'Diagnóstico',
     nextLabel: 'Cotação',
-    tabIndex: '3 de 7',
+    tabIndex: '4 de 8',
   },
   cotacao: {
     title: 'Cotação de Autopeças',
@@ -32,7 +45,7 @@ const TAB_CONFIGS = {
     nextTab: 'terceiros',
     prevLabel: 'Peças',
     nextLabel: 'Terceiros',
-    tabIndex: '4 de 7',
+    tabIndex: '5 de 8',
   },
   terceiros: {
     title: 'Serviços de Terceiros',
@@ -44,7 +57,7 @@ const TAB_CONFIGS = {
     nextTab: 'orcamento',
     prevLabel: 'Cotação',
     nextLabel: 'Orçamento',
-    tabIndex: '5 de 7',
+    tabIndex: '6 de 8',
   },
   orcamento: {
     title: 'Composição de Orçamento',
@@ -56,10 +69,10 @@ const TAB_CONFIGS = {
     nextTab: 'finalizar',
     prevLabel: 'Terceiros',
     nextLabel: 'Finalizar',
-    tabIndex: '6 de 7',
+    tabIndex: '7 de 8',
   },
   finalizar: {
-    title: 'Finalização & Fechamento',
+    title: 'Finalização e Fechamento',
     subtitle: 'Checklist de saída e emissão da Ordem de Serviço',
     description:
       'Validação final das informações, impressão da via do cliente, geração de comprovante e integração com o painel de atendimento do pátio.',
@@ -68,7 +81,7 @@ const TAB_CONFIGS = {
     nextTab: null,
     prevLabel: 'Orçamento',
     nextLabel: null,
-    tabIndex: '7 de 7',
+    tabIndex: '8 de 8',
   },
 }
 

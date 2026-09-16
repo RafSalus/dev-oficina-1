@@ -35,7 +35,7 @@ export const MENU_CATEGORIES = [
   },
   {
     id: 'atendimento-patio',
-    title: 'Atendimento & Pátio',
+    title: 'Atendimento e Pátio',
     items: [
       {
         id: 'clientes',
@@ -69,7 +69,7 @@ export const MENU_CATEGORIES = [
   },
   {
     id: 'oficina-servicos',
-    title: 'Oficina & Serviços',
+    title: 'Oficina e Serviços',
     items: [
       {
         id: 'manutencao-preventiva',
@@ -123,7 +123,7 @@ export const MENU_CATEGORIES = [
   },
   {
     id: 'financeiro-fiscal',
-    title: 'Financeiro & Fiscal',
+    title: 'Financeiro e Fiscal',
     items: [
       {
         id: 'despesas',

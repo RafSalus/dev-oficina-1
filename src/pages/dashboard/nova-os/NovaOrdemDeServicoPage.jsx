@@ -2,12 +2,13 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotice } from '../../../context/NoticeContext'
 import { TabClienteVeiculo } from './tabs/TabClienteVeiculo'
-import { TabDiagnostico } from './tabs/TabDiagnostico'
+import { TabChecklist } from './tabs/TabChecklist'
 import { TabEmBreve } from './tabs/TabEmBreve'
 
 export const OS_TABS = [
-  { id: 'cliente-veiculo', label: 'Cliente e Veículo' },
-  { id: 'diagnostico', label: 'Diagnóstico' },
+  { id: 'cliente-veiculo', label: 'Cliente e Veiculo' },
+  { id: 'checklist', label: 'Checklist' },
+  { id: 'diagnostico', label: 'Diagnostico' },
   { id: 'pecas', label: 'Peças' },
   { id: 'cotacao', label: 'Cotação' },
   { id: 'terceiros', label: 'Terceiros' },
@@ -37,22 +38,31 @@ export function NovaOrdemDeServicoPage() {
     documento: '',
     email: '',
 
-    // Atendimento e Diagnóstico
+    // Relato do Cliente e Atendimento
     tipoAtendimento: 'orcamento',
     prioridade: 'normal',
-    tecnicoResponsavel: 'Gabriel',
-    previsaoData: '',
-    previsaoHora: '',
     relatoCliente: '',
-    diagnosticoInicial: '',
 
     // Checklist
     checklist: {
       estepe: true,
       macaco: true,
       chaveRoda: true,
+      triangulo: true,
+      manual: false,
+      chaveReserva: false,
       semPertences: true,
+      documento: true,
+      painelIntacto: true,
+      tapetes: true,
+      arCondicionado: true,
+      vidrosTravas: true,
+      semAmassados: true,
+      semRiscos: true,
+      vidrosIntactos: true,
+      faroisIntactos: true,
     },
+    checklistObs: '',
   })
 
   const updateFormData = (fields) => {
@@ -84,7 +94,7 @@ export function NovaOrdemDeServicoPage() {
       onSubmit={handleSubmit}
       className="h-full w-full flex flex-col gap-2.5 overflow-hidden select-none"
     >
-      {/* Barra Superior de Abas (Aproveitamento total da tela, sem barras redundantes) */}
+      {/* Barra Superior de Abas (8 Abas com rótulos limpos e sem &) */}
       <nav
         aria-label="Etapas da Ordem de Serviço"
         className="h-11 shrink-0 bg-white px-2 rounded-2xl border border-[#e4e7ec] shadow-xs flex items-center justify-between gap-1 overflow-x-auto no-scrollbar"
@@ -123,20 +133,20 @@ export function NovaOrdemDeServicoPage() {
           <TabClienteVeiculo
             formData={formData}
             updateFormData={updateFormData}
+            onNext={() => setActiveTab('checklist')}
+          />
+        )}
+
+        {activeTab === 'checklist' && (
+          <TabChecklist
+            formData={formData}
+            updateFormData={updateFormData}
+            onPrev={() => setActiveTab('cliente-veiculo')}
             onNext={() => setActiveTab('diagnostico')}
           />
         )}
 
-        {activeTab === 'diagnostico' && (
-          <TabDiagnostico
-            formData={formData}
-            updateFormData={updateFormData}
-            onPrev={() => setActiveTab('cliente-veiculo')}
-            onNext={() => setActiveTab('pecas')}
-          />
-        )}
-
-        {activeTab !== 'cliente-veiculo' && activeTab !== 'diagnostico' && (
+        {activeTab !== 'cliente-veiculo' && activeTab !== 'checklist' && (
           <TabEmBreve tabId={activeTab} onSelectTab={setActiveTab} />
         )}
       </div>
