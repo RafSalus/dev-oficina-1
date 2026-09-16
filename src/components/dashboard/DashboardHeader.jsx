@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Bell, User, SignOut, GearSix, CheckCircle, Plus, ArrowLeft } from '@phosphor-icons/react'
+import { Bell, User, SignOut, GearSix, CheckCircle, Plus, ArrowLeft, FloppyDisk } from '@phosphor-icons/react'
 import { useAdminAuth } from '../../context/AdminAuthContext'
 
 export function DashboardHeader() {
@@ -40,8 +40,8 @@ export function DashboardHeader() {
 
   return (
     <header className="h-16 px-6 bg-white border-b border-[#e4e7ec] flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Lado Esquerdo: Logo e Nome da Empresa */}
-      <div className="flex items-center gap-3">
+      {/* Lado Esquerdo: Logo e Nome da Empresa + Contexto Dinâmico */}
+      <div className="flex items-center gap-3 sm:gap-4">
         <Link
           to="/gestao/dashboard"
           className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#101828]"
@@ -60,6 +60,14 @@ export function DashboardHeader() {
             </span>
           </div>
         </Link>
+
+        {isOsNovaPage && (
+          <div className="hidden sm:flex items-center gap-2 pl-3 sm:pl-4 border-l border-[#e4e7ec] animate-in fade-in duration-200">
+            <span className="text-xs font-semibold text-[#667085]">Ordem de Serviço</span>
+            <span className="text-xs text-[#98a2b3]">/</span>
+            <span className="text-xs font-bold text-[#101828]">Nova OS</span>
+          </div>
+        )}
       </div>
 
       {/* Lado Direito: Ações Contextuais Dinâmicas + Notificações e Perfil */}
@@ -79,16 +87,24 @@ export function DashboardHeader() {
           </div>
         )}
 
-        {/* Botão Contextual Dinâmico: Voltar para OS (na tela de criação) */}
+        {/* Botões Contextuais Dinâmicos: Voltar e Salvar OS (na tela de abertura) */}
         {isOsNovaPage && (
-          <div className="flex items-center gap-2 sm:gap-3 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 sm:gap-2.5 animate-in fade-in duration-200">
             <button
               type="button"
               onClick={() => navigate('/gestao/ordem-de-servico')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white hover:bg-[#f2f4f7] text-[#344054] hover:text-[#101828] border border-[#d0d5dd] text-xs font-semibold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
             >
               <ArrowLeft size={14} weight="bold" />
-              <span>Voltar para OS</span>
+              <span>Voltar</span>
+            </button>
+            <button
+              type="submit"
+              form="form-nova-os"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-black hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
+            >
+              <FloppyDisk size={14} weight="bold" />
+              <span>Salvar OS</span>
             </button>
             <div className="h-5 w-px bg-[#e4e7ec]" />
           </div>
