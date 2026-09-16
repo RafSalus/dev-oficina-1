@@ -24,19 +24,22 @@ export function NovaOrdemDeServicoPage() {
 
   // Estado unificado dos dados da OS
   const [formData, setFormData] = useState({
+    // Cliente
+    clienteId: '',
+    cliente: '',
+    telefone: '',
+    documento: '',
+    email: '',
+    endereco: '',
+
     // Veículo
+    veiculoId: '',
     placa: '',
     marcaModelo: '',
     ano: '',
     cor: '',
     km: '',
     nivelCombustivel: '1/2',
-
-    // Cliente
-    cliente: '',
-    telefone: '',
-    documento: '',
-    email: '',
 
     // Relato do Cliente e Atendimento
     tipoAtendimento: 'orcamento',
@@ -72,19 +75,25 @@ export function NovaOrdemDeServicoPage() {
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!formData.placa.trim()) {
-      setActiveTab('cliente-veiculo')
-      openNotice('Por favor, informe a placa do veículo.')
-      return
-    }
-
     if (!formData.cliente.trim()) {
       setActiveTab('cliente-veiculo')
-      openNotice('Por favor, informe o nome do cliente.')
+      openNotice('Por favor, selecione o cliente.')
       return
     }
 
-    openNotice(`Ordem de Serviço #${formData.placa.toUpperCase()} aberta com sucesso!`)
+    if (!formData.placa.trim()) {
+      setActiveTab('cliente-veiculo')
+      openNotice('Por favor, selecione o veículo do cliente.')
+      return
+    }
+
+    if (!formData.km.trim()) {
+      setActiveTab('cliente-veiculo')
+      openNotice('Por favor, informe a quilometragem (KM) do veículo.')
+      return
+    }
+
+    openNotice(`Ordem de Serviço #${formData.placa.toUpperCase()} aberta com sucesso para ${formData.cliente}!`)
     navigate('/gestao/ordem-de-servico')
   }
 
