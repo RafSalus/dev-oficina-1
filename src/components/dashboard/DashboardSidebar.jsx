@@ -92,6 +92,9 @@ export function DashboardSidebar() {
                 const IconComponent = ICONS_MAP[item.icon] || SquaresFour
                 const isActive =
                   location.pathname === item.path ||
+                  (item.path !== '/gestao/dashboard' &&
+                    item.path !== '/' &&
+                    location.pathname.startsWith(item.path + '/')) ||
                   (item.path === '/gestao/dashboard' &&
                     (location.pathname === '/gestao' || location.pathname === '/gestao/resumo'))
 

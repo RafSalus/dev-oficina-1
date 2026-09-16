@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Bell, User, SignOut, GearSix, CheckCircle, Plus } from '@phosphor-icons/react'
+import { Bell, User, SignOut, GearSix, CheckCircle, Plus, ArrowLeft } from '@phosphor-icons/react'
 import { useAdminAuth } from '../../context/AdminAuthContext'
-import { NovaOsModal } from './NovaOsModal'
 
 export function DashboardHeader() {
   const { user, signOut } = useAdminAuth()
@@ -11,12 +10,12 @@ export function DashboardHeader() {
 
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
-  const [showNovaOsModal, setShowNovaOsModal] = useState(false)
 
   const notifRef = useRef(null)
   const profileRef = useRef(null)
 
-  const isOsPage = location.pathname === '/gestao/ordem-de-servico'
+  const isOsListPage = location.pathname === '/gestao/ordem-de-servico'
+  const isOsNovaPage = location.pathname === '/gestao/ordem-de-servico/nova'
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -65,16 +64,31 @@ export function DashboardHeader() {
 
       {/* Lado Direito: Ações Contextuais Dinâmicas + Notificações e Perfil */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Botão Contextual Dinâmico: Nova OS */}
-        {isOsPage && (
+        {/* Botão Contextual Dinâmico: Nova OS (na tela de listagem) */}
+        {isOsListPage && (
           <div className="flex items-center gap-2 sm:gap-3 animate-in fade-in duration-200">
             <button
               type="button"
-              onClick={() => setShowNovaOsModal(true)}
+              onClick={() => navigate('/gestao/ordem-de-servico/nova')}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-black hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
             >
               <Plus size={15} weight="bold" />
               <span>Nova OS</span>
+            </button>
+            <div className="h-5 w-px bg-[#e4e7ec]" />
+          </div>
+        )}
+
+        {/* Botão Contextual Dinâmico: Voltar para OS (na tela de criação) */}
+        {isOsNovaPage && (
+          <div className="flex items-center gap-2 sm:gap-3 animate-in fade-in duration-200">
+            <button
+              type="button"
+              onClick={() => navigate('/gestao/ordem-de-servico')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white hover:bg-[#f2f4f7] text-[#344054] hover:text-[#101828] border border-[#d0d5dd] text-xs font-semibold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
+            >
+              <ArrowLeft size={14} weight="bold" />
+              <span>Voltar para OS</span>
             </button>
             <div className="h-5 w-px bg-[#e4e7ec]" />
           </div>
@@ -187,12 +201,6 @@ export function DashboardHeader() {
           )}
         </div>
       </div>
-
-      {/* Modal de Abertura de Nova OS */}
-      <NovaOsModal
-        isOpen={showNovaOsModal}
-        onClose={() => setShowNovaOsModal(false)}
-      />
     </header>
   )
 }

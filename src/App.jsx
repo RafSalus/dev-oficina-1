@@ -11,6 +11,7 @@ import { GestaoAcessoNegadoPage } from './pages/GestaoAcessoNegadoPage'
 
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
+import { NovaOrdemDeServicoPage } from './pages/dashboard/NovaOrdemDeServicoPage'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="agenda" element={<DashboardPage />} />
               <Route path="ordem-de-servico" element={<DashboardPage />} />
+              <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
               <Route path="pdv" element={<DashboardPage />} />
               <Route path="clientes" element={<DashboardPage />} />
               <Route path="veiculos" element={<DashboardPage />} />

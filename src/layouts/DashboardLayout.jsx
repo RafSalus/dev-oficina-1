@@ -15,8 +15,8 @@ export function DashboardLayout() {
         {/* Sidebar com fundo preto retrátil */}
         <DashboardSidebar />
 
-        {/* Espaço de conteúdo centralizado */}
-        <main className="flex-1 overflow-y-auto pl-2 pr-4 py-4 flex flex-col items-center justify-center min-w-0">
+        {/* Espaço de conteúdo dinâmico */}
+        <main className="flex-1 overflow-y-auto pl-2 pr-4 py-4 flex flex-col min-w-0">
           <Outlet />
         </main>
       </div>
