@@ -1,17 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Bell, User, SignOut, GearSix, CheckCircle } from '@phosphor-icons/react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Bell, User, SignOut, GearSix, CheckCircle, Plus } from '@phosphor-icons/react'
 import { useAdminAuth } from '../../context/AdminAuthContext'
+import { NovaOsModal } from './NovaOsModal'
 
 export function DashboardHeader() {
   const { user, signOut } = useAdminAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showNovaOsModal, setShowNovaOsModal] = useState(false)
 
   const notifRef = useRef(null)
   const profileRef = useRef(null)
+
+  const isOsPage = location.pathname === '/gestao/ordem-de-servico'
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -58,8 +63,23 @@ export function DashboardHeader() {
         </Link>
       </div>
 
-      {/* Lado Direito: Notificações e Perfil */}
+      {/* Lado Direito: Ações Contextuais Dinâmicas + Notificações e Perfil */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Botão Contextual Dinâmico: Nova OS */}
+        {isOsPage && (
+          <div className="flex items-center gap-2 sm:gap-3 animate-in fade-in duration-200">
+            <button
+              type="button"
+              onClick={() => setShowNovaOsModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-black hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
+            >
+              <Plus size={15} weight="bold" />
+              <span>Nova OS</span>
+            </button>
+            <div className="h-5 w-px bg-[#e4e7ec]" />
+          </div>
+        )}
+
         {/* Ícone de Notificação */}
         <div className="relative" ref={notifRef}>
           <button
@@ -167,6 +187,12 @@ export function DashboardHeader() {
           )}
         </div>
       </div>
+
+      {/* Modal de Abertura de Nova OS */}
+      <NovaOsModal
+        isOpen={showNovaOsModal}
+        onClose={() => setShowNovaOsModal(false)}
+      />
     </header>
   )
 }
