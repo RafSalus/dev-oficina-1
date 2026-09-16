@@ -10,6 +10,7 @@ import {
   Speedometer,
   ArrowRight,
   IdentificationBadge,
+  WhatsappLogo,
 } from '@phosphor-icons/react'
 import { MOCK_CLIENTES_VEICULOS } from '../../../../constants/mockClientesVeiculos'
 
@@ -102,6 +103,19 @@ const customSelectStyles = {
     fontWeight: 500,
   }),
 }
+
+const TIPO_ATENDIMENTO_OPTIONS = [
+  { value: 'orcamento', label: 'Orçamento' },
+  { value: 'corretiva', label: 'Manutenção Corretiva' },
+  { value: 'preventiva', label: 'Revisão Preventiva' },
+  { value: 'garantia', label: 'Retorno em Garantia' },
+]
+
+const PRIORIDADE_OPTIONS = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'alta', label: 'Alta' },
+  { value: 'urgente', label: 'Urgente' },
+]
 
 export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
   const {
@@ -216,13 +230,13 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
   }
 
   return (
-    <div className="h-full w-full flex flex-col justify-between gap-3 overflow-hidden">
-      {/* Grid de 3 Cartões Proporcionais e Espaçosos */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-3.5 overflow-hidden">
+    <div className="h-full w-full flex flex-col justify-between gap-2.5 overflow-hidden">
+      {/* Grid de 3 Cartões Proporcionais e Compactos */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-3 overflow-hidden">
         {/* Cartão 1: Cliente (Primeiro na ordem) */}
-        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-5 flex flex-col justify-between overflow-hidden">
-          <div className="flex items-center justify-between pb-3.5 border-b border-[#f2f4f7] shrink-0">
-            <div className="flex items-center gap-3">
+        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
+          <div className="flex items-center justify-between pb-2.5 border-b border-[#f2f4f7] shrink-0">
+            <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-[#101828] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
                 <User size={18} weight="bold" />
               </div>
@@ -239,10 +253,10 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
             )}
           </div>
 
-          <div className="flex-1 flex flex-col justify-between py-3 space-y-3.5 overflow-hidden min-h-0">
+          <div className="flex-1 flex flex-col justify-between py-2.5 space-y-2.5 overflow-hidden min-h-0">
             {/* Campo Select de Cliente */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-1.5">
                 Localizar Cliente <span className="text-[#b42318]">*</span>
               </label>
               <Select
@@ -259,9 +273,9 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
 
             {/* Painel Executivo do Cliente Selecionado */}
             {cliente ? (
-              <div className="flex-1 bg-[#fafafa] border border-[#e4e7ec] rounded-2xl p-4 flex flex-col justify-between overflow-hidden shadow-2xs">
+              <div className="flex-1 bg-[#fafafa] border border-[#e4e7ec] rounded-2xl p-3 flex flex-col justify-between overflow-hidden shadow-2xs">
                 {/* Linha Superior: Avatar, Nome e CPF/CNPJ */}
-                <div className="flex items-center gap-3 pb-3 border-b border-[#e4e7ec]">
+                <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#e4e7ec]">
                   <div className="w-13 h-13 rounded-2xl bg-[#101828] text-white flex items-center justify-center font-black text-base shrink-0 shadow-xs tracking-wider">
                     {clienteIniciais}
                   </div>
@@ -278,8 +292,8 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                   </div>
                 </div>
 
-                {/* Contatos: Telefone e E-mail em Bloco Espaçoso */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
+                {/* Contatos: Telefone e E-mail compactos */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-1.5">
                   <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-[#e4e7ec] truncate">
                     <div className="w-7 h-7 rounded-lg bg-[#f2f4f7] flex items-center justify-center text-[#101828] shrink-0">
                       <Phone size={15} weight="bold" />
@@ -290,6 +304,17 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                         {telefone || 'Sem telefone'}
                       </span>
                     </div>
+                    {telefone && (
+                      <a
+                        href={`https://wa.me/55${telefone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-7 h-7 rounded-lg bg-[#25D366] hover:bg-[#1da851] flex items-center justify-center text-white shrink-0 transition-colors cursor-pointer"
+                        title="Abrir conversa no WhatsApp"
+                      >
+                        <WhatsappLogo size={16} weight="fill" />
+                      </a>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-[#e4e7ec] truncate">
@@ -306,7 +331,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                 </div>
 
                 {/* Bloco de Endereço Completo em Destaque */}
-                <div className="pt-2.5 border-t border-[#e4e7ec] flex items-start gap-3">
+                <div className="pt-2 border-t border-[#e4e7ec] flex items-start gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-white border border-[#e4e7ec] flex items-center justify-center text-[#101828] shrink-0 mt-0.5 shadow-2xs">
                     <MapPin size={16} weight="bold" />
                   </div>
@@ -335,9 +360,9 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
         </div>
 
         {/* Cartão 2: Veículo (Vinculado estritamente ao Cliente) */}
-        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-5 flex flex-col justify-between overflow-hidden">
-          <div className="flex items-center justify-between pb-3.5 border-b border-[#f2f4f7] shrink-0">
-            <div className="flex items-center gap-3">
+        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
+          <div className="flex items-center justify-between pb-2.5 border-b border-[#f2f4f7] shrink-0">
+            <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-[#101828] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
                 <Car size={18} weight="bold" />
               </div>
@@ -354,10 +379,10 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
             )}
           </div>
 
-          <div className="flex-1 flex flex-col justify-between py-3 space-y-3.5 overflow-hidden min-h-0">
+          <div className="flex-1 flex flex-col justify-between py-2.5 space-y-2.5 overflow-hidden min-h-0">
             {/* Campo Select de Veículo Vinculado */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-1.5">
                 Selecionar Veículo do Cliente <span className="text-[#b42318]">*</span>
               </label>
               <Select
@@ -381,7 +406,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
 
             {/* Vitrine do Veículo Selecionado */}
             {placa ? (
-              <div className="bg-[#fafafa] border border-[#e4e7ec] rounded-2xl p-4 flex items-center gap-3.5 shadow-2xs">
+              <div className="bg-[#fafafa] border border-[#e4e7ec] rounded-2xl p-3 flex items-center gap-3 shadow-2xs">
                 {/* Emblema da Placa com Estilo Automotivo Mercosul */}
                 <div className="flex flex-col items-center bg-white border-2 border-[#101828] rounded-xl px-3 py-1.5 shrink-0 shadow-xs">
                   <span className="text-[8px] font-black uppercase tracking-widest text-[#101828] leading-none mb-0.5">
@@ -419,9 +444,9 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
             )}
 
             {/* Únicos Campos a Preencher: KM e Nível de Combustível */}
-            <div className="pt-3 border-t border-[#f2f4f7] space-y-3">
+            <div className="pt-2.5 border-t border-[#f2f4f7] space-y-2">
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold uppercase tracking-wider text-[#344054]">
                     Quilometragem Atual (KM) <span className="text-[#b42318]">*</span>
                   </label>
@@ -441,13 +466,13 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold uppercase tracking-wider text-[#344054]">
                     Nível de Combustível de Entrada
                   </label>
                   <span className="text-xs text-[#667085]">Marcador do painel</span>
                 </div>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5">
                   {['Res.', '1/4', '1/2', '3/4', 'Cheio'].map((nivel) => {
                     const val = nivel === 'Res.' ? 'Reserva' : nivel
                     const isSelected = nivelCombustivel === val || nivelCombustivel === nivel
@@ -473,9 +498,9 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
         </div>
 
         {/* Cartão 3: Relato do Cliente (Terceiro na ordem) */}
-        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-5 flex flex-col justify-between overflow-hidden">
-          <div className="flex items-center justify-between pb-3.5 border-b border-[#f2f4f7] shrink-0">
-            <div className="flex items-center gap-3">
+        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
+          <div className="flex items-center justify-between pb-2.5 border-b border-[#f2f4f7] shrink-0">
+            <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-[#101828] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
                 <ChatText size={18} weight="bold" />
               </div>
@@ -490,44 +515,49 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
             </span>
           </div>
 
-          <div className="flex-1 flex flex-col justify-between py-3 space-y-3.5 overflow-hidden min-h-0">
-            {/* Tipo de Atendimento e Prioridade */}
-            <div className="grid grid-cols-2 gap-3 shrink-0">
+          <div className="flex-1 flex flex-col justify-between py-2.5 space-y-2.5 overflow-hidden min-h-0">
+            {/* Tipo de Atendimento e Prioridade com react-select */}
+            <div className="grid grid-cols-2 gap-2.5 shrink-0">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-1.5">
                   Tipo de Atendimento
                 </label>
-                <select
-                  value={tipoAtendimento}
-                  onChange={(e) => updateFormData({ tipoAtendimento: e.target.value })}
-                  className="w-full bg-[#f9fafb] hover:bg-[#f2f4f7] focus:bg-white border border-[#e4e7ec] focus:border-[#101828] rounded-xl px-3 h-10 text-xs font-bold text-[#101828] focus:outline-none transition-all cursor-pointer shadow-2xs"
-                >
-                  <option value="orcamento">Orçamento</option>
-                  <option value="corretiva">Manutenção Corretiva</option>
-                  <option value="preventiva">Revisão Preventiva</option>
-                  <option value="garantia">Retorno em Garantia</option>
-                </select>
+                <Select
+                  value={
+                    TIPO_ATENDIMENTO_OPTIONS.find((opt) => opt.value === tipoAtendimento) ||
+                    TIPO_ATENDIMENTO_OPTIONS[0]
+                  }
+                  onChange={(opt) =>
+                    updateFormData({ tipoAtendimento: opt?.value || 'orcamento' })
+                  }
+                  options={TIPO_ATENDIMENTO_OPTIONS}
+                  isSearchable={false}
+                  styles={customSelectStyles}
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-1.5">
                   Prioridade
                 </label>
-                <select
-                  value={prioridade}
-                  onChange={(e) => updateFormData({ prioridade: e.target.value })}
-                  className="w-full bg-[#f9fafb] hover:bg-[#f2f4f7] focus:bg-white border border-[#e4e7ec] focus:border-[#101828] rounded-xl px-3 h-10 text-xs font-bold text-[#101828] focus:outline-none transition-all cursor-pointer shadow-2xs"
-                >
-                  <option value="normal">Normal</option>
-                  <option value="alta">Alta</option>
-                  <option value="urgente">Urgente</option>
-                </select>
+                <Select
+                  value={
+                    PRIORIDADE_OPTIONS.find((opt) => opt.value === prioridade) ||
+                    PRIORIDADE_OPTIONS[0]
+                  }
+                  onChange={(opt) =>
+                    updateFormData({ prioridade: opt?.value || 'normal' })
+                  }
+                  options={PRIORIDADE_OPTIONS}
+                  isSearchable={false}
+                  styles={customSelectStyles}
+                />
               </div>
             </div>
 
             {/* Relato do Cliente / Queixa Principal */}
             <div className="flex-1 flex flex-col min-h-0">
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-1.5">
                 Relato do Cliente (Queixa Principal) <span className="text-[#b42318]">*</span>
               </label>
               <textarea

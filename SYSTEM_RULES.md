@@ -6,3 +6,4 @@
 > 3. **Design de Tela Única (Single-Screen Workspace):** Todos os módulos, cadastros, formulários e listagens devem ser concebidos para caber e operar com 100% de aproveitamento da altura útil (`h-full`, `min-h-0`), utilizando grids inteligentes, colunas proporcionais, painéis ou abas compactas quando necessário.
 > 4. **Estilo Visual Uber:** Cores sóbrias e elegantes (fundo neutro `#f3f4f6`, sidebar preta `bg-black`, cartões brancos com borda fina `#e4e7ec`, tipografia nítida e contrastante, sem "árvore de natal" e sem vibe-code).
 > 5. **Proibição do Caractere '&':** Em todo o sistema, não usar '&' em títulos, menus, rótulos, subtítulos e textos visíveis. Usar sempre a conjunção 'e'.
+> 6. **Uso Obrigatório do 'react-select':** Todos os campos de seleção (select/dropdown) no sistema devem obrigatoriamente utilizar a biblioteca 'react-select', padronizados com o tema sóbrio da aplicação. É proibido o uso da tag nativa HTML `<select>`.
