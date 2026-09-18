@@ -23,6 +23,7 @@ import { MecanicoLayout } from './layouts/MecanicoLayout'
 import { MecanicoModulePlaceholder } from './components/mecanico/MecanicoModulePlaceholder'
 import { ClienteLayout } from './layouts/ClienteLayout'
 import { ClienteModulePlaceholder } from './components/cliente/ClienteModulePlaceholder'
+import { ClienteServicosPage } from './pages/cliente/ClienteServicosPage'
 import { SecretariaLayout } from './layouts/SecretariaLayout'
 import { SecretariaModulePlaceholder } from './components/secretaria/SecretariaModulePlaceholder'
 
@@ -123,7 +124,7 @@ export default function App() {
               <Route path="inicio" element={<Navigate to="/cliente/resumo" replace />} />
               <Route path="resumo" element={<ClienteModulePlaceholder />} />
               <Route path="veiculos" element={<ClienteModulePlaceholder />} />
-              <Route path="servicos" element={<ClienteModulePlaceholder />} />
+              <Route path="servicos" element={<ClienteServicosPage />} />
               <Route path="manutencoes" element={<ClienteModulePlaceholder />} />
               <Route path="garantias" element={<ClienteModulePlaceholder />} />
               <Route path="historico" element={<ClienteModulePlaceholder />} />
