@@ -130,6 +130,27 @@ export const SECRETARIA_MENU_CATEGORIES = [
         icon: 'Package',
         description: 'Almoxarifado, níveis de estoque mínimo, localização e inventário.',
       },
+      {
+        id: 'servicos',
+        label: 'Serviços (Mão de Obra)',
+        path: '/secretaria/servicos',
+        icon: 'Wrench',
+        description: 'Catálogo de serviços técnicos, tempo estimado e parâmetros fiscais de NFS-e.',
+      },
+      {
+        id: 'pecas',
+        label: 'Peças e Produtos',
+        path: '/secretaria/pecas',
+        icon: 'Package',
+        description: 'Cadastro de peças com código de barras GTIN/EAN, NCM, margens e estoque.',
+      },
+      {
+        id: 'terceiros',
+        label: 'Terceiros e Parceiros',
+        path: '/secretaria/terceiros',
+        icon: 'Buildings',
+        description: 'Cadastro de oficinas e terceiros parceiros para serviços externos.',
+      },
     ],
   },
   {

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { NoticeProvider } from './context/NoticeContext'
 import { AdminAuthProvider } from './context/AdminAuthContext'
 import { PwaStandaloneRedirect } from './components/PwaStandaloneRedirect'
+import { PwaManifestSwitcher } from './components/PwaManifestSwitcher'
 
 import { Toaster } from 'sonner'
 import { CheckCircle, Info, WarningCircle, XCircle } from '@phosphor-icons/react'
@@ -26,6 +27,9 @@ import { ClienteModulePlaceholder } from './components/cliente/ClienteModulePlac
 import { ClienteServicosPage } from './pages/cliente/ClienteServicosPage'
 import { SecretariaLayout } from './layouts/SecretariaLayout'
 import { SecretariaModulePlaceholder } from './components/secretaria/SecretariaModulePlaceholder'
+import { ServicosPage } from './pages/dashboard/suprimentos/ServicosPage'
+import { PecasPage } from './pages/dashboard/suprimentos/PecasPage'
+import { TerceirosPage } from './pages/dashboard/suprimentos/TerceirosPage'
 
 export default function App() {
   return (
@@ -33,6 +37,7 @@ export default function App() {
       <AdminAuthProvider>
         <BrowserRouter>
           <PwaStandaloneRedirect />
+          <PwaManifestSwitcher />
           <Toaster
             position="top-right"
             richColors={false}
@@ -93,6 +98,9 @@ export default function App() {
               <Route path="pecas-danificadas" element={<DashboardPage />} />
               <Route path="estoque" element={<DashboardPage />} />
               <Route path="compras" element={<DashboardPage />} />
+              <Route path="servicos" element={<ServicosPage />} />
+              <Route path="pecas" element={<PecasPage />} />
+              <Route path="terceiros" element={<TerceirosPage />} />
               <Route path="despesas" element={<DashboardPage />} />
               <Route path="nota-fiscal" element={<DashboardPage />} />
               <Route path="relatorios" element={<DashboardPage />} />
@@ -152,6 +160,9 @@ export default function App() {
               <Route path="pecas-danificadas" element={<SecretariaModulePlaceholder />} />
               <Route path="estoque" element={<SecretariaModulePlaceholder />} />
               <Route path="compras" element={<SecretariaModulePlaceholder />} />
+              <Route path="servicos" element={<ServicosPage />} />
+              <Route path="pecas" element={<PecasPage />} />
+              <Route path="terceiros" element={<TerceirosPage />} />
               <Route path="despesas" element={<SecretariaModulePlaceholder />} />
               <Route path="nota-fiscal" element={<SecretariaModulePlaceholder />} />
               <Route path="configuracoes" element={<SecretariaModulePlaceholder />} />

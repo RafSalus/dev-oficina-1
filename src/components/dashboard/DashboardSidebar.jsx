@@ -21,6 +21,7 @@ import {
   IdentificationBadge,
   GearSix,
   Globe,
+  Buildings,
 } from '@phosphor-icons/react'
 import { MENU_CATEGORIES } from '../../constants/dashboardMenus'
 
@@ -45,6 +46,7 @@ const ICONS_MAP = {
   IdentificationBadge,
   GearSix,
   Globe,
+  Buildings,
 }
 
 export function DashboardSidebar() {

@@ -19,6 +19,7 @@ import {
   FileText,
   GearSix,
   Globe,
+  Buildings,
 } from '@phosphor-icons/react'
 import { SecretariaHeader } from '../components/secretaria/SecretariaHeader'
 import { SecretariaSidebar } from '../components/secretaria/SecretariaSidebar'
@@ -48,6 +49,7 @@ const ICONS_MAP = {
   FileText,
   GearSix,
   Globe,
+  Buildings,
 }
 
 const MOBILE_NAV_ITEMS = [

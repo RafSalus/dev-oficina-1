@@ -28,6 +28,8 @@ import {
 import { useCliente } from '../../context/ClienteContext'
 import { gerarLaudoTecnico } from '../../constants/catalogoPecasServicos'
 import { toast } from 'sonner'
+import { useIsMobile } from '../../hooks/useIsMobile'
+import { MobileClienteServicosPage } from './mobile/MobileClienteServicosPage'
 
 // Dados base da Ordem de Serviço com laudo pericial, checklist e fotos das peças
 const DADOS_SERVICO_INICIAL = {
@@ -281,6 +283,7 @@ Mecânica Gabriel • Compromisso com a Segurança e Transparência Técnica`,
 }
 
 export function ClienteServicosPage() {
+  const isMobile = useIsMobile()
   const { clienteAtivo } = useCliente()
 
   // Controle da Aba Ativa: 'orcamento' ou 'laudo'
@@ -444,6 +447,29 @@ export function ClienteServicosPage() {
     )
     return `https://wa.me/5543988126874?text=${texto}`
   }, [clienteAtivo, servico])
+
+  if (isMobile) {
+    return (
+      <MobileClienteServicosPage
+        servico={servico}
+        clienteAtivo={clienteAtivo}
+        itensMarcados={itensMarcados}
+        aprovado={aprovado}
+        totais={totais}
+        laudoOficialPadraoOS={laudoOficialPadraoOS}
+        linkWhatsApp={linkWhatsApp}
+        modalAprovacaoAberto={modalAprovacaoAberto}
+        setModalAprovacaoAberto={setModalAprovacaoAberto}
+        formaPagamento={formaPagamento}
+        setFormaPagamento={setFormaPagamento}
+        nomeResponsavel={nomeResponsavel}
+        setNomeResponsavel={setNomeResponsavel}
+        onToggleItem={handleToggleItem}
+        onCopiarLaudo={handleCopiarLaudo}
+        onConfirmarAprovacao={handleConfirmarAprovacao}
+      />
+    )
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden select-none">
