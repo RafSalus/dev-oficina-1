@@ -1,7 +1,25 @@
 {
-  "name": "MG",
-  "short_name": "MG",
+  "id": "/gestao/dashboard",
+  "name": "Mecânica Gabriel - Gestão de Oficina",
+  "short_name": "MG Oficina",
+  "description": "Sistema de gestão da oficina Mecânica Gabriel: ordens de serviço, agenda, clientes, veículos e estoque em um só lugar.",
+  "start_url": "/gestao/dashboard",
+  "scope": "/",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "orientation": "portrait-primary",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "categories": ["business", "productivity"],
   "icons": [
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
@@ -12,10 +30,27 @@
       "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
-  "display": "standalone"
+  "shortcuts": [
+    {
+      "name": "Nova Ordem de Serviço",
+      "short_name": "Nova OS",
+      "url": "/gestao/ordem-de-servico",
+      "icons": [{ "src": "/icons/mg-brand-icon-192-v4.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Agenda",
+      "short_name": "Agenda",
+      "url": "/gestao/agenda",
+      "icons": [{ "src": "/icons/mg-brand-icon-192-v4.png", "sizes": "192x192" }]
+    }
+  ]
 }

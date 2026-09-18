@@ -1,22 +1,73 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Bell, User, SignOut, GearSix, CheckCircle, Plus, ArrowLeft, FloppyDisk, X } from '@phosphor-icons/react'
+import {
+  Bell,
+  User,
+  SignOut,
+  GearSix,
+  CheckCircle,
+  Plus,
+  ArrowLeft,
+  FloppyDisk,
+  X,
+  PushPin,
+  PushPinSlash,
+  Wrench,
+} from '@phosphor-icons/react'
 import { useAdminAuth } from '../../context/AdminAuthContext'
 import { toast } from 'sonner'
 
-export function DashboardHeader() {
+export function DashboardHeader({ isPinned = false, onTogglePin }) {
   const { user, signOut } = useAdminAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
+  const [isHovered, setIsHovered] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
 
   const notifRef = useRef(null)
   const profileRef = useRef(null)
+  const headerRef = useRef(null)
+  const leaveTimeoutRef = useRef(null)
 
-  const isOsListPage = location.pathname === '/gestao/ordem-de-servico'
+  const isOsListPage =
+    location.pathname === '/gestao/ordem-de-servico' ||
+    location.pathname === '/gestao/orcamento' ||
+    location.pathname === '/gestao/orcamentos'
   const isOsNovaPage = location.pathname === '/gestao/ordem-de-servico/nova'
+
+  const isHeaderVisible = isPinned || isHovered || showNotifications || showProfile
+
+  const handleMouseEnter = () => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current)
+      leaveTimeoutRef.current = null
+    }
+    setIsHovered(true)
+  }
+
+  const handleMouseLeave = () => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current)
+    }
+    leaveTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false)
+    }, 250)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (leaveTimeoutRef.current) {
+        clearTimeout(leaveTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    setShowNotifications(false)
+    setShowProfile(false)
+  }, [location.pathname])
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -40,7 +91,38 @@ export function DashboardHeader() {
   const userName = user?.user_metadata?.name || 'Administrador'
 
   return (
-    <header className="h-16 px-6 bg-white border-b border-[#d0d5dd] flex items-center justify-between z-30 shrink-0 select-none">
+    <>
+      {/* Sensor de aproximação do mouse no topo da tela (quando não fixado) */}
+      {!isPinned && (
+        <div
+          onMouseEnter={handleMouseEnter}
+          className="fixed top-0 left-0 right-0 h-4 z-40 group flex justify-center items-start cursor-pointer pointer-events-auto"
+          title="Passe o mouse para exibir o cabeçalho"
+        >
+          <div
+            className={`mt-1 w-16 h-1 rounded-full transition-all duration-200 ${
+              isHeaderVisible
+                ? 'opacity-0 pointer-events-none'
+                : 'bg-[#101828]/25 group-hover:bg-[#0284c7] group-hover:w-28 group-hover:h-1.5 shadow-xs'
+            }`}
+          />
+        </div>
+      )}
+
+      <header
+        ref={headerRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={
+          isPinned
+            ? 'h-16 px-6 bg-white border-b border-[#d0d5dd] flex items-center justify-between z-30 shrink-0 select-none transition-all duration-200'
+            : `fixed top-0 left-0 right-0 h-16 px-6 bg-white border-b border-[#d0d5dd] flex items-center justify-between z-50 select-none shadow-xl transition-all duration-300 ease-out ${
+                isHeaderVisible
+                  ? 'translate-y-0 opacity-100 pointer-events-auto'
+                  : '-translate-y-full opacity-0 pointer-events-none'
+              }`
+        }
+      >
       {/* Lado Esquerdo: Logo e Nome da Empresa + Contexto Dinâmico */}
       <div className="flex items-center gap-3 sm:gap-4">
         <Link
@@ -69,25 +151,20 @@ export function DashboardHeader() {
             <span className="text-xs font-bold text-[#101828]">Nova OS</span>
           </div>
         )}
+
+        {isOsListPage && (
+          <div className="hidden sm:flex items-center gap-2 pl-3 sm:pl-4 border-l border-[#e4e7ec] animate-in fade-in duration-200">
+            <span className="text-xs font-semibold text-[#667085]">Operações</span>
+            <span className="text-xs text-[#98a2b3]">/</span>
+            <span className="text-xs font-bold text-[#101828]">
+              {location.pathname.includes('orcamento') ? 'Orçamento' : 'Ordem de Serviço'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Lado Direito: Ações Contextuais Dinâmicas + Notificações e Perfil */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Botão Contextual Dinâmico: Nova OS (na tela de listagem) */}
-        {isOsListPage && (
-          <div className="flex items-center gap-2 sm:gap-3 animate-in fade-in duration-200">
-            <button
-              type="button"
-              onClick={() => navigate('/gestao/ordem-de-servico/nova')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-black hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
-            >
-              <Plus size={15} weight="bold" />
-              <span>Nova OS</span>
-            </button>
-            <div className="h-5 w-px bg-[#e4e7ec]" />
-          </div>
-        )}
-
         {/* Botões Contextuais Dinâmicos: Voltar e Salvar OS (na tela de abertura) */}
         {isOsNovaPage && (
           <div className="flex items-center gap-2 sm:gap-2.5 animate-in fade-in duration-200">
@@ -116,6 +193,50 @@ export function DashboardHeader() {
             <div className="h-5 w-px bg-[#e4e7ec]" />
           </div>
         )}
+
+        {/* Botão de Fixar / Desafixar Cabeçalho e Link para Portal do Mecânico */}
+        <div className="flex items-center gap-2">
+          {onTogglePin && (
+            <button
+              type="button"
+              onClick={() => {
+                onTogglePin()
+                if (isPinned) {
+                  toast.info('Cabeçalho em modo automático (oculta ao afastar o mouse).')
+                } else {
+                  toast.success('Cabeçalho fixado no topo.')
+                }
+              }}
+              aria-label={isPinned ? 'Desafixar cabeçalho (ocultar automaticamente)' : 'Fixar cabeçalho no topo'}
+              title={
+                isPinned
+                  ? 'Cabeçalho fixado. Clique para ativar auto-ocultação ao afastar o mouse.'
+                  : 'Ativar fixação do cabeçalho.'
+              }
+              className={`p-2 rounded-xl transition-all cursor-pointer ${
+                isPinned
+                  ? 'bg-[#101828] text-white shadow-xs'
+                  : 'text-[#475467] hover:text-[#101828] hover:bg-[#f2f4f7]'
+              }`}
+            >
+              {isPinned ? (
+                <PushPin size={18} weight="fill" />
+              ) : (
+                <PushPinSlash size={18} weight="bold" />
+              )}
+            </button>
+          )}
+
+          {/* Botão para alternar para o Portal do Mecânico */}
+          <Link
+            to="/mecanico/dashboard"
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#0284c7] bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
+            title="Acessar Bancada Técnica e Ordens de Serviço do Mecânico"
+          >
+            <Wrench size={15} weight="bold" />
+            <span>Portal do Mecânico</span>
+          </Link>
+        </div>
 
         {/* Ícone de Notificação */}
         <div className="relative" ref={notifRef}>
@@ -203,6 +324,15 @@ export function DashboardHeader() {
 
               <div className="py-1">
                 <Link
+                  to="/mecanico/dashboard"
+                  onClick={() => setShowProfile(false)}
+                  className="w-full px-4 py-2 text-xs font-bold text-[#0284c7] hover:bg-sky-50 flex items-center gap-2.5 transition-colors"
+                >
+                  <Wrench size={16} weight="bold" />
+                  <span>Portal do Mecânico</span>
+                </Link>
+
+                <Link
                   to="/gestao/configuracoes"
                   onClick={() => setShowProfile(false)}
                   className="w-full px-4 py-2 text-xs font-medium text-[#344054] hover:bg-[#f2f4f7] flex items-center gap-2.5 transition-colors"
@@ -225,5 +355,6 @@ export function DashboardHeader() {
         </div>
       </div>
     </header>
-  )
+  </>
+)
 }

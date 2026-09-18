@@ -79,6 +79,8 @@ export const CATEGORIAS_PECAS_OPCOES = [
   { value: 'Outros Componentes', label: 'Outros Componentes' },
 ]
 
+export const CATEGORIAS_PECAS = CATEGORIAS_PECAS_OPCOES.map((c) => c.value)
+
 export const CATALOGO_PECAS_ESTOQUE = [
   {
     codigo: 'PEC-001',

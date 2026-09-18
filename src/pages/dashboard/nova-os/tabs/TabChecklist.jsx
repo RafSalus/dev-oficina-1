@@ -430,7 +430,7 @@ export function TabChecklist({ formData, updateFormData, onSaveStep, onCancel })
         </button>
 
         <span className="text-xs font-medium text-[#667085]">
-          Aba 2 de 9 • <strong className="text-[#101828] font-bold">Checklist Oficial</strong>
+          Aba 2 de 8 • <strong className="text-[#101828] font-bold">Checklist Oficial</strong>
         </span>
 
         <button

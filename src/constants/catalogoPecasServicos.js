@@ -66,6 +66,14 @@ export const SUGESTOES_SERVICOS = [
   { value: 'Substituição da Bateria e Teste do Sistema de Carga', label: 'Substituição da Bateria e Teste do Sistema de Carga', categoria: 'Elétrica' },
   { value: 'Recarga de Gás Ecológico e Higienização do Ar Condicionado', label: 'Recarga de Gás Ecológico e Higienização do Ar Condicionado', categoria: 'Climatização' },
   { value: 'Troca da Junta da Tampa de Válvulas e Eliminação de Vazamento', label: 'Troca da Junta da Tampa de Válvulas e Eliminação de Vazamento', categoria: 'Motor' },
+  { value: 'Retífica e Plaina de Cabeçote de Alumínio', label: 'Retífica e Plaina de Cabeçote de Alumínio (Terceiro)', categoria: 'Retífica' },
+  { value: 'Teste Hidrostático de Cabeçote (Trinca)', label: 'Teste Hidrostático de Cabeçote (Trinca - Terceiro)', categoria: 'Retífica' },
+  { value: 'Usinagem e Torneamento de Volante do Motor', label: 'Usinagem e Torneamento de Volante do Motor (Terceiro)', categoria: 'Usinagem' },
+  { value: 'Reparo e Desbloqueio de Módulo de Injeção ECU', label: 'Reparo e Desbloqueio de Módulo de Injeção ECU (Terceiro)', categoria: 'Eletrônica' },
+  { value: 'Solda TIG Especial em Cárter de Alumínio', label: 'Solda TIG Especial em Cárter de Alumínio (Terceiro)', categoria: 'Soldas' },
+  { value: 'Recondicionamento de Caixa de Direção Hidráulica', label: 'Recondicionamento de Caixa de Direção Hidráulica (Terceiro)', categoria: 'Direção' },
+  { value: 'Varetagem e Solda em Radiador', label: 'Varetagem e Solda em Radiador (Terceiro)', categoria: 'Radiadores' },
+  { value: 'Transporte em Guincho Plataforma', label: 'Transporte em Guincho Plataforma (Terceiro)', categoria: 'Guincho' },
 ]
 
 export const CATALOGO_SERVICOS_TABELA = [

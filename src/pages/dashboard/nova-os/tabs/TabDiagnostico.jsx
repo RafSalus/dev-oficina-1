@@ -756,7 +756,7 @@ export function TabDiagnostico({ formData, updateFormData, onSaveStep, onCancel 
         </button>
 
         <span className="text-xs font-medium text-[#667085]">
-          Aba 3 de 9 • <strong className="text-[#101828] font-bold">Diagnóstico Técnico</strong>
+          Aba 3 de 8 • <strong className="text-[#101828] font-bold">Diagnóstico Técnico</strong>
         </span>
 
         <button

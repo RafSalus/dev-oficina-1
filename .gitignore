@@ -15,6 +15,7 @@ lerna-debug.log*
 # Node dependencies
 node_modules
 dist
+dist_old
 dist-ssr
 *.local
 

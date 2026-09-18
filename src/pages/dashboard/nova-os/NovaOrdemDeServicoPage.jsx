@@ -1,134 +1,30 @@
 import React, { useState } from 'react'
+import { Receipt } from '@phosphor-icons/react'
 import { useNavigate } from 'react-router-dom'
 import { useNotice } from '../../../context/NoticeContext'
+import { useIsMobile } from '../../../hooks/useIsMobile'
 import { TabClienteVeiculo } from './tabs/TabClienteVeiculo'
 import { TabChecklist } from './tabs/TabChecklist'
 import { TabDiagnostico } from './tabs/TabDiagnostico'
 import { TabServicos } from './tabs/TabServicos'
 import { TabPecas } from './tabs/TabPecas'
+import { TabTerceiros } from './tabs/TabTerceiros'
+import { TabOrcamento } from './tabs/TabOrcamento'
 import { TabEmBreve } from './tabs/TabEmBreve'
+import { MobileNovaOrdemDeServicoPage } from './mobile/MobileNovaOrdemDeServicoPage'
+import { OS_TABS, DRAFT_KEY, useOsDraft } from './useOsDraft'
+import { adicionarOuAtualizarOrdem } from '../orcamento/mockOrdensAbertas'
 import { toast } from 'sonner'
 
-export const OS_TABS = [
-  { id: 'cliente-veiculo', label: 'Cliente e Veiculo' },
-  { id: 'checklist', label: 'Checklist' },
-  { id: 'diagnostico', label: 'Diagnostico' },
-  { id: 'servicos', label: 'Serviços' },
-  { id: 'pecas', label: 'Peças' },
-  { id: 'aprovacao', label: 'Aprovação' },
-  { id: 'terceiros', label: 'Terceiros' },
-  { id: 'orcamento', label: 'Orçamento' },
-  { id: 'finalizar', label: 'Finalizar' },
-]
-
-const DRAFT_KEY = 'dev_oficina_draft_os'
-
-const INITIAL_FORM_DATA = {
-  // Cliente
-  clienteId: '',
-  cliente: '',
-  telefone: '',
-  documento: '',
-  email: '',
-  endereco: '',
-
-  // Diagnóstico
-  mecanicoId: '',
-  mecanicoNome: '',
-  pecasDiagnostico: [],
-  servicosDiagnostico: [],
-  problemasDetectados: [],
-  laudoTecnico: '',
-
-  // Serviços da OS
-  servicosOS: [],
-
-  // Peças e Cotações da OS
-  pecasOS: [],
-  cotacoesEnviadas: [],
-
-  // Veículo
-  veiculoId: '',
-  placa: '',
-  marcaModelo: '',
-  ano: '',
-  cor: '',
-  km: '',
-  nivelCombustivel: '1/2',
-
-  // Relato do Cliente e Atendimento
-  tipoAtendimento: 'orcamento',
-  prioridade: 'normal',
-  relatoCliente: '',
-
-  // KM de Saída
-  kmSaida: '',
-
-  // Checklist Oficial de Entrada e Saída
-  checklistEntrada: {
-    esguicho: { ok: true, obs: '' },
-    vidros: { ok: true, obs: '' },
-    pecas: { ok: true, obs: '' },
-    bancos: { ok: true, obs: '' },
-    painel: { ok: true, obs: '' },
-    oleoGeral: { ok: true, obs: '' },
-    sensorRe: { ok: true, obs: '' },
-    freioMaoManopla: { ok: true, obs: '' },
-    cintoSeguranca: { ok: true, obs: '' },
-    quebraSolPqp: { ok: true, obs: '' },
-    retrovisores: { ok: true, obs: '' },
-    lampadasGeral: { ok: true, obs: '' },
-    palhetas: { ok: true, obs: '' },
-    portas: { ok: true, obs: '' },
-    agua: { ok: true, obs: '' },
-    vazamentos: { ok: true, obs: '' },
-    rodas: { ok: true, obs: '' },
-    alinhamento: { ok: true, obs: '' },
-    buzina: { ok: true, obs: '' },
-    portinholaTanque: { ok: true, obs: '' },
-    bateria: { ok: true, obs: '' },
-    testeDdp: { ok: true, obs: '' },
-  },
-  checklistEntradaObs: '',
-  checklistSaida: {
-    nivelFluidos: { ok: true, obs: '' },
-    apertoRodas: { ok: true, obs: '' },
-    calibragemPneus: { ok: true, obs: '' },
-    testeVeiculo: { ok: true, obs: '' },
-    etiquetaOleo: { ok: true, obs: '' },
-  },
-  checklistSaidaObs: '',
-}
+export { OS_TABS }
 
 export function NovaOrdemDeServicoPage() {
+  const isMobile = useIsMobile()
   const navigate = useNavigate()
   const { openNotice } = useNotice()
 
   const [activeTab, setActiveTab] = useState('cliente-veiculo')
-
-  // Estado unificado dos dados da OS com persistência de rascunho
-  const [formData, setFormData] = useState(() => {
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        return { ...INITIAL_FORM_DATA, ...parsed }
-      }
-    } catch (e) {
-      console.error('Erro ao ler rascunho de OS:', e)
-    }
-    return INITIAL_FORM_DATA
-  })
-
-  const updateFormData = (fields) => {
-    setFormData((prev) => {
-      const updated = { ...prev, ...fields }
-      try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(updated))
-      } catch (e) {}
-      return updated
-    })
-  }
+  const { formData, updateFormData, clearDraft } = useOsDraft()
 
   const handleSaveStep = (stepName, nextTabId) => {
     try {
@@ -145,9 +41,7 @@ export function NovaOrdemDeServicoPage() {
   }
 
   const handleCancel = () => {
-    try {
-      localStorage.removeItem(DRAFT_KEY)
-    } catch (e) {}
+    clearDraft()
     toast.info('Abertura de Ordem de Serviço cancelada.')
     navigate('/gestao/ordem-de-servico')
   }
@@ -173,12 +67,27 @@ export function NovaOrdemDeServicoPage() {
       return
     }
 
+    // Persiste no storage de ordens abertas e orçamentos
     try {
-      localStorage.removeItem(DRAFT_KEY)
-    } catch (e) {}
+      adicionarOuAtualizarOrdem(formData)
+    } catch (err) {
+      console.error('Erro ao registrar ordem aberta:', err)
+    }
 
-    toast.success(`Ordem de Serviço #${formData.placa.toUpperCase()} aberta com sucesso para ${formData.cliente}!`)
+    clearDraft()
+
+    toast.success(`Ordem de Serviço #${formData.numeroOS} aberta com sucesso para ${formData.cliente}!`)
     navigate('/gestao/ordem-de-servico')
+  }
+
+  if (isMobile) {
+    return (
+      <MobileNovaOrdemDeServicoPage
+        formData={formData}
+        updateFormData={updateFormData}
+        clearDraft={clearDraft}
+      />
+    )
   }
 
   return (
@@ -187,12 +96,25 @@ export function NovaOrdemDeServicoPage() {
       onSubmit={handleSubmit}
       className="h-full w-full flex flex-col gap-2.5 overflow-hidden select-none"
     >
-      {/* Barra Superior de Abas (8 Abas com rótulos limpos e sem e-comercial) */}
+      {/* Barra Superior de Abas com Identificação do Número da OS */}
       <nav
         aria-label="Etapas da Ordem de Serviço"
-        className="h-11 shrink-0 bg-white px-2 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between gap-1 overflow-x-auto no-scrollbar"
+        className="h-11 shrink-0 bg-white px-2.5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between gap-2 overflow-x-auto no-scrollbar"
       >
-        <div className="flex items-center gap-1 w-full justify-between">
+        {/* Identificador Oficial da OS */}
+        <div className="flex items-center gap-2 pl-2 pr-3 py-1 bg-[#101828] text-white rounded-xl shrink-0 shadow-xs">
+          <div className="w-5.5 h-5.5 rounded-lg bg-[#0284c7] flex items-center justify-center text-white">
+            <Receipt size={13} weight="bold" />
+          </div>
+          <div className="leading-tight">
+            <span className="text-[8px] font-bold text-[#98a2b3] uppercase tracking-wider block">Nº DA OS</span>
+            <span className="font-mono font-black text-xs text-white">#{formData.numeroOS}</span>
+          </div>
+        </div>
+
+        <div className="h-6 w-px bg-[#e4e7ec] shrink-0" />
+
+        <div className="flex items-center gap-1 flex-1 justify-between min-w-0">
           {OS_TABS.map((tab, index) => {
             const isActive = activeTab === tab.id
             return (
@@ -262,7 +184,25 @@ export function NovaOrdemDeServicoPage() {
           <TabPecas
             formData={formData}
             updateFormData={updateFormData}
-            onSaveStep={() => handleSaveStep('Peças e Componentes', 'aprovacao')}
+            onSaveStep={() => handleSaveStep('Peças e Componentes', 'terceiros')}
+            onCancel={handleCancel}
+          />
+        )}
+
+        {activeTab === 'terceiros' && (
+          <TabTerceiros
+            formData={formData}
+            updateFormData={updateFormData}
+            onSaveStep={() => handleSaveStep('Serviços de Terceiros', 'orcamento')}
+            onCancel={handleCancel}
+          />
+        )}
+
+        {activeTab === 'orcamento' && (
+          <TabOrcamento
+            formData={formData}
+            updateFormData={updateFormData}
+            onSaveStep={() => handleSaveStep('Composição de Orçamento', 'finalizar')}
             onCancel={handleCancel}
           />
         )}
@@ -271,7 +211,9 @@ export function NovaOrdemDeServicoPage() {
           activeTab !== 'checklist' &&
           activeTab !== 'diagnostico' &&
           activeTab !== 'servicos' &&
-          activeTab !== 'pecas' && (
+          activeTab !== 'pecas' &&
+          activeTab !== 'terceiros' &&
+          activeTab !== 'orcamento' && (
             <TabEmBreve
               tabId={activeTab}
               onSelectTab={setActiveTab}

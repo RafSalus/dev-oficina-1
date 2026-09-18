@@ -919,7 +919,7 @@ export function TabServicos({ formData, updateFormData, onSaveStep, onCancel }) 
         </button>
 
         <span className="text-xs font-medium text-[#667085]">
-          Aba 4 de 9 • <strong className="text-[#101828] font-bold">Serviços e Mão de Obra</strong>
+          Aba 4 de 8 • <strong className="text-[#101828] font-bold">Serviços e Mão de Obra</strong>
         </span>
 
         <button

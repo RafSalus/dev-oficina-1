@@ -1914,7 +1914,7 @@ export function TabPecas({ formData, updateFormData, onSaveStep, onCancel }) {
         </button>
 
         <span className="text-xs font-medium text-[#667085]">
-          Aba 5 de 9 • <strong className="text-[#101828] font-bold">Peças e Componentes</strong>
+          Aba 5 de 8 • <strong className="text-[#101828] font-bold">Peças e Componentes</strong>
         </span>
 
         <button

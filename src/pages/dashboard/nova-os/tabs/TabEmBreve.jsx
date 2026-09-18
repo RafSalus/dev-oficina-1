@@ -2,7 +2,6 @@ import React from 'react'
 import {
   Wrench,
   Package,
-  Calculator,
   Handshake,
   Receipt,
   CheckCircle,
@@ -19,7 +18,7 @@ const TAB_CONFIGS = {
     icon: Wrench,
     nextTab: 'servicos',
     nextLabel: 'Serviços',
-    tabIndex: '3 de 9',
+    tabIndex: '3 de 8',
   },
   servicos: {
     title: 'Serviços e Mão de Obra',
@@ -29,7 +28,7 @@ const TAB_CONFIGS = {
     icon: Wrench,
     nextTab: 'pecas',
     nextLabel: 'Peças',
-    tabIndex: '4 de 9',
+    tabIndex: '4 de 8',
   },
   pecas: {
     title: 'Peças e Insumos',
@@ -37,29 +36,9 @@ const TAB_CONFIGS = {
     description:
       'Nesta etapa você vinculará peças do estoque interno, óleos, filtros e componentes necessários para a execução dos serviços.',
     icon: Package,
-    nextTab: 'aprovacao',
-    nextLabel: 'Aprovação',
-    tabIndex: '5 de 9',
-  },
-  cotacao: {
-    title: 'Cotação e Aprovação',
-    subtitle: 'Cotação com fornecedores e autorização do cliente',
-    description:
-      'Pesquisa e cotação de preços de peças em múltiplos parceiros para obter a melhor margem de lucro e melhor custo-benefício.',
-    icon: Calculator,
     nextTab: 'terceiros',
     nextLabel: 'Terceiros',
-    tabIndex: '6 de 9',
-  },
-  aprovacao: {
-    title: 'Cotação e Aprovação',
-    subtitle: 'Cotação com fornecedores e autorização do cliente',
-    description:
-      'Envio do orçamento e plano de serviços para aprovação do cliente via WhatsApp ou e-mail com acompanhamento em tempo real.',
-    icon: Calculator,
-    nextTab: 'terceiros',
-    nextLabel: 'Terceiros',
-    tabIndex: '6 de 9',
+    tabIndex: '5 de 8',
   },
   terceiros: {
     title: 'Serviços de Terceiros',
@@ -69,7 +48,7 @@ const TAB_CONFIGS = {
     icon: Handshake,
     nextTab: 'orcamento',
     nextLabel: 'Orçamento',
-    tabIndex: '7 de 9',
+    tabIndex: '6 de 8',
   },
   orcamento: {
     title: 'Composição de Orçamento',
@@ -79,7 +58,7 @@ const TAB_CONFIGS = {
     icon: Receipt,
     nextTab: 'finalizar',
     nextLabel: 'Finalizar',
-    tabIndex: '8 de 9',
+    tabIndex: '7 de 8',
   },
   finalizar: {
     title: 'Finalização e Fechamento',
@@ -89,7 +68,7 @@ const TAB_CONFIGS = {
     icon: CheckCircle,
     nextTab: null,
     nextLabel: null,
-    tabIndex: '9 de 9',
+    tabIndex: '8 de 8',
   },
 }
 

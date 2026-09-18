@@ -584,9 +584,14 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
               </div>
             </div>
 
-            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#f2f4f7] text-[#344054] border border-[#d0d5dd]">
-              Recepção
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-[#101828] text-white tracking-wider shadow-2xs">
+                #{formData.numeroOS}
+              </span>
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#f2f4f7] text-[#344054] border border-[#d0d5dd]">
+                Recepção
+              </span>
+            </div>
           </div>
 
           <div className="flex-1 flex flex-col justify-between py-2.5 space-y-2.5 overflow-hidden min-h-0">
@@ -657,7 +662,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
         </button>
 
         <span className="text-xs font-medium text-[#667085]">
-          Aba 1 de 9 • <strong className="text-[#101828] font-bold">Cliente e Veiculo</strong>
+          Aba 1 de 8 • <strong className="text-[#101828] font-bold">Cliente e Veiculo</strong>
         </span>
 
         <button

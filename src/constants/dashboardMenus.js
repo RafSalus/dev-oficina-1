@@ -25,6 +25,13 @@ export const MENU_CATEGORIES = [
         description: 'Abertura, acompanhamento e finalização de ordens de serviço e orçamentos.',
       },
       {
+        id: 'orcamento',
+        label: 'Orçamento',
+        path: '/gestao/orcamento',
+        icon: 'Receipt',
+        description: 'Acompanhamento de orçamentos e ordens de serviço abertas no pátio.',
+      },
+      {
         id: 'pdv',
         label: 'PDV',
         path: '/gestao/pdv',

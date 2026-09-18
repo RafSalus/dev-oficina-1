@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { NoticeProvider } from './context/NoticeContext'
 import { AdminAuthProvider } from './context/AdminAuthContext'
+import { PwaStandaloneRedirect } from './components/PwaStandaloneRedirect'
 
 import { Toaster } from 'sonner'
 import { CheckCircle, Info, WarningCircle, XCircle } from '@phosphor-icons/react'
@@ -15,13 +16,18 @@ import { GestaoAcessoNegadoPage } from './pages/GestaoAcessoNegadoPage'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
 import { NovaOrdemDeServicoPage } from './pages/dashboard/NovaOrdemDeServicoPage'
+import { OrcamentoOSListPage } from './pages/dashboard/orcamento/OrcamentoOSListPage'
 import { CotacaoAutoPecaPage } from './pages/CotacaoAutoPecaPage'
+import { AprovacaoOrcamentoClientePage } from './pages/AprovacaoOrcamentoClientePage'
+import { MecanicoLayout } from './layouts/MecanicoLayout'
+import { MecanicoModulePlaceholder } from './components/mecanico/MecanicoModulePlaceholder'
 
 export default function App() {
   return (
     <NoticeProvider>
       <AdminAuthProvider>
         <BrowserRouter>
+          <PwaStandaloneRedirect />
           <Toaster
             position="top-right"
             richColors={false}
@@ -46,12 +52,16 @@ export default function App() {
             }}
           />
           <Routes>
-            {/* Public landing, client e auto parts quotation routes */}
+            {/* Public landing, client, quotation and budget approval routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/cliente/entrar" element={<ClienteEntrarPage />} />
             <Route path="/cliente/recuperar-senha" element={<Navigate to="/cliente/entrar" replace />} />
             <Route path="/cotacao/:id" element={<CotacaoAutoPecaPage />} />
             <Route path="/cotacao" element={<CotacaoAutoPecaPage />} />
+            <Route path="/aprovacao/:id" element={<AprovacaoOrcamentoClientePage />} />
+            <Route path="/aprovacao" element={<AprovacaoOrcamentoClientePage />} />
+            <Route path="/orcamento/:id" element={<AprovacaoOrcamentoClientePage />} />
+            <Route path="/orcamento" element={<AprovacaoOrcamentoClientePage />} />
 
             {/* Management Auth routes */}
             <Route path="/gestao/entrar" element={<GestaoEntrarPage />} />
@@ -63,8 +73,10 @@ export default function App() {
               <Route index element={<Navigate to="/gestao/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="agenda" element={<DashboardPage />} />
-              <Route path="ordem-de-servico" element={<DashboardPage />} />
+              <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
               <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
+              <Route path="orcamento" element={<OrcamentoOSListPage />} />
+              <Route path="orcamentos" element={<Navigate to="/gestao/orcamento" replace />} />
               <Route path="pdv" element={<DashboardPage />} />
               <Route path="clientes" element={<DashboardPage />} />
               <Route path="veiculos" element={<DashboardPage />} />
@@ -81,6 +93,24 @@ export default function App() {
               <Route path="relatorios" element={<DashboardPage />} />
               <Route path="funcionarios" element={<DashboardPage />} />
               <Route path="configuracoes" element={<DashboardPage />} />
+            </Route>
+
+            {/* Post-login Mechanic Workspace with Dedicated Menus and Layout */}
+            <Route path="/mecanico" element={<MecanicoLayout />}>
+              <Route index element={<Navigate to="/mecanico/dashboard" replace />} />
+              <Route path="dashboard" element={<MecanicoModulePlaceholder />} />
+              <Route path="agenda" element={<MecanicoModulePlaceholder />} />
+              <Route path="ordens-servico" element={<MecanicoModulePlaceholder />} />
+              <Route path="diagnostico" element={<MecanicoModulePlaceholder />} />
+              <Route path="checklist" element={<MecanicoModulePlaceholder />} />
+              <Route path="servicos" element={<MecanicoModulePlaceholder />} />
+              <Route path="pedir-pecas" element={<MecanicoModulePlaceholder />} />
+              <Route path="estoque" element={<MecanicoModulePlaceholder />} />
+              <Route path="pecas-danificadas" element={<MecanicoModulePlaceholder />} />
+              <Route path="ferramentas" element={<MecanicoModulePlaceholder />} />
+              <Route path="clientes" element={<MecanicoModulePlaceholder />} />
+              <Route path="leva-e-traz" element={<MecanicoModulePlaceholder />} />
+              <Route path="comissoes" element={<MecanicoModulePlaceholder />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

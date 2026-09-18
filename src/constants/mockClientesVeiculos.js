@@ -1,5 +1,33 @@
 export const MOCK_CLIENTES_VEICULOS = [
   {
+    value: 'cli-0',
+    label: '0000161 - Edgar Amaral da Silveira - (43) 98812-6874',
+    nome: 'Edgar Amaral da Silveira',
+    documento: '033.687.739-09',
+    telefone: '(43) 98812-6874',
+    email: 'edgar.silveira@email.com',
+    endereco: 'R Tupinamba, 566 - Apucarana - PR - CEP: 86812-405',
+    cidade: 'Apucarana',
+    uf: 'PR',
+    cep: '86812-405',
+    codigoCliente: '0000161',
+    veiculos: [
+      {
+        value: 'veic-0',
+        label: 'ASF6I46 - Fiat Doblo 1.8 Cargo (2009/2010 - Branca)',
+        placa: 'ASF6I46',
+        marcaModelo: 'Fiat Doblo 1.8 Cargo',
+        marca: 'FIAT',
+        modelo: 'DOBLO 1.8 CARGO',
+        ano: '2009/2010',
+        cor: 'Branca',
+        combustivel: 'FLEX',
+        kmPadrao: '280.812',
+        kmAnterior: '279.003',
+      },
+    ],
+  },
+  {
     value: 'cli-1',
     label: 'Carlos Eduardo Silveira - (43) 99123-4567',
     nome: 'Carlos Eduardo Silveira',
