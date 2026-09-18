@@ -1,5 +1,8 @@
 import React from 'react'
 import { useLocation } from 'react-router-dom'
+import { useIsMobile } from '../../hooks/useIsMobile'
+import { MobileMecanicoHomeScreen } from './mobile/MobileMecanicoHomeScreen'
+import { MobileMecanicoComingSoon } from './mobile/MobileMecanicoComingSoon'
 import {
   SquaresFour,
   CalendarDots,
@@ -36,6 +39,12 @@ const ICONS_MAP = {
 
 export function MecanicoModulePlaceholder() {
   const location = useLocation()
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    const isHome = location.pathname === '/mecanico/dashboard' || location.pathname === '/mecanico'
+    return isHome ? <MobileMecanicoHomeScreen /> : <MobileMecanicoComingSoon />
+  }
 
   let currentItem = null
   let currentCategory = null

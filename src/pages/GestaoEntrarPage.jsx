@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeSlash, Wrench } from '@phosphor-icons/react'
+import { Eye, EyeSlash, Wrench, User } from '@phosphor-icons/react'
 import { ManagementAuthLayout } from '../layouts/ManagementAuthLayout'
 import { useAdminAuth } from '../context/AdminAuthContext'
 import { MESSAGES } from '../constants/company'
@@ -186,26 +186,37 @@ export function GestaoEntrarPage() {
               {submitting ? 'Entrando...' : 'Entrar no sistema'}
             </button>
 
-            {/* Acesso Direto para Mecânico */}
+            {/* Acesso Direto para Secretaria ou Mecânico */}
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-xs">
                 <span className="bg-white px-2 text-gray-500 font-semibold uppercase tracking-wider text-[10px]">
-                  OU ACESSO TÉCNICO
+                  OU ACESSOS DA EQUIPE
                 </span>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate('/mecanico/dashboard')}
-              className="w-full bg-[#f8fafc] hover:bg-[#f2f4f7] border border-[#0284c7]/40 hover:border-[#0284c7] text-[#0284c7] font-bold h-12 rounded-xl shadow-2xs transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2 text-sm"
-            >
-              <Wrench size={18} weight="bold" />
-              <span>Entrar como Mecânico da Oficina</span>
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/secretaria/dashboard')}
+                className="bg-[#f8fafc] hover:bg-[#f2f4f7] border border-[#0284c7]/40 hover:border-[#0284c7] text-[#0284c7] font-bold h-11 rounded-xl shadow-2xs transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-1.5 text-xs"
+              >
+                <User size={16} weight="bold" />
+                <span>Entrar Secretaria</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/mecanico/dashboard')}
+                className="bg-[#f8fafc] hover:bg-[#f2f4f7] border border-zinc-300 hover:border-zinc-500 text-zinc-800 font-bold h-11 rounded-xl shadow-2xs transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-1.5 text-xs"
+              >
+                <Wrench size={16} weight="bold" />
+                <span>Entrar Mecânico</span>
+              </button>
+            </div>
 
             <div className="mt-4 flex items-center justify-between text-xs">
               <Link

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Receipt,
   Plus,
@@ -102,6 +102,7 @@ const selectFilterStyles = {
 export function OrcamentoOSListPage() {
   const isMobile = useIsMobile()
   const navigate = useNavigate()
+  const location = useLocation()
 
   // Aba ativa: 'abertas' (OS em andamento) ou 'arquivos' (OS finalizadas)
   const [abaAtiva, setAbaAtiva] = useState('abertas')
@@ -459,7 +460,8 @@ export function OrcamentoOSListPage() {
               try {
                 localStorage.removeItem('dev_oficina_draft_os')
               } catch (e) {}
-              navigate('/gestao/ordem-de-servico/nova')
+              const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
+              navigate(`${basePath}/ordem-de-servico/nova`)
             }}
             className="h-9.5 px-3.5 bg-black hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
           >

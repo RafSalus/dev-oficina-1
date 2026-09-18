@@ -1,5 +1,8 @@
 import React from 'react'
 import { useLocation } from 'react-router-dom'
+import { useIsMobile } from '../../hooks/useIsMobile'
+import { MobileClienteHomeScreen } from './mobile/MobileClienteHomeScreen'
+import { MobileClienteComingSoon } from './mobile/MobileClienteComingSoon'
 import {
   SquaresFour,
   CarProfile,
@@ -26,6 +29,15 @@ const ICONS_MAP = {
 
 export function ClienteModulePlaceholder() {
   const location = useLocation()
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    const isHome =
+      location.pathname === '/cliente/resumo' ||
+      location.pathname === '/cliente' ||
+      location.pathname === '/cliente/inicio'
+    return isHome ? <MobileClienteHomeScreen /> : <MobileClienteComingSoon />
+  }
 
   let currentItem = null
   let currentCategory = null

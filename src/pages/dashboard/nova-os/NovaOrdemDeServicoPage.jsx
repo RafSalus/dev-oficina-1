@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Receipt } from '@phosphor-icons/react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useNotice } from '../../../context/NoticeContext'
 import { useIsMobile } from '../../../hooks/useIsMobile'
 import { TabClienteVeiculo } from './tabs/TabClienteVeiculo'
@@ -21,7 +21,10 @@ export { OS_TABS }
 export function NovaOrdemDeServicoPage() {
   const isMobile = useIsMobile()
   const navigate = useNavigate()
+  const location = useLocation()
   const { openNotice } = useNotice()
+
+  const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
 
   const [activeTab, setActiveTab] = useState('cliente-veiculo')
   const { formData, updateFormData, clearDraft } = useOsDraft()
@@ -43,7 +46,7 @@ export function NovaOrdemDeServicoPage() {
   const handleCancel = () => {
     clearDraft()
     toast.info('Abertura de Ordem de Serviço cancelada.')
-    navigate('/gestao/ordem-de-servico')
+    navigate(`${basePath}/ordem-de-servico`)
   }
 
   const handleSubmit = (e) => {
@@ -77,7 +80,7 @@ export function NovaOrdemDeServicoPage() {
     clearDraft()
 
     toast.success(`Ordem de Serviço #${formData.numeroOS} aberta com sucesso para ${formData.cliente}!`)
-    navigate('/gestao/ordem-de-servico')
+    navigate(`${basePath}/ordem-de-servico`)
   }
 
   if (isMobile) {

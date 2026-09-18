@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   X,
   Printer,
@@ -78,6 +78,7 @@ export function PainelDetalhesOS({
   onReabrir,
 }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [copiado, setCopiado] = useState(false)
   const [activeSubTab, setActiveSubTab] = useState('resumo') // 'resumo', 'itens', 'diagnostico'
 
@@ -176,7 +177,8 @@ export function PainelDetalhesOS({
       // Salva no draft para abrir e continuar na tela de Nova OS
       localStorage.setItem(DRAFT_KEY, JSON.stringify(os))
       toast.info(`Carregando OS #${os.numeroOS} no formulário de edição...`)
-      navigate('/gestao/ordem-de-servico/nova')
+      const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
+      navigate(`${basePath}/ordem-de-servico/nova`)
     } catch (e) {
       toast.error('Erro ao preparar edição da OS.')
     }

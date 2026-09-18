@@ -23,6 +23,8 @@ import { MecanicoLayout } from './layouts/MecanicoLayout'
 import { MecanicoModulePlaceholder } from './components/mecanico/MecanicoModulePlaceholder'
 import { ClienteLayout } from './layouts/ClienteLayout'
 import { ClienteModulePlaceholder } from './components/cliente/ClienteModulePlaceholder'
+import { SecretariaLayout } from './layouts/SecretariaLayout'
+import { SecretariaModulePlaceholder } from './components/secretaria/SecretariaModulePlaceholder'
 
 export default function App() {
   return (
@@ -127,6 +129,31 @@ export default function App() {
               <Route path="historico" element={<ClienteModulePlaceholder />} />
               <Route path="posto" element={<ClienteModulePlaceholder />} />
               <Route path="agenda" element={<ClienteModulePlaceholder />} />
+            </Route>
+
+            {/* Post-login Secretaria Workspace (idêntico ao adm, sem relatórios e sem funcionários) */}
+            <Route path="/secretaria" element={<SecretariaLayout />}>
+              <Route index element={<Navigate to="/secretaria/dashboard" replace />} />
+              <Route path="dashboard" element={<SecretariaModulePlaceholder />} />
+              <Route path="agenda" element={<SecretariaModulePlaceholder />} />
+              <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
+              <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
+              <Route path="orcamento" element={<OrcamentoOSListPage />} />
+              <Route path="orcamentos" element={<Navigate to="/secretaria/orcamento" replace />} />
+              <Route path="pdv" element={<SecretariaModulePlaceholder />} />
+              <Route path="clientes" element={<SecretariaModulePlaceholder />} />
+              <Route path="veiculos" element={<SecretariaModulePlaceholder />} />
+              <Route path="estacionados" element={<SecretariaModulePlaceholder />} />
+              <Route path="leva-e-traz" element={<SecretariaModulePlaceholder />} />
+              <Route path="manutencao-preventiva" element={<SecretariaModulePlaceholder />} />
+              <Route path="garantias" element={<SecretariaModulePlaceholder />} />
+              <Route path="ferramentas" element={<SecretariaModulePlaceholder />} />
+              <Route path="pecas-danificadas" element={<SecretariaModulePlaceholder />} />
+              <Route path="estoque" element={<SecretariaModulePlaceholder />} />
+              <Route path="compras" element={<SecretariaModulePlaceholder />} />
+              <Route path="despesas" element={<SecretariaModulePlaceholder />} />
+              <Route path="nota-fiscal" element={<SecretariaModulePlaceholder />} />
+              <Route path="configuracoes" element={<SecretariaModulePlaceholder />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
