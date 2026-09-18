@@ -6,7 +6,7 @@ import { DashboardFooter } from '../components/dashboard/DashboardFooter'
 
 export function DashboardLayout() {
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#f3f4f6] text-zinc-900 overflow-hidden font-sans select-none">
+    <div className="h-screen w-screen flex flex-col bg-[#eaecf0] text-zinc-900 overflow-hidden font-sans select-none">
       {/* Header Superior Completo */}
       <DashboardHeader />
 

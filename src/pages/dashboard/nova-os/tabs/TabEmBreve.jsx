@@ -6,8 +6,8 @@ import {
   Handshake,
   Receipt,
   CheckCircle,
-  ArrowLeft,
-  ArrowRight,
+  FloppyDisk,
+  X,
 } from '@phosphor-icons/react'
 
 const TAB_CONFIGS = {
@@ -17,11 +17,19 @@ const TAB_CONFIGS = {
     description:
       'Espaço dedicado para inserção de diagnósticos avançados, testes com scanners automotivos, inspeção de injeção eletrônica e testes de bancada.',
     icon: Wrench,
-    prevTab: 'checklist',
+    nextTab: 'servicos',
+    nextLabel: 'Serviços',
+    tabIndex: '3 de 9',
+  },
+  servicos: {
+    title: 'Serviços e Mão de Obra',
+    subtitle: 'Serviços mecânicos a serem executados na OS',
+    description:
+      'Registro dos serviços mecânicos, eletrônicos e de manutenção que serão realizados no veículo, incluindo tempo padrão e alocação técnica.',
+    icon: Wrench,
     nextTab: 'pecas',
-    prevLabel: 'Checklist',
     nextLabel: 'Peças',
-    tabIndex: '3 de 8',
+    tabIndex: '4 de 9',
   },
   pecas: {
     title: 'Peças e Insumos',
@@ -29,23 +37,29 @@ const TAB_CONFIGS = {
     description:
       'Nesta etapa você vinculará peças do estoque interno, óleos, filtros e componentes necessários para a execução dos serviços.',
     icon: Package,
-    prevTab: 'diagnostico',
-    nextTab: 'cotacao',
-    prevLabel: 'Diagnóstico',
-    nextLabel: 'Cotação',
-    tabIndex: '4 de 8',
+    nextTab: 'aprovacao',
+    nextLabel: 'Aprovação',
+    tabIndex: '5 de 9',
   },
   cotacao: {
-    title: 'Cotação de Autopeças',
-    subtitle: 'Pesquisa e preços com distribuidores parceiros',
+    title: 'Cotação e Aprovação',
+    subtitle: 'Cotação com fornecedores e autorização do cliente',
     description:
-      'Sistema automatizado de cotação de autopeças junto a fornecedores externos para peças que não estão disponíveis no estoque local.',
+      'Pesquisa e cotação de preços de peças em múltiplos parceiros para obter a melhor margem de lucro e melhor custo-benefício.',
     icon: Calculator,
-    prevTab: 'pecas',
     nextTab: 'terceiros',
-    prevLabel: 'Peças',
     nextLabel: 'Terceiros',
-    tabIndex: '5 de 8',
+    tabIndex: '6 de 9',
+  },
+  aprovacao: {
+    title: 'Cotação e Aprovação',
+    subtitle: 'Cotação com fornecedores e autorização do cliente',
+    description:
+      'Envio do orçamento e plano de serviços para aprovação do cliente via WhatsApp ou e-mail com acompanhamento em tempo real.',
+    icon: Calculator,
+    nextTab: 'terceiros',
+    nextLabel: 'Terceiros',
+    tabIndex: '6 de 9',
   },
   terceiros: {
     title: 'Serviços de Terceiros',
@@ -53,45 +67,39 @@ const TAB_CONFIGS = {
     description:
       'Registro e controle de custo/prazo para serviços terceirizados, como retífica de cabeçote, tornearia, soldas e reparos eletrônicos de módulo.',
     icon: Handshake,
-    prevTab: 'cotacao',
     nextTab: 'orcamento',
-    prevLabel: 'Cotação',
     nextLabel: 'Orçamento',
-    tabIndex: '6 de 8',
+    tabIndex: '7 de 9',
   },
   orcamento: {
     title: 'Composição de Orçamento',
-    subtitle: 'Cálculo de margem, mão de obra e aprovação',
+    subtitle: 'Cálculo de margem, mão de obra e condições',
     description:
       'Consolidação de peças, serviços, mão de obra e condições de pagamento para envio e autorização direta do cliente via WhatsApp ou e-mail.',
     icon: Receipt,
-    prevTab: 'terceiros',
     nextTab: 'finalizar',
-    prevLabel: 'Terceiros',
     nextLabel: 'Finalizar',
-    tabIndex: '7 de 8',
+    tabIndex: '8 de 9',
   },
   finalizar: {
     title: 'Finalização e Fechamento',
-    subtitle: 'Checklist de saída e emissão da Ordem de Serviço',
+    subtitle: 'Validação final e emissão da Ordem de Serviço',
     description:
-      'Validação final das informações, impressão da via do cliente, geração de comprovante e integração com o painel de atendimento do pátio.',
+      'Validação final das informações, gravação no banco de dados e integração com o painel de atendimento e pátio da oficina.',
     icon: CheckCircle,
-    prevTab: 'orcamento',
     nextTab: null,
-    prevLabel: 'Orçamento',
     nextLabel: null,
-    tabIndex: '8 de 8',
+    tabIndex: '9 de 9',
   },
 }
 
-export function TabEmBreve({ tabId, onSelectTab }) {
+export function TabEmBreve({ tabId, onSelectTab, onSaveStep, onCancel }) {
   const config = TAB_CONFIGS[tabId] || {
     title: 'Módulo em Desenvolvimento',
     subtitle: 'Recurso em fase de estruturação',
     description: 'Esta funcionalidade estará disponível em breve.',
     icon: Package,
-    tabIndex: 'Em breve',
+    tabIndex: 'Etapa',
   }
 
   const IconComponent = config.icon
@@ -99,8 +107,8 @@ export function TabEmBreve({ tabId, onSelectTab }) {
   return (
     <div className="h-full w-full flex flex-col justify-between gap-2.5 overflow-hidden">
       {/* Área Central: Cartão Sóbrio Estilo Uber */}
-      <div className="flex-1 min-h-0 bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-6 flex flex-col items-center justify-center text-center overflow-hidden">
-        <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] border border-[#e4e7ec] flex items-center justify-center mb-3 text-[#101828]">
+      <div className="flex-1 min-h-0 bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-6 flex flex-col items-center justify-center text-center overflow-hidden">
+        <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] border border-[#d0d5dd] flex items-center justify-center mb-3 text-[#101828]">
           <IconComponent size={24} weight="bold" />
         </div>
 
@@ -121,41 +129,44 @@ export function TabEmBreve({ tabId, onSelectTab }) {
           {config.description}
         </p>
 
-        <div className="bg-[#fafafa] border border-[#e4e7ec] rounded-xl px-4 py-2 text-[11px] text-[#667085]">
+        <div className="bg-[#f8fafc] border border-[#d0d5dd] rounded-xl px-4 py-2 text-[11px] text-[#667085]">
           Os dados informados nas abas anteriores já estão salvos e vinculados a esta OS.
         </div>
       </div>
 
-      {/* Barra Inferior de Navegação */}
-      <div className="h-10 shrink-0 bg-white px-4 rounded-xl border border-[#e4e7ec] shadow-xs flex items-center justify-between">
-        {config.prevTab ? (
-          <button
-            type="button"
-            onClick={() => onSelectTab(config.prevTab)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#475467] hover:text-[#101828] cursor-pointer"
-          >
-            <ArrowLeft size={14} weight="bold" />
-            <span>Voltar para {config.prevLabel}</span>
-          </button>
-        ) : (
-          <span />
-        )}
+      {/* Barra Inferior de Ações da Etapa */}
+      <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] hover:border-[#fecdca] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
+        >
+          <X size={14} weight="bold" />
+          <span>Cancelar</span>
+        </button>
 
-        <span className="text-[11px] font-medium text-[#667085]">
-          Aba {config.tabIndex} • <strong className="text-[#101828]">{config.title}</strong>
+        <span className="text-xs font-medium text-[#667085]">
+          Aba {config.tabIndex} • <strong className="text-[#101828] font-bold">{config.title}</strong>
         </span>
 
         {config.nextTab ? (
           <button
             type="button"
-            onClick={() => onSelectTab(config.nextTab)}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#101828] hover:text-black hover:underline cursor-pointer"
+            onClick={() => onSaveStep?.(config.title, config.nextTab)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
           >
-            <span>Avançar para {config.nextLabel}</span>
-            <ArrowRight size={14} weight="bold" />
+            <FloppyDisk size={15} weight="bold" />
+            <span>Salvar e Continuar</span>
           </button>
         ) : (
-          <span className="text-xs font-bold text-[#027a48]">Última etapa</span>
+          <button
+            type="submit"
+            form="form-nova-os"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+          >
+            <CheckCircle size={15} weight="bold" />
+            <span>Salvar e Finalizar OS</span>
+          </button>
         )}
       </div>
     </div>

@@ -50,7 +50,7 @@ export function DashboardFooter() {
   }
 
   return (
-    <footer className="h-12 px-6 bg-white border-t border-[#e4e7ec] flex items-center justify-between text-xs text-[#475467] z-20 shrink-0 select-none">
+    <footer className="h-12 px-6 bg-white border-t border-[#d0d5dd] flex items-center justify-between text-xs text-[#475467] z-20 shrink-0 select-none">
       {/* Lado Esquerdo: Status do Terminal */}
       <div className="flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-[#12b76a]" />

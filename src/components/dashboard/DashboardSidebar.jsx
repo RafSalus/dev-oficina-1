@@ -105,7 +105,7 @@ export function DashboardSidebar() {
                     title={!isHovered ? item.label : undefined}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all duration-200 group relative ${
                       isActive
-                        ? 'bg-white text-black font-bold shadow-sm'
+                        ? 'bg-white text-[#101828] font-bold shadow-sm'
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-900 font-medium'
                     }`}
                   >
@@ -115,7 +115,7 @@ export function DashboardSidebar() {
                         size={20}
                         weight={isActive ? 'fill' : 'regular'}
                         className={`transition-transform duration-200 ${
-                          isActive ? 'text-black' : 'text-zinc-400 group-hover:scale-110 group-hover:text-white'
+                          isActive ? 'text-[#0284c7]' : 'text-zinc-400 group-hover:scale-110 group-hover:text-white'
                         }`}
                       />
                     </div>
@@ -133,7 +133,7 @@ export function DashboardSidebar() {
 
                     {/* Ponto indicador sutil quando retraído */}
                     {isActive && !isHovered && (
-                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-white" />
+                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#0284c7]" />
                     )}
                   </NavLink>
                 )
@@ -146,7 +146,7 @@ export function DashboardSidebar() {
       {/* Indicador de status na base da sidebar */}
       <div className="p-2.5 border-t border-zinc-900 bg-zinc-950/80 shrink-0">
         <div className="flex items-center gap-2.5 px-2.5 py-1 text-[11px] text-zinc-500">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+          <div className="w-2 h-2 rounded-full bg-[#0284c7] shrink-0" />
           <span
             className={`whitespace-nowrap transition-all duration-300 font-medium ${
               isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none w-0 overflow-hidden'

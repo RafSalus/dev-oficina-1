@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Bell, User, SignOut, GearSix, CheckCircle, Plus, ArrowLeft, FloppyDisk } from '@phosphor-icons/react'
+import { Bell, User, SignOut, GearSix, CheckCircle, Plus, ArrowLeft, FloppyDisk, X } from '@phosphor-icons/react'
 import { useAdminAuth } from '../../context/AdminAuthContext'
+import { toast } from 'sonner'
 
 export function DashboardHeader() {
   const { user, signOut } = useAdminAuth()
@@ -39,7 +40,7 @@ export function DashboardHeader() {
   const userName = user?.user_metadata?.name || 'Administrador'
 
   return (
-    <header className="h-16 px-6 bg-white border-b border-[#e4e7ec] flex items-center justify-between z-30 shrink-0 select-none">
+    <header className="h-16 px-6 bg-white border-b border-[#d0d5dd] flex items-center justify-between z-30 shrink-0 select-none">
       {/* Lado Esquerdo: Logo e Nome da Empresa + Contexto Dinâmico */}
       <div className="flex items-center gap-3 sm:gap-4">
         <Link
@@ -92,11 +93,17 @@ export function DashboardHeader() {
           <div className="flex items-center gap-2 sm:gap-2.5 animate-in fade-in duration-200">
             <button
               type="button"
-              onClick={() => navigate('/gestao/ordem-de-servico')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white hover:bg-[#f2f4f7] text-[#344054] hover:text-[#101828] border border-[#d0d5dd] text-xs font-semibold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
+              onClick={() => {
+                try {
+                  localStorage.removeItem('dev_oficina_draft_os')
+                } catch (e) {}
+                toast.info('Abertura de Ordem de Serviço cancelada.')
+                navigate('/gestao/ordem-de-servico')
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] border border-[#d0d5dd] hover:border-[#fecdca] text-xs font-semibold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
             >
-              <ArrowLeft size={14} weight="bold" />
-              <span>Voltar</span>
+              <X size={14} weight="bold" />
+              <span>Cancelar</span>
             </button>
             <button
               type="submit"
@@ -125,7 +132,7 @@ export function DashboardHeader() {
             }`}
           >
             <Bell size={20} weight="bold" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-[#101828] rounded-full ring-2 ring-white" />
+            <span className="absolute top-2 right-2 w-2 h-2 bg-[#0284c7] rounded-full ring-2 ring-white" />
           </button>
 
           {showNotifications && (
@@ -140,7 +147,7 @@ export function DashboardHeader() {
               </div>
               <div className="py-2">
                 <div className="px-4 py-2.5 hover:bg-[#f9fafb] transition-colors flex items-start gap-3">
-                  <div className="p-1.5 rounded-lg bg-[#ecfdf3] text-[#027a48] mt-0.5 shrink-0">
+                  <div className="p-1.5 rounded-lg bg-[#e0f2fe] text-[#0284c7] mt-0.5 shrink-0">
                     <CheckCircle size={16} weight="fill" />
                   </div>
                   <div>

@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { NoticeProvider } from './context/NoticeContext'
 import { AdminAuthProvider } from './context/AdminAuthContext'
 
+import { Toaster } from 'sonner'
+import { CheckCircle, Info, WarningCircle, XCircle } from '@phosphor-icons/react'
+
 import { LandingPage } from './pages/LandingPage'
 import { ClienteEntrarPage } from './pages/ClienteEntrarPage'
 import { GestaoEntrarPage } from './pages/GestaoEntrarPage'
@@ -12,17 +15,43 @@ import { GestaoAcessoNegadoPage } from './pages/GestaoAcessoNegadoPage'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
 import { NovaOrdemDeServicoPage } from './pages/dashboard/NovaOrdemDeServicoPage'
+import { CotacaoAutoPecaPage } from './pages/CotacaoAutoPecaPage'
 
 export default function App() {
   return (
     <NoticeProvider>
       <AdminAuthProvider>
         <BrowserRouter>
+          <Toaster
+            position="top-right"
+            richColors={false}
+            duration={3200}
+            icons={{
+              success: <CheckCircle size={18} weight="fill" className="text-[#0284c7]" />,
+              info: <Info size={18} weight="fill" className="text-[#0284c7]" />,
+              warning: <WarningCircle size={18} weight="fill" className="text-amber-400" />,
+              error: <XCircle size={18} weight="fill" className="text-rose-400" />,
+            }}
+            toastOptions={{
+              style: {
+                background: '#0f172a',
+                color: '#ffffff',
+                border: '1px solid #1e293b',
+                borderRadius: '12px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                padding: '12px 14px',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
+              },
+            }}
+          />
           <Routes>
-            {/* Public landing and client routes */}
+            {/* Public landing, client e auto parts quotation routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/cliente/entrar" element={<ClienteEntrarPage />} />
             <Route path="/cliente/recuperar-senha" element={<Navigate to="/cliente/entrar" replace />} />
+            <Route path="/cotacao/:id" element={<CotacaoAutoPecaPage />} />
+            <Route path="/cotacao" element={<CotacaoAutoPecaPage />} />
 
             {/* Management Auth routes */}
             <Route path="/gestao/entrar" element={<GestaoEntrarPage />} />

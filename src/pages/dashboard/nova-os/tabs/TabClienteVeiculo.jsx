@@ -11,25 +11,29 @@ import {
   ArrowRight,
   IdentificationBadge,
   WhatsappLogo,
+  FloppyDisk,
+  X,
 } from '@phosphor-icons/react'
+import { useNotice } from '../../../../context/NoticeContext'
 import { MOCK_CLIENTES_VEICULOS } from '../../../../constants/mockClientesVeiculos'
 import { GoogleMapsIcon } from '../../../../components/icons/GoogleMapsIcon'
+import { toast } from 'sonner'
 
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
     minHeight: '44px',
     height: '44px',
-    backgroundColor: state.isDisabled ? '#f2f4f7' : state.isFocused ? '#ffffff' : '#f9fafb',
-    borderColor: state.isFocused ? '#101828' : '#e4e7ec',
+    backgroundColor: state.isDisabled ? '#f2f4f7' : state.isFocused ? '#ffffff' : '#f8fafc',
+    borderColor: state.isFocused ? '#101828' : '#d0d5dd',
     borderWidth: '1px',
     borderRadius: '14px',
     boxShadow: state.isFocused ? '0 0 0 1px #101828' : 'none',
     fontSize: '13px',
     cursor: state.isDisabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.15s ease',
-    '&:hover': {
-      borderColor: state.isFocused ? '#101828' : '#d0d5dd',
+    ':hover': {
+      borderColor: state.isFocused ? '#101828' : '#98a2b3',
       backgroundColor: state.isDisabled ? '#f2f4f7' : '#ffffff',
     },
   }),
@@ -53,13 +57,13 @@ const customSelectStyles = {
     ...base,
     padding: '6px 10px',
     color: '#667085',
-    '&:hover': { color: '#101828' },
+    ':hover': { color: '#101828' },
   }),
   clearIndicator: (base) => ({
     ...base,
     padding: '6px 8px',
     color: '#667085',
-    '&:hover': { color: '#101828' },
+    ':hover': { color: '#101828' },
   }),
   menu: (base) => ({
     ...base,
@@ -118,7 +122,9 @@ const PRIORIDADE_OPTIONS = [
   { value: 'urgente', label: 'Urgente' },
 ]
 
-export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
+export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCancel }) {
+  const { openNotice } = useNotice()
+
   const {
     clienteId,
     cliente,
@@ -137,6 +143,26 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
     prioridade = 'normal',
     relatoCliente = '',
   } = formData
+
+  const handleSave = () => {
+    if (!clienteId || !cliente?.trim()) {
+      toast.warning('Por favor, selecione o cliente para continuar.')
+      return
+    }
+
+    if (!veiculoId || !placa?.trim()) {
+      toast.warning('Por favor, selecione o veículo do cliente para continuar.')
+      return
+    }
+
+    if (!km || !km?.trim()) {
+      toast.warning('Por favor, informe a quilometragem (KM) atual do veículo.')
+      return
+    }
+
+    toast.success('Dados do cliente e veículo confirmados!')
+    onSaveStep?.()
+  }
 
   // Cliente selecionado atualmente
   const selectedClienteOption = useMemo(() => {
@@ -235,7 +261,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
       {/* Grid de 3 Cartões Proporcionais e Compactos */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-3 overflow-hidden">
         {/* Cartão 1: Cliente (Primeiro na ordem) */}
-        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
+        <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 flex flex-col justify-between overflow-hidden">
           <div className="flex items-center justify-between pb-2.5 border-b border-[#f2f4f7] shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-[#101828] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
@@ -274,9 +300,9 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
 
             {/* Painel Executivo do Cliente Selecionado */}
             {cliente ? (
-              <div className="flex-1 bg-[#fafafa] border border-[#e4e7ec] rounded-2xl p-3 flex flex-col justify-between overflow-hidden shadow-2xs">
+              <div className="flex-1 bg-[#f8fafc] border border-[#d0d5dd] rounded-2xl p-3 flex flex-col justify-between overflow-hidden shadow-xs">
                 {/* Linha Superior: Avatar, Nome e CPF/CNPJ */}
-                <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#e4e7ec]">
+                <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#e2e8f0]">
                   <div className="w-13 h-13 rounded-2xl bg-[#101828] text-white flex items-center justify-center font-black text-base shrink-0 shadow-xs tracking-wider">
                     {clienteIniciais}
                   </div>
@@ -286,7 +312,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                     </p>
                     <div className="flex items-center gap-2 text-xs text-[#475467] mt-1">
                       <IdentificationBadge size={16} className="text-[#667085] shrink-0" />
-                      <span className="font-mono font-semibold bg-white px-2 py-0.5 rounded-md border border-[#e4e7ec]">
+                      <span className="font-mono font-semibold bg-white px-2 py-0.5 rounded-md border border-[#d0d5dd]">
                         {documento || 'Documento não informado'}
                       </span>
                     </div>
@@ -295,7 +321,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
 
                 {/* Contatos: Telefone e E-mail compactos */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-1.5">
-                  <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-[#e4e7ec] truncate">
+                  <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-[#d0d5dd] truncate">
                     <div className="w-7 h-7 rounded-lg bg-[#f2f4f7] flex items-center justify-center text-[#101828] shrink-0">
                       <Phone size={15} weight="bold" />
                     </div>
@@ -318,7 +344,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-[#e4e7ec] truncate">
+                  <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-[#d0d5dd] truncate">
                     <div className="w-7 h-7 rounded-lg bg-[#f2f4f7] flex items-center justify-center text-[#101828] shrink-0">
                       <EnvelopeSimple size={15} weight="bold" />
                     </div>
@@ -332,7 +358,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                 </div>
 
                 {/* Bloco de Endereço Completo com Atalho para Google Maps */}
-                <div className="pt-2 border-t border-[#e4e7ec] flex items-center justify-between gap-2.5">
+                <div className="pt-2 border-t border-[#e2e8f0] flex items-center justify-between gap-2.5">
                   <div className="flex items-start gap-2.5 min-w-0 flex-1">
                     {endereco ? (
                       <a
@@ -341,13 +367,13 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-8 h-8 rounded-xl bg-white hover:bg-[#f8f9fa] border border-[#e4e7ec] hover:border-[#4285F4] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs transition-all cursor-pointer group"
+                        className="w-8 h-8 rounded-xl bg-white hover:bg-[#f8f9fa] border border-[#d0d5dd] hover:border-[#4285F4] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs transition-all cursor-pointer group"
                         title="Clique para abrir endereço no Google Maps"
                       >
                         <GoogleMapsIcon className="w-4 h-5 transition-transform group-hover:scale-110" />
                       </a>
                     ) : (
-                      <div className="w-8 h-8 rounded-xl bg-white border border-[#e4e7ec] flex items-center justify-center text-[#667085] shrink-0 mt-0.5 shadow-2xs">
+                      <div className="w-8 h-8 rounded-xl bg-white border border-[#d0d5dd] flex items-center justify-center text-[#667085] shrink-0 mt-0.5 shadow-2xs">
                         <MapPin size={18} weight="bold" />
                       </div>
                     )}
@@ -368,7 +394,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="h-8 px-2.5 rounded-xl bg-white hover:bg-[#f8f9fa] active:bg-[#f2f4f7] border border-[#e4e7ec] hover:border-[#4285F4] flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-2xs group"
+                      className="h-8 px-2.5 rounded-xl bg-white hover:bg-[#f8f9fa] active:bg-[#f2f4f7] border border-[#d0d5dd] hover:border-[#4285F4] flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-2xs group"
                       title="Abrir localização no Google Maps"
                     >
                       <GoogleMapsIcon className="w-3.5 h-4 shrink-0 transition-transform group-hover:scale-110" />
@@ -380,7 +406,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border border-dashed border-[#d0d5dd] rounded-2xl bg-[#fafafa]">
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border border-dashed border-[#d0d5dd] rounded-2xl bg-[#f8fafc]">
                 <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] flex items-center justify-center text-[#667085] mb-3 shadow-2xs">
                   <User size={24} />
                 </div>
@@ -394,7 +420,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
         </div>
 
         {/* Cartão 2: Veículo (Vinculado estritamente ao Cliente) */}
-        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
+        <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 flex flex-col justify-between overflow-hidden">
           <div className="flex items-center justify-between pb-2.5 border-b border-[#f2f4f7] shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-[#101828] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
@@ -407,7 +433,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
             </div>
 
             {placa && (
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#f2f4f7] text-[#344054] border border-[#e4e7ec]">
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#f2f4f7] text-[#344054] border border-[#d0d5dd]">
                 Veículo Identificado
               </span>
             )}
@@ -440,7 +466,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
 
             {/* Vitrine do Veículo Selecionado */}
             {placa ? (
-              <div className="bg-[#fafafa] border border-[#e4e7ec] rounded-2xl p-3 flex items-center gap-3 shadow-2xs">
+              <div className="bg-[#f8fafc] border border-[#d0d5dd] rounded-2xl p-3 flex items-center gap-3 shadow-xs">
                 {/* Emblema da Placa com Estilo Automotivo Mercosul */}
                 <div className="flex flex-col items-center bg-white border-2 border-[#101828] rounded-xl px-3 py-1.5 shrink-0 shadow-xs">
                   <span className="text-[8px] font-black uppercase tracking-widest text-[#101828] leading-none mb-0.5">
@@ -456,7 +482,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                     {marcaModelo}
                   </p>
                   <div className="flex items-center gap-2 mt-1.5 text-xs text-[#667085]">
-                    <span className="font-bold text-[#344054] bg-white px-2 py-0.5 rounded-md border border-[#e4e7ec]">
+                    <span className="font-bold text-[#344054] bg-white px-2 py-0.5 rounded-md border border-[#d0d5dd]">
                       Ano {ano}
                     </span>
                     <span>•</span>
@@ -465,7 +491,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                 </div>
               </div>
             ) : (
-              <div className="py-5 text-center border border-dashed border-[#d0d5dd] rounded-2xl bg-[#fafafa]">
+              <div className="py-5 text-center border border-dashed border-[#d0d5dd] rounded-2xl bg-[#f8fafc]">
                 <p className="text-sm font-extrabold text-[#101828]">
                   {!clienteId ? 'Aguardando cliente' : 'Nenhum veículo selecionado'}
                 </p>
@@ -479,6 +505,20 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
 
             {/* Únicos Campos a Preencher: KM e Nível de Combustível */}
             <div className="pt-2.5 border-t border-[#f2f4f7] space-y-2">
+              {/* KM Anterior do Veículo */}
+              {selectedVeiculoOption?.kmPadrao && (
+                <div className="p-2 rounded-xl bg-[#f0f9ff] border border-[#bae6fd]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#0369a1]">
+                      KM Anterior Registrado
+                    </span>
+                    <span className="text-sm font-black text-[#0c4a6e]">
+                      {selectedVeiculoOption.kmPadrao} km
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold uppercase tracking-wider text-[#344054]">
@@ -493,7 +533,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                     placeholder="Ex: 64.250 km"
                     value={km}
                     onChange={(e) => updateFormData({ km: e.target.value })}
-                    className="w-full bg-[#f9fafb] hover:bg-[#f2f4f7] focus:bg-white border border-[#e4e7ec] focus:border-[#101828] rounded-xl px-4 h-11 text-base font-black text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all shadow-2xs"
+                    className="w-full bg-[#f8fafc] hover:bg-[#f1f5f9] focus:bg-white border border-[#d0d5dd] focus:border-[#101828] rounded-xl px-4 h-11 text-base font-black text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all shadow-xs"
                   />
                   <Speedometer size={20} className="absolute right-3.5 top-3 text-[#98a2b3]" />
                 </div>
@@ -518,7 +558,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                         className={`h-10 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${
                           isSelected
                             ? 'bg-black text-white border-black shadow-xs'
-                            : 'bg-[#f9fafb] text-[#475467] border-[#e4e7ec] hover:border-[#d0d5dd] hover:bg-[#f2f4f7]'
+                            : 'bg-[#f8fafc] text-[#475467] border-[#d0d5dd] hover:border-[#98a2b3] hover:bg-[#f1f5f9]'
                         }`}
                       >
                         {nivel}
@@ -532,7 +572,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
         </div>
 
         {/* Cartão 3: Relato do Cliente (Terceiro na ordem) */}
-        <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
+        <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 flex flex-col justify-between overflow-hidden">
           <div className="flex items-center justify-between pb-2.5 border-b border-[#f2f4f7] shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-[#101828] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
@@ -544,7 +584,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
               </div>
             </div>
 
-            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#f2f4f7] text-[#344054] border border-[#e4e7ec]">
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#f2f4f7] text-[#344054] border border-[#d0d5dd]">
               Recepção
             </span>
           </div>
@@ -598,25 +638,35 @@ export function TabClienteVeiculo({ formData, updateFormData, onNext }) {
                 value={relatoCliente}
                 onChange={(e) => updateFormData({ relatoCliente: e.target.value })}
                 placeholder="Descreva o que o cliente relatou: barulho na suspensão ao esterçar, luz acesa no painel, vazamento de óleo, revisão periódica..."
-                className="flex-1 w-full bg-[#f9fafb] hover:bg-[#f2f4f7] focus:bg-white border border-[#e4e7ec] focus:border-[#101828] rounded-xl p-3.5 text-sm font-medium text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all resize-none leading-relaxed shadow-2xs"
+                className="flex-1 w-full bg-[#f8fafc] hover:bg-[#f1f5f9] focus:bg-white border border-[#d0d5dd] focus:border-[#101828] rounded-xl p-3.5 text-sm font-medium text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all resize-none leading-relaxed shadow-xs"
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Barra Inferior de Navegação Rápida entre Abas */}
-      <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#e4e7ec] shadow-xs flex items-center justify-between">
-        <span className="text-xs font-medium text-[#667085]">
-          Aba 1 de 8 • <strong className="text-[#101828] font-bold">Cliente e Veiculo</strong>
-        </span>
+      {/* Barra Inferior de Ações da Etapa */}
+      <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between">
         <button
           type="button"
-          onClick={onNext}
-          className="inline-flex items-center gap-2 text-xs font-extrabold text-[#101828] hover:text-black hover:underline cursor-pointer"
+          onClick={onCancel}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] hover:border-[#fecdca] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
         >
-          <span>Avançar para Checklist</span>
-          <ArrowRight size={15} weight="bold" />
+          <X size={14} weight="bold" />
+          <span>Cancelar</span>
+        </button>
+
+        <span className="text-xs font-medium text-[#667085]">
+          Aba 1 de 9 • <strong className="text-[#101828] font-bold">Cliente e Veiculo</strong>
+        </span>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+        >
+          <FloppyDisk size={15} weight="bold" />
+          <span>Salvar e Continuar</span>
         </button>
       </div>
     </div>

@@ -6,10 +6,14 @@ import {
   ArrowRight,
   ClipboardText,
   CarProfile,
+  Speedometer,
+  FloppyDisk,
+  X,
 } from '@phosphor-icons/react'
 import { ITENS_CHECKLIST_ENTRADA, ITENS_CHECKLIST_SAIDA } from '../../../../constants/checklistItems'
+import { toast } from 'sonner'
 
-export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
+export function TabChecklist({ formData, updateFormData, onSaveStep, onCancel }) {
   const [subTab, setSubTab] = useState('entrada') // 'entrada' | 'saida'
 
   const checklistEntrada = formData.checklistEntrada || {}
@@ -81,12 +85,12 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
         key={item.id}
         className={`mb-2 rounded-xl border transition-colors ${
           status === 'conforme'
-            ? 'bg-[#f0fdf4] border-[#a6f4c5]'
+            ? 'bg-[#f0f9ff] border-[#bae6fd]'
             : status === 'nao_conforme'
             ? 'bg-[#fef3f2] border-[#fecdca]'
             : status === 'isento'
-            ? 'bg-[#f9fafb] border-[#e4e7ec]'
-            : 'bg-white border-[#e4e7ec] hover:border-[#d0d5dd]'
+            ? 'bg-[#f8fafc] border-[#d0d5dd]'
+            : 'bg-white border-[#d0d5dd] hover:border-[#98a2b3]'
         }`}
       >
         {/* Linha do item: Label + Botões de Status */}
@@ -109,8 +113,8 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
               onClick={() => handleStatusItem(tipo, item.id, 'conforme')}
               className={`px-2.5 py-0.5 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer border ${
                 status === 'conforme'
-                  ? 'bg-[#027a48] text-white border-[#027a48]'
-                  : 'bg-white text-[#027a48] border-[#a6f4c5] hover:bg-[#ecfdf3]'
+                  ? 'bg-[#0284c7] text-white border-[#0284c7]'
+                  : 'bg-white text-[#0284c7] border-[#bae6fd] hover:bg-[#e0f2fe]'
               }`}
             >
               Conforme
@@ -158,7 +162,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
   return (
     <div className="h-full w-full flex flex-col justify-between gap-2.5 overflow-hidden">
       {/* Sub-Header com Seletor de Entrada / Saída e Ações Rápidas */}
-      <div className="h-10 shrink-0 bg-white px-3 rounded-2xl border border-[#e4e7ec] shadow-xs flex items-center justify-between gap-2">
+      <div className="h-10 shrink-0 bg-white px-3 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between gap-2">
         {/* Segmented Switcher Entrada / Saída */}
         <div className="flex items-center gap-1 bg-[#f2f4f7] p-1 rounded-xl">
           <button
@@ -175,7 +179,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
             <span
               className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 totalEntradaOk === ITENS_CHECKLIST_ENTRADA.length
-                  ? 'bg-[#ecfdf3] text-[#027a48]'
+                  ? 'bg-[#e0f2fe] text-[#0284c7]'
                   : 'bg-[#fffaeb] text-[#b54708]'
               }`}
             >
@@ -197,7 +201,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
             <span
               className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 totalSaidaOk === ITENS_CHECKLIST_SAIDA.length
-                  ? 'bg-[#ecfdf3] text-[#027a48]'
+                  ? 'bg-[#e0f2fe] text-[#0284c7]'
                   : 'bg-[#f2f4f7] text-[#667085]'
               }`}
             >
@@ -213,7 +217,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
           /* CHECKLIST DE ENTRADA (22 itens distribuídos em 3 colunas elegantes) */
           <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-2 overflow-hidden">
             {/* Coluna 1: Itens 1 a 8 */}
-            <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-3 flex flex-col justify-between overflow-hidden">
+            <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-3 flex flex-col justify-between overflow-hidden">
               <div className="flex items-center justify-between pb-2 mb-1 rounded-xl bg-[#f2f4f7] px-3 py-2 shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-lg bg-[#101828] text-white flex items-center justify-center font-bold text-xs shrink-0">
@@ -232,7 +236,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
             </div>
 
             {/* Coluna 2: Itens 9 a 16 */}
-            <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-3 flex flex-col justify-between overflow-hidden">
+            <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-3 flex flex-col justify-between overflow-hidden">
               <div className="flex items-center justify-between pb-2 mb-1 rounded-xl bg-[#f2f4f7] px-3 py-2 shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-lg bg-[#101828] text-white flex items-center justify-center font-bold text-xs shrink-0">
@@ -251,7 +255,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
             </div>
 
             {/* Coluna 3: Itens 17 a 22 + Observações Gerais */}
-            <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-3 flex flex-col justify-between overflow-hidden">
+            <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-3 flex flex-col justify-between overflow-hidden">
               <div className="flex items-center justify-between pb-2 mb-1 rounded-xl bg-[#f2f4f7] px-3 py-2 shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-lg bg-[#101828] text-white flex items-center justify-center font-bold text-xs shrink-0">
@@ -278,7 +282,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
                     value={formData.checklistEntradaObs || ''}
                     onChange={(e) => updateFormData({ checklistEntradaObs: e.target.value })}
                     placeholder="Anotações gerais da vistoria de entrada, pertences deixados pelo cliente, avarias prévias na lataria..."
-                    className="flex-1 w-full bg-[#f9fafb] hover:bg-[#f2f4f7] focus:bg-white border border-[#e4e7ec] focus:border-[#101828] rounded-xl p-2 text-xs font-medium text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all resize-none leading-relaxed"
+                    className="flex-1 w-full bg-[#f8fafc] hover:bg-[#f1f5f9] focus:bg-white border border-[#d0d5dd] focus:border-[#101828] rounded-xl p-2 text-xs font-medium text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all resize-none leading-relaxed"
                   />
                 </div>
               </div>
@@ -288,7 +292,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
           /* CHECKLIST DE SAÍDA (5 itens + Observações Gerais + Termo de Liberação) */
           <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-2 overflow-hidden">
             {/* Coluna 1: Itens de Saída */}
-            <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
+            <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 flex flex-col justify-between overflow-hidden">
               <div className="flex items-center gap-2 pb-3 mb-1 rounded-xl bg-[#f2f4f7] px-3 py-2 shrink-0">
                 <div className="w-7 h-7 rounded-lg bg-[#101828] text-white flex items-center justify-center font-bold text-xs shrink-0">
                   <CheckSquare size={16} weight="bold" />
@@ -304,45 +308,78 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
               </div>
             </div>
 
-            {/* Coluna 2: Observações Gerais de Saída */}
-            <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
-              <div className="flex items-center gap-2 pb-3 border-b border-[#f2f4f7] shrink-0">
-                <div className="w-7 h-7 rounded-lg bg-[#101828] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                  <ClipboardText size={16} weight="bold" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-[#101828]">Observações Gerais de Saída</h3>
-                  <p className="text-[10px] text-[#667085]">Notas de rodagem e entrega</p>
+            {/* Coluna 2: KM de Saída + Observações Gerais de Saída */}
+            <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 flex flex-col justify-between overflow-hidden">
+              <div className="flex items-center justify-between pb-2 mb-1 rounded-xl bg-[#f2f4f7] px-3 py-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#101828] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    <ClipboardText size={14} weight="bold" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[#101828]">Dados de Saída</h3>
+                    <p className="text-[10px] text-[#667085]">KM final e observações</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex-1 flex flex-col py-3 min-h-0">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#344054] mb-1">
-                  Relatório de Liberação / Observações Finais
-                </label>
-                <textarea
-                  value={formData.checklistSaidaObs || ''}
-                  onChange={(e) => updateFormData({ checklistSaidaObs: e.target.value })}
-                  placeholder="Relate o resultado do teste de rodagem, recomendações de retorno para revisão, peças velhas devolvidas ao cliente..."
-                  className="flex-1 w-full bg-[#f9fafb] hover:bg-[#f2f4f7] focus:bg-white border border-[#e4e7ec] focus:border-[#101828] rounded-xl p-3 text-xs font-medium text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all resize-none leading-relaxed"
-                />
+              <div className="flex-1 flex flex-col py-3 min-h-0 gap-3">
+                {/* Campo KM de Saída */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#344054]">
+                      Quilometragem de Saída (KM) <span className="text-[#b42318]">*</span>
+                    </label>
+                    <span className="text-[10px] text-[#667085]">Hodômetro final</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: 64.280 km"
+                      value={formData.kmSaida || ''}
+                      onChange={(e) => updateFormData({ kmSaida: e.target.value })}
+                      className="w-full bg-[#f8fafc] hover:bg-[#f1f5f9] focus:bg-white border border-[#d0d5dd] focus:border-[#101828] rounded-xl px-3 h-10 text-sm font-bold text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all shadow-xs"
+                    />
+                    <Speedometer size={16} className="absolute right-3 top-2.5 text-[#98a2b3]" />
+                  </div>
+                  {formData.km && (
+                    <p className="text-[10px] text-[#667085] mt-1">
+                      KM de entrada: <span className="font-bold text-[#344054]">{formData.km}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Observações Gerais de Saída */}
+                <div className="flex-1 flex flex-col min-h-0">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#344054] mb-1">
+                    Relatório de Liberação / Observações Finais
+                  </label>
+                  <textarea
+                    value={formData.checklistSaidaObs || ''}
+                    onChange={(e) => updateFormData({ checklistSaidaObs: e.target.value })}
+                    placeholder="Relate o resultado do teste de rodagem, recomendações de retorno para revisão, peças velhas devolvidas ao cliente..."
+                    className="flex-1 w-full bg-[#f8fafc] hover:bg-[#f1f5f9] focus:bg-white border border-[#d0d5dd] focus:border-[#101828] rounded-xl p-3 text-xs font-medium text-[#101828] placeholder-[#98a2b3] focus:outline-none transition-all resize-none leading-relaxed"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Coluna 3: Status de Liberação */}
-            <div className="h-full bg-white rounded-2xl border border-[#e4e7ec] shadow-xs p-4 flex flex-col justify-between overflow-hidden">
-              <div className="flex items-center gap-2 pb-3 border-b border-[#f2f4f7] shrink-0">
-                <div className="w-7 h-7 rounded-lg bg-[#101828] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                  <CarProfile size={16} weight="bold" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-[#101828]">Controle de Qualidade</h3>
-                  <p className="text-[10px] text-[#667085]">Validação de conformidade técnica</p>
+            <div className="h-full bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 flex flex-col justify-between overflow-hidden">
+              <div className="flex items-center justify-between pb-2 mb-1 rounded-xl bg-[#f2f4f7] px-3 py-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#101828] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    <CarProfile size={14} weight="bold" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-[#101828]">Controle de Qualidade</h3>
+                    <p className="text-[10px] text-[#667085]">Validação de conformidade técnica</p>
+                  </div>
                 </div>
               </div>
 
               <div className="flex-1 flex flex-col justify-between py-3 gap-3 overflow-hidden">
-                <div className="p-3 rounded-xl bg-[#f9fafb] border border-[#e4e7ec] space-y-2">
+                <div className="p-3 rounded-xl bg-[#f8fafc] border border-[#d0d5dd] space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#667085]">Entrada do Veículo:</span>
                     <span className="font-bold text-[#101828]">
@@ -369,7 +406,7 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#fcfcfd] border border-[#e4e7ec] text-[11px] text-[#475467] leading-relaxed space-y-1.5">
+                <div className="p-3 rounded-xl bg-[#f8fafc] border border-[#d0d5dd] text-[11px] text-[#475467] leading-relaxed space-y-1.5">
                   <p className="font-bold text-[#101828]">Importante na Entrega:</p>
                   <p>• Apresentar ao cliente as peças substituídas.</p>
                   <p>• Validar se o hodômetro final condiz com os testes de rodagem.</p>
@@ -381,28 +418,31 @@ export function TabChecklist({ formData, updateFormData, onPrev, onNext }) {
         )}
       </div>
 
-      {/* Barra Inferior de Navegação */}
-      <div className="h-10 shrink-0 bg-white px-4 rounded-xl border border-[#e4e7ec] shadow-xs flex items-center justify-between">
+      {/* Barra Inferior de Ações da Etapa */}
+      <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between">
         <button
           type="button"
-          onClick={onPrev}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#475467] hover:text-[#101828] cursor-pointer"
+          onClick={onCancel}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] hover:border-[#fecdca] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
         >
-          <ArrowLeft size={14} weight="bold" />
-          <span>Voltar para Cliente e Veiculo</span>
+          <X size={14} weight="bold" />
+          <span>Cancelar</span>
         </button>
 
-        <span className="text-[11px] font-medium text-[#667085]">
-          Aba 2 de 8 • <strong className="text-[#101828]">Checklist Oficial</strong>
+        <span className="text-xs font-medium text-[#667085]">
+          Aba 2 de 9 • <strong className="text-[#101828] font-bold">Checklist Oficial</strong>
         </span>
 
         <button
           type="button"
-          onClick={onNext}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#101828] hover:text-black hover:underline cursor-pointer"
+          onClick={() => {
+            toast.success('Checklist salvo com sucesso!')
+            onSaveStep?.()
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
         >
-          <span>Avançar para Diagnostico</span>
-          <ArrowRight size={14} weight="bold" />
+          <FloppyDisk size={15} weight="bold" />
+          <span>Salvar e Continuar</span>
         </button>
       </div>
     </div>
