@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Clock, Calendar, ShieldCheck } from '@phosphor-icons/react'
-import { useMecanico } from '../../context/MecanicoContext'
+import { Clock, Calendar, ShieldCheck, CaretLeft, CaretRight } from '@phosphor-icons/react'
+import { useCliente } from '../../context/ClienteContext'
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -14,8 +14,8 @@ const WEEKDAY_NAMES = [
 
 const WEEKDAY_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
-export function MecanicoFooter() {
-  const { mecanicoAtivo } = useMecanico()
+export function ClienteFooter() {
+  const { clienteAtivo } = useCliente()
   const [timeStr, setTimeStr] = useState('')
   const [dateStr, setDateStr] = useState('')
   const [showCalendar, setShowCalendar] = useState(false)
@@ -84,18 +84,18 @@ export function MecanicoFooter() {
 
   return (
     <footer className="h-12 px-6 bg-white border-t border-[#d0d5dd] flex items-center justify-between text-xs text-[#475467] z-20 shrink-0 select-none relative">
-      {/* Lado Esquerdo: Identificação do Mecânico */}
+      {/* Lado Esquerdo: Identificação do Cliente */}
       <div className="flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-500" />
         <span className="text-xs font-bold text-[#101828]">
-          {mecanicoAtivo.nome}
+          {clienteAtivo?.nome || 'Cliente da Oficina'}
         </span>
       </div>
 
-      {/* Centro: Status do Sistema e Sincronização */}
+      {/* Centro: Status do Sistema e Conexão */}
       <div className="hidden md:flex items-center gap-2 text-[11px] text-[#667085]">
         <ShieldCheck size={14} weight="bold" className="text-[#0284c7]" />
-        <span>Sincronizado com o Pátio e Almoxarifado</span>
+        <span>Conectado à Oficina • Veículo em Atendimento</span>
       </div>
 
       {/* Lado Direito: Calendário (hover) e Hora ao Vivo */}
@@ -164,7 +164,7 @@ export function MecanicoFooter() {
 
               {/* Rodapé do Mini Calendário */}
               <div className="mt-3 pt-2 border-t border-[#e4e7ec] flex items-center justify-between text-[10px] text-[#667085]">
-                <span>Bancada Operacional</span>
+                <span>Oficina aberta até 18h</span>
                 <span className="font-bold text-[#0284c7]">MG Gabriel</span>
               </div>
             </div>

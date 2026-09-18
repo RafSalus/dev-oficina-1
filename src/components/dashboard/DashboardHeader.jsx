@@ -12,7 +12,6 @@ import {
   X,
   PushPin,
   PushPinSlash,
-  Wrench,
 } from '@phosphor-icons/react'
 import { useAdminAuth } from '../../context/AdminAuthContext'
 import { toast } from 'sonner'
@@ -226,16 +225,6 @@ export function DashboardHeader({ isPinned = false, onTogglePin }) {
               )}
             </button>
           )}
-
-          {/* Botão para alternar para o Portal do Mecânico */}
-          <Link
-            to="/mecanico/dashboard"
-            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#0284c7] bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
-            title="Acessar Bancada Técnica e Ordens de Serviço do Mecânico"
-          >
-            <Wrench size={15} weight="bold" />
-            <span>Portal do Mecânico</span>
-          </Link>
         </div>
 
         {/* Ícone de Notificação */}
@@ -323,15 +312,6 @@ export function DashboardHeader({ isPinned = false, onTogglePin }) {
               </div>
 
               <div className="py-1">
-                <Link
-                  to="/mecanico/dashboard"
-                  onClick={() => setShowProfile(false)}
-                  className="w-full px-4 py-2 text-xs font-bold text-[#0284c7] hover:bg-sky-50 flex items-center gap-2.5 transition-colors"
-                >
-                  <Wrench size={16} weight="bold" />
-                  <span>Portal do Mecânico</span>
-                </Link>
-
                 <Link
                   to="/gestao/configuracoes"
                   onClick={() => setShowProfile(false)}

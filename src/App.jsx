@@ -21,6 +21,8 @@ import { CotacaoAutoPecaPage } from './pages/CotacaoAutoPecaPage'
 import { AprovacaoOrcamentoClientePage } from './pages/AprovacaoOrcamentoClientePage'
 import { MecanicoLayout } from './layouts/MecanicoLayout'
 import { MecanicoModulePlaceholder } from './components/mecanico/MecanicoModulePlaceholder'
+import { ClienteLayout } from './layouts/ClienteLayout'
+import { ClienteModulePlaceholder } from './components/cliente/ClienteModulePlaceholder'
 
 export default function App() {
   return (
@@ -111,6 +113,20 @@ export default function App() {
               <Route path="clientes" element={<MecanicoModulePlaceholder />} />
               <Route path="leva-e-traz" element={<MecanicoModulePlaceholder />} />
               <Route path="comissoes" element={<MecanicoModulePlaceholder />} />
+            </Route>
+
+            {/* Post-login Customer Portal with Dedicated Menus and Layout */}
+            <Route path="/cliente" element={<ClienteLayout />}>
+              <Route index element={<Navigate to="/cliente/resumo" replace />} />
+              <Route path="inicio" element={<Navigate to="/cliente/resumo" replace />} />
+              <Route path="resumo" element={<ClienteModulePlaceholder />} />
+              <Route path="veiculos" element={<ClienteModulePlaceholder />} />
+              <Route path="servicos" element={<ClienteModulePlaceholder />} />
+              <Route path="manutencoes" element={<ClienteModulePlaceholder />} />
+              <Route path="garantias" element={<ClienteModulePlaceholder />} />
+              <Route path="historico" element={<ClienteModulePlaceholder />} />
+              <Route path="posto" element={<ClienteModulePlaceholder />} />
+              <Route path="agenda" element={<ClienteModulePlaceholder />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

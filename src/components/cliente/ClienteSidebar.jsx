@@ -2,38 +2,28 @@ import React, { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   SquaresFour,
-  ClipboardText,
-  MagnifyingGlassPlus,
-  CheckSquareOffset,
+  CarProfile,
   Wrench,
-  ShoppingCart,
-  Package,
-  WarningOctagon,
-  Hammer,
-  Users,
-  ArrowsLeftRight,
+  Toolbox,
+  Certificate,
+  ClockCounterClockwise,
+  GasPump,
   CalendarDots,
-  Coins,
 } from '@phosphor-icons/react'
-import { MECANICO_MENU_CATEGORIES } from '../../constants/mecanicoMenus'
+import { CLIENTE_MENU_CATEGORIES } from '../../constants/clienteMenus'
 
 const ICONS_MAP = {
   SquaresFour,
-  ClipboardText,
-  MagnifyingGlassPlus,
-  CheckSquareOffset,
+  CarProfile,
   Wrench,
-  ShoppingCart,
-  Package,
-  WarningOctagon,
-  Hammer,
-  Users,
-  ArrowsLeftRight,
+  Toolbox,
+  Certificate,
+  ClockCounterClockwise,
+  GasPump,
   CalendarDots,
-  Coins,
 }
 
-export function MecanicoSidebar() {
+export function ClienteSidebar() {
   const [isHovered, setIsHovered] = useState(false)
   const location = useLocation()
 
@@ -45,11 +35,11 @@ export function MecanicoSidebar() {
         isHovered ? 'w-[264px]' : 'w-[72px]'
       }`}
     >
-      {/* Lista scrollável de menus do mecânico */}
-      <div className="overflow-y-auto overflow-x-hidden no-scrollbar py-2.5 px-2 space-y-1.5">
-        {MECANICO_MENU_CATEGORIES.map((category, catIndex) => (
+      {/* Lista de menus do cliente */}
+      <div className="overflow-y-auto overflow-x-hidden no-scrollbar py-2.5 px-2 space-y-1">
+        {CLIENTE_MENU_CATEGORIES.map((category, catIndex) => (
           <div key={category.id} className="space-y-1">
-            {/* Linha separadora de categoria que expande e retrai */}
+            {/* Linha separadora de categoria */}
             {catIndex > 0 && (
               <div className="pt-2 pb-1.5 px-2">
                 <div
@@ -71,16 +61,16 @@ export function MecanicoSidebar() {
               </span>
             </div>
 
-            {/* Links do Menu do Mecânico */}
+            {/* Links do Menu do Cliente */}
             <div className="space-y-0.5">
               {category.items.map((item) => {
                 const IconComponent = ICONS_MAP[item.icon] || SquaresFour
                 const isActive =
                   location.pathname === item.path ||
-                  (item.path !== '/mecanico/dashboard' &&
+                  (item.path !== '/cliente/resumo' &&
                     location.pathname.startsWith(item.path + '/')) ||
-                  (item.path === '/mecanico/dashboard' &&
-                    location.pathname === '/mecanico')
+                  (item.path === '/cliente/resumo' &&
+                    (location.pathname === '/cliente' || location.pathname === '/cliente/inicio'))
 
                 return (
                   <NavLink

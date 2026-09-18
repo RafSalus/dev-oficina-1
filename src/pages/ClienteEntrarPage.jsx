@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
-import { Eye, EyeSlash, WhatsappLogo } from '@phosphor-icons/react'
+import { useNavigate } from 'react-router-dom'
+import { Eye, EyeSlash, WhatsappLogo, CarProfile } from '@phosphor-icons/react'
 import { CustomerAuthLayout } from '../layouts/CustomerAuthLayout'
 import { WHATSAPP_ACCESS, MESSAGES } from '../constants/company'
+import { toast } from 'sonner'
 
 function PasswordInput({ id, label, autoComplete, value, onChange, error }) {
   const [show, setShow] = useState(false)
@@ -46,7 +48,7 @@ function PasswordInput({ id, label, autoComplete, value, onChange, error }) {
 }
 
 function CustomerLoginForm({ onRequestRecovery }) {
-  const [submitted, setSubmitted] = useState(false)
+  const navigate = useNavigate()
   const [cpfCnpj, setCpfCnpj] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState({})
@@ -59,7 +61,8 @@ function CustomerLoginForm({ onRequestRecovery }) {
 
     setErrors(newErrors)
     if (!newErrors.cpfCnpj && !newErrors.password) {
-      setSubmitted(true)
+      toast.success('Login realizado com sucesso! Bem-vindo ao Portal do Cliente.')
+      navigate('/cliente/resumo')
     }
   }
 
@@ -125,6 +128,30 @@ function CustomerLoginForm({ onRequestRecovery }) {
         Acessar Painel
       </button>
 
+      {/* Acesso Rápido para Demonstração */}
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-white px-2 text-gray-500 font-semibold uppercase tracking-wider text-[10px]">
+            OU ACESSO RÁPIDO
+          </span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          toast.success('Acesso ao Portal do Cliente!')
+          navigate('/cliente/resumo')
+        }}
+        className="w-full bg-[#f8fafc] hover:bg-[#f2f4f7] border border-[#0284c7]/40 hover:border-[#0284c7] text-[#0284c7] font-bold h-12 rounded-xl shadow-2xs transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2 text-sm"
+      >
+        <CarProfile size={18} weight="bold" />
+        <span>Entrar como Cliente (Demonstração)</span>
+      </button>
+
       <div className="mt-3 text-right">
         <button
           type="button"
@@ -134,19 +161,10 @@ function CustomerLoginForm({ onRequestRecovery }) {
           Esqueci minha senha
         </button>
       </div>
-
-      {submitted && (
-        <p
-          id="acesso-painel-aviso"
-          role="status"
-          className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600"
-        >
-          {MESSAGES.plannedNotice}
-        </p>
-      )}
     </form>
   )
 }
+
 
 function CustomerRecoveryForm({ onBack }) {
   const [submitted, setSubmitted] = useState(false)

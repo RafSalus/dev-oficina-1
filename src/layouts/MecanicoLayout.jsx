@@ -32,12 +32,12 @@ export function MecanicoLayout() {
         <MecanicoHeader isPinned={isHeaderPinned} onTogglePin={toggleHeaderPin} />
 
         {/* Área Central: Sidebar do Mecânico + Conteúdo do Terminal */}
-        <div className="flex-1 flex overflow-hidden min-h-0 relative">
+        <div className="flex-1 flex overflow-hidden min-h-0 relative items-center">
           {/* Sidebar com fundo preto retrátil com menus exclusivos do mecânico */}
           <MecanicoSidebar />
 
           {/* Espaço de trabalho técnico estritamente limitado, sem scroll de página */}
-          <main className="flex-1 overflow-hidden pl-2 pr-3 py-3 flex flex-col min-w-0 min-h-0">
+          <main className="flex-1 self-stretch overflow-hidden pl-2 pr-3 py-3 flex flex-col min-w-0 min-h-0">
             <Outlet />
           </main>
         </div>
