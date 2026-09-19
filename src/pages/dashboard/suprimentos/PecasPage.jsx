@@ -12,35 +12,47 @@ import {
   WarningCircle,
   Barcode,
   Archive,
+  ArrowsLeftRight,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import {
   carregarPecasCadastradas,
   salvarPecasCadastradas,
+  CATEGORIAS_PECAS_OPCOES,
 } from '../../../constants/cadastrosSuprimentosData'
 import { formatarNCM } from '../../../utils/fiscalValidators'
 import { PecaModalForm } from '../../../components/suprimentos/PecaModalForm'
+import { EstoqueMovimentoModal } from '../../../components/suprimentos/EstoqueMovimentoModal'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 
 export function PecasPage() {
   const [pecas, setPecas] = useState([])
   const [busca, setBusca] = useState('')
+  const [filtroCategoria, setFiltroCategoria] = useState('TODAS')
   const [filtroEstoque, setFiltroEstoque] = useState('TODOS')
   const [filtroStatus, setFiltroStatus] = useState('TODOS')
 
   const [modalAberto, setModalAberto] = useState(false)
   const [pecaEmEdicao, setPecaEmEdicao] = useState(null)
 
-  // Carrega do localStorage ao montar
-  useEffect(() => {
-    const dados = carregarPecasCadastradas()
-    setPecas(dados)
+  const [modalMovimentoAberto, setModalMovimentoAberto] = useState(false)
+  const [pecaParaMovimento, setPecaParaMovimento] = useState(null)
 
-    const handleStorageChange = () => {
+  // Carrega do localStorage ao montar e sincroniza em tempo real
+  useEffect(() => {
+    const sincronizarDados = () => {
       setPecas(carregarPecasCadastradas())
     }
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    sincronizarDados()
+
+    window.addEventListener('storage', sincronizarDados)
+    window.addEventListener('dev_oficina_pecas_updated', sincronizarDados)
+    window.addEventListener('dev_oficina_estoque_updated', sincronizarDados)
+    return () => {
+      window.removeEventListener('storage', sincronizarDados)
+      window.removeEventListener('dev_oficina_pecas_updated', sincronizarDados)
+      window.removeEventListener('dev_oficina_estoque_updated', sincronizarDados)
+    }
   }, [])
 
   // Métricas rápidas
@@ -83,10 +95,15 @@ export function PecasPage() {
         !termo ||
         peca.nome?.toLowerCase().includes(termo) ||
         peca.codigo?.toLowerCase().includes(termo) ||
+        peca.categoria?.toLowerCase().includes(termo) ||
         peca.codigoFabricante?.toLowerCase().includes(termo) ||
         peca.gtin?.toLowerCase().includes(termo) ||
         peca.ncm?.toLowerCase().includes(termo) ||
         peca.localizacao?.toLowerCase().includes(termo)
+
+      // Filtro por Categoria
+      const matchCategoria =
+        filtroCategoria === 'TODAS' || peca.categoria === filtroCategoria
 
       // Filtro por Nível de Estoque
       const estoqueAtual = Number(peca.estoqueAtual) || 0
@@ -102,9 +119,9 @@ export function PecasPage() {
         (filtroStatus === 'ATIVOS' && peca.ativo) ||
         (filtroStatus === 'INATIVOS' && !peca.ativo)
 
-      return matchBusca && matchEstoque && matchStatus
+      return matchBusca && matchCategoria && matchEstoque && matchStatus
     })
-  }, [pecas, busca, filtroEstoque, filtroStatus])
+  }, [pecas, busca, filtroCategoria, filtroEstoque, filtroStatus])
 
   // Abertura do formulário
   const handleAbrirNovo = () => {
@@ -165,6 +182,11 @@ export function PecasPage() {
       },
     })
   }
+
+  const opcoesFiltroCategoria = [
+    { value: 'TODAS', label: 'Todas as Categorias' },
+    ...CATEGORIAS_PECAS_OPCOES,
+  ]
 
   const opcoesFiltroEstoque = [
     { value: 'TODOS', label: 'Todos os Estoques' },
@@ -273,8 +295,19 @@ export function PecasPage() {
           />
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="w-full md:w-56">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="w-full sm:w-48">
+            <Select
+              value={opcoesFiltroCategoria.find((opt) => opt.value === filtroCategoria)}
+              onChange={(opt) => setFiltroCategoria(opt ? opt.value : 'TODAS')}
+              options={opcoesFiltroCategoria}
+              styles={customSelectStyles}
+              placeholder="Categoria"
+              isSearchable={true}
+            />
+          </div>
+
+          <div className="w-full sm:w-48">
             <Select
               value={opcoesFiltroEstoque.find((opt) => opt.value === filtroEstoque)}
               onChange={(opt) => setFiltroEstoque(opt ? opt.value : 'TODOS')}
@@ -285,7 +318,7 @@ export function PecasPage() {
             />
           </div>
 
-          <div className="w-full md:w-48">
+          <div className="w-full sm:w-40">
             <Select
               value={opcoesFiltroStatus.find((opt) => opt.value === filtroStatus)}
               onChange={(opt) => setFiltroStatus(opt ? opt.value : 'TODOS')}
@@ -351,7 +384,10 @@ export function PecasPage() {
 
                       <td className="py-3 px-4 max-w-xs">
                         <div className="font-semibold text-slate-900">{peca.nome}</div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                        <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-100">
+                            {peca.categoria || 'Geral'}
+                          </span>
                           <span className="font-mono font-medium text-slate-600">[{peca.unidade}]</span>
                           {peca.localizacao && (
                             <span>• {peca.localizacao}</span>
@@ -434,8 +470,19 @@ export function PecasPage() {
                         <div className="inline-flex items-center gap-1 justify-end">
                           <button
                             type="button"
+                            onClick={() => {
+                              setPecaParaMovimento(peca)
+                              setModalMovimentoAberto(true)
+                            }}
+                            className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors cursor-pointer"
+                            title="Movimentar Estoque no Almoxarifado"
+                          >
+                            <ArrowsLeftRight size={15} />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleAbrirEditar(peca)}
-                            className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                            className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors cursor-pointer"
                             title="Editar Peça"
                           >
                             <PencilSimple size={15} />
@@ -443,7 +490,7 @@ export function PecasPage() {
                           <button
                             type="button"
                             onClick={() => handleExcluirPeca(peca.id, peca.nome)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                             title="Excluir Peça"
                           >
                             <Trash size={15} />
@@ -465,6 +512,19 @@ export function PecasPage() {
         onClose={() => setModalAberto(false)}
         onSalvar={handleSalvarPeca}
         pecaParaEditar={pecaEmEdicao}
+      />
+
+      {/* Modal de Movimentação Rápida de Estoque */}
+      <EstoqueMovimentoModal
+        isOpen={modalMovimentoAberto}
+        onClose={() => {
+          setModalMovimentoAberto(false)
+          setPecaParaMovimento(null)
+        }}
+        pecaPreSelecionada={pecaParaMovimento}
+        onSucesso={() => {
+          setPecas(carregarPecasCadastradas())
+        }}
       />
     </div>
   )

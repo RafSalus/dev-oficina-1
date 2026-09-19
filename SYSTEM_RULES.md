@@ -52,3 +52,20 @@ import { IMaskInput } from 'react-imask'
 - Validação deve considerar apenas os dígitos (sem formatação) ao salvar
 - Ao carregar dados do banco, aplicar máscara na exibição
 
+> 14. **Compartilhamento de Telas e Módulos entre Administrador (Gestão) e Secretária (Recepção):**
+> O perfil da **Secretária** compartilha rigorosamente as mesmas telas, módulos, componentes, cadastros e fluxos operacionais desenvolvidos para o perfil do **Administrador (Gestão)**. Não deve haver telas paralelas ou placeholders para funcionalidades já criadas no módulo de gestão — toda tela implementada no painel administrativo deve ser compartilhada e replicada integralmente no painel da secretária.
+> As **únicas telas às quais a secretária NÃO terá acesso** são:
+> - **Relatórios** (restrito à administração);
+> - **Funcionários** (restrito à administração);
+> - **Configurações** (restrito à administração).
+> Todas as demais telas do sistema (Dashboard/Resumo, Agenda, Ordens de Serviço, Orçamentos, PDV, Clientes, Veículos da Frota, Estacionados, Leva e Traz, Manutenção Preventiva, Garantias, Ferramentas, Peças Danificadas, Compras, Estoque, Serviços, Peças, Fornecedores e Terceiros, Despesas e Notas Fiscais) são compartilhadas diretamente com a secretária, utilizando os mesmos componentes executivos, cadastros e fluxos operacionais.
+
+> 15. **Botão Obrigatório de Fechar Aba em Telas Abertas em Nova Aba (Suporte a Tela Cheia / Fullscreen):**
+> Sempre que qualquer tela, documento de impressão, visualização pública, portal de cliente ou cotação de autopeças for aberta em uma nova aba do navegador (seja via link com `target="_blank"` ou chamada `window.open()`), essa tela deve obrigatoriamente conter um botão visível e de fácil acesso para **"Fechar Aba"** (ou **"Voltar ao Sistema"**) posicionado no cabeçalho ou barra de topo da página.
+> **Justificativa e Requisito de Usabilidade:** Em modo de tela cheia (*fullscreen* / F11 / PWA), as abas e controles nativos da janela do navegador ficam totalmente ocultos. Se uma nova aba for aberta sem esse botão, o usuário é obrigado a sair da tela cheia, minimizar ou restaurar a janela apenas para fechar a aba, o que prejudica severamente a experiência de uso. O botão de fechar aba deve:
+> - Executar `window.close()` para encerrar a aba instantaneamente;
+> - Possuir fallback automático: caso a política de segurança do navegador impeça o fechamento via script (quando a aba não foi aberta diretamente por script da mesma origem), deve redirecionar de volta para a tela de origem do sistema (`window.history.back()` ou rota correspondente);
+> - Ser claramente identificado com ícone e texto legível (ex: botão com ícone de fechar e texto "Fechar Aba"), garantindo retorno ágil ao sistema principal.
+
+
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import Select from 'react-select'
 import {
   Buildings,
@@ -11,33 +11,38 @@ import {
   CheckCircle,
   WarningCircle,
   MagnifyingGlass,
+  CircleNotch,
+  Tag,
 } from '@phosphor-icons/react'
 import { ModalRedimensionavel } from './ModalRedimensionavel'
 import { customSelectStyles } from './customSelectStyles'
 import {
-  TIPOS_SERVICO_TERCEIRO_OPCOES,
+  CATEGORIAS_FORNECEDOR_OPCOES,
+  RAMOS_FORNECEDOR_OPCOES,
   ESTADOS_BRASIL_OPCOES,
 } from '../../constants/cadastrosSuprimentosData'
+import { consultarCepApi } from '../../services/cepService'
 import {
   validarCNPJ,
   formatarCNPJ,
   formatarCEP,
   formatarTelefone,
-  validarCEP,
 } from '../../utils/fiscalValidators'
 import { IMaskInput } from 'react-imask'
 import { toast } from 'sonner'
 
 const FORM_INICIAL = {
+  codigo: '',
   razaoSocial: '',
   nomeFantasia: '',
   cnpj: '',
-  inscricaoEstadual: 'ISENTO',
-  inscricaoMunicipal: '',
-  tipoServico: 'Retífica de Motores',
-  contatoNome: '',
-  contatoTelefone: '',
-  contatoEmail: '',
+  inscricaoEstadual: '',
+  telefone: '',
+  telefoneSecundario: '',
+  email: '',
+  contatoResponsavel: '',
+  categoria: 'Autopeças',
+  tipoServico: 'Autopeças em Geral',
   cep: '',
   logradouro: '',
   numero: '',
@@ -45,23 +50,54 @@ const FORM_INICIAL = {
   bairro: '',
   cidade: '',
   uf: 'SP',
+  observacoes: '',
+  chavePix: '',
+  banco: '',
+  agencia: '',
+  conta: '',
   ativo: true,
 }
 
 export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEditar }) {
   const [formData, setFormData] = useState(FORM_INICIAL)
   const [buscandoCep, setBuscandoCep] = useState(false)
+  const numeroInputRef = useRef(null)
 
   useEffect(() => {
     if (terceiroParaEditar) {
       setFormData({
         ...terceiroParaEditar,
+        codigo: terceiroParaEditar.codigo || '',
+        razaoSocial: terceiroParaEditar.razaoSocial || terceiroParaEditar.nome || '',
+        nomeFantasia: terceiroParaEditar.nomeFantasia || terceiroParaEditar.nome || '',
         cnpj: formatarCNPJ(terceiroParaEditar.cnpj || ''),
-        cep: formatarCEP(terceiroParaEditar.cep || ''),
-        contatoTelefone: formatarTelefone(terceiroParaEditar.contatoTelefone || ''),
+        inscricaoEstadual: terceiroParaEditar.inscricaoEstadual || '',
+        telefone: formatarTelefone(terceiroParaEditar.telefone || ''),
+        telefoneSecundario: formatarTelefone(terceiroParaEditar.telefoneSecundario || ''),
+        email: terceiroParaEditar.email || '',
+        contatoResponsavel: terceiroParaEditar.contatoResponsavel || '',
+        categoria: terceiroParaEditar.categoria || terceiroParaEditar.categoriaFornecedor || 'Autopeças',
+        tipoServico: terceiroParaEditar.tipoServico || 'Autopeças em Geral',
+        cep: formatarCEP(terceiroParaEditar.cep || (terceiroParaEditar.endereco?.cep || '')),
+        logradouro: terceiroParaEditar.logradouro || (terceiroParaEditar.endereco?.logradouro || ''),
+        numero: terceiroParaEditar.numero || (terceiroParaEditar.endereco?.numero || ''),
+        complemento: terceiroParaEditar.complemento || (terceiroParaEditar.endereco?.complemento || ''),
+        bairro: terceiroParaEditar.bairro || (terceiroParaEditar.endereco?.bairro || ''),
+        cidade: terceiroParaEditar.cidade || (terceiroParaEditar.endereco?.cidade || ''),
+        uf: terceiroParaEditar.uf || (terceiroParaEditar.endereco?.uf || 'SP'),
+        observacoes: terceiroParaEditar.observacoes || '',
+        chavePix: terceiroParaEditar.chavePix || '',
+        banco: terceiroParaEditar.banco || '',
+        agencia: terceiroParaEditar.agencia || '',
+        conta: terceiroParaEditar.conta || '',
+        ativo: terceiroParaEditar.ativo !== false,
       })
     } else {
-      setFormData(FORM_INICIAL)
+      const codigoSorteado = `FORN-${Math.floor(100 + Math.random() * 900)}`
+      setFormData({
+        ...FORM_INICIAL,
+        codigo: codigoSorteado,
+      })
     }
   }, [terceiroParaEditar, isOpen])
 
@@ -75,34 +111,34 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
     return validarCNPJ(formData.cnpj)
   }, [formData.cnpj])
 
-  // Busca rápida de CEP via ViaCEP
-  const buscarEnderecoPorCep = async () => {
-    const cepLimpo = (formData.cep || '').replace(/\D/g, '')
+  // Busca rápida de CEP via API integrada
+  const buscarEnderecoPorCep = async (cepOpcional) => {
+    const cepParaConsultar = cepOpcional || formData.cep
+    const cepLimpo = (cepParaConsultar || '').replace(/\D/g, '')
     if (cepLimpo.length !== 8) {
-      toast.warning('Informe um CEP completo com 8 dígitos.')
+      if (!cepOpcional) {
+        toast.warning('Informe um CEP completo com 8 dígitos.')
+      }
       return
     }
 
     try {
       setBuscandoCep(true)
-      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
-      const dados = await res.json()
-
-      if (dados.erro) {
-        toast.error('CEP não encontrado na base dos Correios.')
-        return
-      }
+      const dados = await consultarCepApi(cepLimpo)
 
       setFormData((prev) => ({
         ...prev,
         logradouro: dados.logradouro || prev.logradouro,
         bairro: dados.bairro || prev.bairro,
-        cidade: dados.localidade || prev.cidade,
+        cidade: dados.cidade || prev.cidade,
         uf: dados.uf || prev.uf,
       }))
-      toast.success('Endereço preenchido com sucesso!')
-    } catch {
-      toast.error('Não foi possível consultar o CEP automaticamente. Preencha os campos manualmente.')
+      toast.success('Endereço completado com sucesso via CEP!')
+      setTimeout(() => {
+        numeroInputRef.current?.focus()
+      }, 100)
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível consultar o CEP automaticamente. Preencha os campos manualmente.')
     } finally {
       setBuscandoCep(false)
     }
@@ -112,19 +148,23 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
     e.preventDefault()
 
     if (!formData.razaoSocial?.trim()) {
-      toast.warning('A Razão Social do terceiro é obrigatória.')
+      toast.warning('A Razão Social do fornecedor é obrigatória.')
       return
     }
     if (!formData.cnpj?.trim()) {
-      toast.warning('O CNPJ do parceiro é obrigatório.')
+      toast.warning('O CNPJ do fornecedor é obrigatório.')
       return
     }
     if (!validarCNPJ(formData.cnpj)) {
       toast.error('CNPJ inválido. Verifique os dígitos informados.')
       return
     }
+    if (!formData.categoriaFornecedor) {
+      toast.warning('Selecione a categoria do fornecedor.')
+      return
+    }
     if (!formData.tipoServico) {
-      toast.warning('Selecione a especialidade técnica do terceiro.')
+      toast.warning('Selecione a especialidade ou ramo do fornecedor.')
       return
     }
     if (!formData.contatoNome?.trim()) {
@@ -138,12 +178,13 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
 
     const payload = {
       ...formData,
-      id: terceiroParaEditar?.id || `ter-${Date.now()}`,
+      id: terceiroParaEditar?.id || `forn-${Date.now()}`,
       razaoSocial: formData.razaoSocial.trim(),
       nomeFantasia: formData.nomeFantasia?.trim() || formData.razaoSocial.trim(),
       cnpj: formData.cnpj.replace(/\D/g, ''),
       inscricaoEstadual: formData.inscricaoEstadual?.trim() || 'ISENTO',
       inscricaoMunicipal: formData.inscricaoMunicipal?.trim() || '',
+      categoriaFornecedor: formData.categoriaFornecedor,
       tipoServico: formData.tipoServico,
       contatoNome: formData.contatoNome.trim(),
       contatoTelefone: formData.contatoTelefone.trim(),
@@ -162,8 +203,11 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
     onClose()
   }
 
-  const tipoServicoSelecionado =
-    TIPOS_SERVICO_TERCEIRO_OPCOES.find((opt) => opt.value === formData.tipoServico) || null
+  const categoriaSelecionada =
+    CATEGORIAS_FORNECEDOR_OPCOES.find((opt) => opt.value === formData.categoriaFornecedor) || null
+
+  const ramoSelecionado =
+    RAMOS_FORNECEDOR_OPCOES.find((opt) => opt.value === formData.tipoServico) || null
 
   const ufSelecionada =
     ESTADOS_BRASIL_OPCOES.find((opt) => opt.value === formData.uf) || null
@@ -172,14 +216,66 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
     <ModalRedimensionavel
       isOpen={isOpen}
       onClose={onClose}
-      titulo={terceiroParaEditar ? 'Editar Terceiro e Parceiro' : 'Novo Terceiro e Parceiro'}
-      subtitulo="Cadastro de empresas parceiras para prestação de serviços externos homologados"
+      titulo={terceiroParaEditar ? 'Editar Fornecedor' : 'Novo Fornecedor'}
+      subtitulo="Cadastro de empresas fornecedoras de autopeças, componentes e parceiros de serviços externos homologados"
       icone={Buildings}
-      larguraPadrao={820}
+      larguraPadrao={840}
       alturaPadrao={720}
-      storageKey="terceiro_modal"
+      storageKey="fornecedor_modal"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Classificação e Categoria do Fornecedor */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
+            <Tag size={16} className="text-sky-600" />
+            <span>Classificação e Ramo de Fornecimento</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-5">
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Categoria do Fornecedor <span className="text-rose-500">*</span>
+              </label>
+              <Select
+                value={categoriaSelecionada}
+                onChange={(opt) =>
+                  handleChange('categoriaFornecedor', opt ? opt.value : 'Autopeças')
+                }
+                options={CATEGORIAS_FORNECEDOR_OPCOES}
+                styles={customSelectStyles}
+                placeholder="Selecione a categoria"
+              />
+            </div>
+
+            <div className="md:col-span-5">
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Ramo ou Especialidade Técnica <span className="text-rose-500">*</span>
+              </label>
+              <Select
+                value={ramoSelecionado}
+                onChange={(opt) =>
+                  handleChange('tipoServico', opt ? opt.value : 'Autopeças em Geral')
+                }
+                options={RAMOS_FORNECEDOR_OPCOES}
+                styles={customSelectStyles}
+                placeholder="Selecione o ramo"
+              />
+            </div>
+
+            <div className="md:col-span-2 flex items-center pt-6">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formData.ativo}
+                  onChange={(e) => handleChange('ativo', e.target.checked)}
+                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer"
+                />
+                <span className="text-xs font-medium text-slate-700">Ativo</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         {/* Dados da Empresa */}
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-4">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700">
@@ -196,7 +292,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
                 type="text"
                 value={formData.razaoSocial}
                 onChange={(e) => handleChange('razaoSocial', e.target.value)}
-                placeholder="Ex: Retífica e Usinagem de Precisão Ltda"
+                placeholder="Ex: Distribuidora de Peças Brasil Ltda"
                 required
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
               />
@@ -210,7 +306,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
                 type="text"
                 value={formData.nomeFantasia}
                 onChange={(e) => handleChange('nomeFantasia', e.target.value)}
-                placeholder="Ex: Retífica Master Motores"
+                placeholder="Ex: Brasil Auto Peças"
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
               />
             </div>
@@ -270,33 +366,6 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-mono"
               />
             </div>
-
-            <div className="md:col-span-8">
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                Especialidade e Tipo de Serviço <span className="text-rose-500">*</span>
-              </label>
-              <Select
-                value={tipoServicoSelecionado}
-                onChange={(opt) =>
-                  handleChange('tipoServico', opt ? opt.value : 'Retífica de Motores')
-                }
-                options={TIPOS_SERVICO_TERCEIRO_OPCOES}
-                styles={customSelectStyles}
-                placeholder="Selecione o tipo de serviço prestado"
-              />
-            </div>
-
-            <div className="md:col-span-4 flex items-center pt-6">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={formData.ativo}
-                  onChange={(e) => handleChange('ativo', e.target.checked)}
-                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer"
-                />
-                <span className="text-xs font-medium text-slate-700">Parceiro Ativo e Homologado</span>
-              </label>
-            </div>
           </div>
         </div>
 
@@ -310,7 +379,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
-                Nome do Responsável <span className="text-rose-500">*</span>
+                Nome do Responsável / Vendedor <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -354,7 +423,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
                   type="email"
                   value={formData.contatoEmail}
                   onChange={(e) => handleChange('contatoEmail', e.target.value)}
-                  placeholder="contato@parceiro.com.br"
+                  placeholder="pedidos@fornecedor.com.br"
                   className="w-full pl-8 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
                 />
                 <EnvelopeSimple size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -370,7 +439,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
               <MapPin size={16} className="text-sky-600" />
               <span>Endereço e Localização</span>
             </div>
-            <span className="text-[11px] text-slate-500">Usado para retirada e entrega de peças</span>
+            <span className="text-[11px] text-slate-500">Usado para faturamento e entrega de peças</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -382,18 +451,34 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
                 <IMaskInput
                   mask="00000-000"
                   value={formData.cep}
-                  onAccept={(val) => handleChange('cep', val)}
+                  onAccept={(val) => {
+                    handleChange('cep', val)
+                    const limpo = val.replace(/\D/g, '')
+                    if (limpo.length === 8) {
+                      buscarEnderecoPorCep(val)
+                    }
+                  }}
+                  onBlur={() => {
+                    const limpo = (formData.cep || '').replace(/\D/g, '')
+                    if (limpo.length === 8) {
+                      buscarEnderecoPorCep(formData.cep)
+                    }
+                  }}
                   placeholder="00000-000"
                   className="w-full pr-8 pl-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-mono"
                 />
                 <button
                   type="button"
-                  onClick={buscarEnderecoPorCep}
+                  onClick={() => buscarEnderecoPorCep(formData.cep)}
                   disabled={buscandoCep}
-                  title="Consultar CEP"
-                  className="absolute right-2 text-slate-400 hover:text-sky-600 transition-colors p-1"
+                  title="Consultar CEP e preencher endereço"
+                  className="absolute right-2 text-slate-400 hover:text-sky-600 disabled:text-slate-300 transition-colors p-1 cursor-pointer"
                 >
-                  <MagnifyingGlass size={15} />
+                  {buscandoCep ? (
+                    <CircleNotch size={15} className="animate-spin text-sky-600" />
+                  ) : (
+                    <MagnifyingGlass size={15} />
+                  )}
                 </button>
               </div>
             </div>
@@ -416,15 +501,16 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
                 Número
               </label>
               <input
+                ref={numeroInputRef}
                 type="text"
                 value={formData.numero}
                 onChange={(e) => handleChange('numero', e.target.value)}
                 placeholder="Nº"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-medium"
               />
             </div>
 
-            <div className="md:col-span-4">
+            <div className="md:col-span-3">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Complemento
               </label>
@@ -432,7 +518,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
                 type="text"
                 value={formData.complemento}
                 onChange={(e) => handleChange('complemento', e.target.value)}
-                placeholder="Galpão, Sala, Bloco..."
+                placeholder="Galpão, Pavilhão, Sala..."
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
               />
             </div>
@@ -463,7 +549,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
               />
             </div>
 
-            <div className="md:col-span-1">
+            <div className="md:col-span-2">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 UF
               </label>
@@ -473,6 +559,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
                 options={ESTADOS_BRASIL_OPCOES}
                 styles={customSelectStyles}
                 placeholder="UF"
+                isSearchable
               />
             </div>
           </div>
@@ -492,7 +579,7 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
             className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md shadow-sm transition-colors"
           >
             <FloppyDisk size={16} />
-            <span>Salvar Terceiro e Parceiro</span>
+            <span>Salvar Fornecedor</span>
           </button>
         </div>
       </form>

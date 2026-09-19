@@ -145,11 +145,11 @@ export const SECRETARIA_MENU_CATEGORIES = [
         description: 'Cadastro de peças com código de barras GTIN/EAN, NCM, margens e estoque.',
       },
       {
-        id: 'terceiros',
-        label: 'Terceiros e Parceiros',
-        path: '/secretaria/terceiros',
+        id: 'fornecedores',
+        label: 'Fornecedores',
+        path: '/secretaria/fornecedores',
         icon: 'Buildings',
-        description: 'Cadastro de oficinas e terceiros parceiros para serviços externos.',
+        description: 'Cadastro de fornecedores de autopeças, insumos e parceiros de serviços externos.',
       },
     ],
   },
@@ -178,14 +178,7 @@ export const SECRETARIA_MENU_CATEGORIES = [
     id: 'administracao',
     title: 'Administração',
     items: [
-      // NOTA: "funcionarios" removido para o perfil Secretaria
-      {
-        id: 'configuracoes',
-        label: 'Configurações',
-        path: '/secretaria/configuracoes',
-        icon: 'GearSix',
-        description: 'Parâmetros do sistema, dados da empresa e preferências de operação.',
-      },
+      // NOTA: "relatorios", "funcionarios" e "configuracoes" não são acessíveis pela Secretaria (Regra 14)
       {
         id: 'site',
         label: 'Site',

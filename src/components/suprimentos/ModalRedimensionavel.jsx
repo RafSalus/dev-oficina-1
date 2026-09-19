@@ -12,6 +12,7 @@ export function ModalRedimensionavel({
   isOpen,
   onClose,
   chaveStorage,
+  storageKey,
   larguraPadrao = 800,
   alturaPadrao = 600,
   larguraMinima = 480,
@@ -23,12 +24,14 @@ export function ModalRedimensionavel({
   children,
   rodape,
 }) {
+  const chavePersistencia = chaveStorage || storageKey || 'modal_redimensionavel_default'
+
   const carregarDimensoes = () => {
     if (typeof window === 'undefined') {
       return { largura: larguraPadrao, altura: alturaPadrao, posicaoX: 0, posicaoY: 0 }
     }
     try {
-      const salvo = localStorage.getItem(chaveStorage)
+      const salvo = localStorage.getItem(chavePersistencia)
       if (salvo) {
         const parsed = JSON.parse(salvo)
         return {
@@ -54,11 +57,11 @@ export function ModalRedimensionavel({
     if (isOpen) {
       setTamanho(carregarDimensoes())
     }
-  }, [isOpen, chaveStorage])
+  }, [isOpen, chavePersistencia])
 
   const salvarDimensoes = (novasDimensoes) => {
     try {
-      localStorage.setItem(chaveStorage, JSON.stringify(novasDimensoes))
+      localStorage.setItem(chavePersistencia, JSON.stringify(novasDimensoes))
     } catch {}
   }
 

@@ -84,15 +84,23 @@ export function CotacaoAutoPecaPage() {
   const [fotoZoom, setFotoZoom] = useState(null)
 
   useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search)
+    const fornecedorParam = queryParams.get('fornecedor')
+
     try {
+      // 1. Tenta carregar do mapa do portal de cotações
       const historicoRaw = localStorage.getItem('dev_oficina_cotacoes')
       if (historicoRaw) {
         const historico = JSON.parse(historicoRaw)
         if (id && historico[id]) {
           const itemStorage = historico[id]
           setCotacao(itemStorage)
-          if (itemStorage.fornecedorNome) {
+          if (fornecedorParam) {
+            setAutoPecaNome(fornecedorParam)
+          } else if (itemStorage.fornecedorNome) {
             setAutoPecaNome(itemStorage.fornecedorNome)
+          } else if (itemStorage.fornecedoresCotados && itemStorage.fornecedoresCotados[0]?.nome) {
+            setAutoPecaNome(itemStorage.fornecedoresCotados[0].nome)
           } else if (itemStorage.fornecedores && itemStorage.fornecedores[0]?.nome) {
             setAutoPecaNome(itemStorage.fornecedores[0].nome)
           }
@@ -101,26 +109,54 @@ export function CotacaoAutoPecaPage() {
           return
         }
       }
+
+      // 2. Fallback: carregar da lista dev_oficina_cotacoes_pecas
+      const listaRaw = localStorage.getItem('dev_oficina_cotacoes_pecas')
+      if (listaRaw) {
+        const lista = JSON.parse(listaRaw)
+        if (Array.isArray(lista)) {
+          const encontrada = lista.find((c) => String(c.id) === String(id))
+          if (encontrada) {
+            const formatada = {
+              ...encontrada,
+              cliente: encontrada.clienteNome || encontrada.cliente,
+              placa: encontrada.veiculoPlaca || encontrada.placa,
+              marcaModelo: encontrada.veiculoModelo || encontrada.marcaModelo,
+            }
+            setCotacao(formatada)
+            if (fornecedorParam) {
+              setAutoPecaNome(fornecedorParam)
+            } else if (formatada.fornecedoresCotados && formatada.fornecedoresCotados[0]?.nome) {
+              setAutoPecaNome(formatada.fornecedoresCotados[0].nome)
+            }
+            iniciarRespostas(formatada)
+            setCarregando(false)
+            return
+          }
+        }
+      }
     } catch (e) {
       console.error(e)
     }
 
     const demo = { ...MOCK_COTACAO, id: id || MOCK_COTACAO.id }
     setCotacao(demo)
-    setAutoPecaNome(demo.fornecedorNome)
+    setAutoPecaNome(fornecedorParam || demo.fornecedorNome)
     iniciarRespostas(demo)
     setCarregando(false)
   }, [id])
 
   const iniciarRespostas = (data) => {
     const obj = {}
-    data.itens.forEach((item) => {
-      obj[item.id] = {
-        status: 'disponivel', // 'disponivel', 'encomenda', 'indisponivel'
-        marca: item.marcaSugerida ? item.marcaSugerida.split('/')[0].trim() : '',
-        preco: '',
-      }
-    })
+    if (data && Array.isArray(data.itens)) {
+      data.itens.forEach((item) => {
+        obj[item.id] = {
+          status: 'disponivel', // 'disponivel', 'encomenda', 'indisponivel'
+          marca: item.marcaSugerida ? item.marcaSugerida.split('/')[0].trim() : '',
+          preco: '',
+        }
+      })
+    }
     setRespostas(obj)
   }
 
@@ -188,6 +224,8 @@ export function CotacaoAutoPecaPage() {
 
       historico[cotacao.id] = atual
       localStorage.setItem('dev_oficina_cotacoes', JSON.stringify(historico))
+      window.dispatchEvent(new Event('storage'))
+      window.dispatchEvent(new CustomEvent('dev_oficina_cotacoes_updated'))
     } catch (err) {
       console.error(err)
     }
@@ -201,6 +239,27 @@ export function CotacaoAutoPecaPage() {
     toast.info('Abrindo WhatsApp oficial da oficina...')
     const msg = `Olá, oficina! Aqui é o(a) *${vendedorNome}* da *${autoPecaNome}*.%0A%0ARespondemos a cotação *#${cotacao.id}* do veículo *${cotacao.placa}* (${cotacao.marcaModelo}).%0A%0A*Total Ofertado:* R$ ${totais.valor}%0A*Itens Ofertados:* ${totais.cotados} de ${totais.totalItens}%0A*Prazo:* ${prazoEntrega}`
     window.open(`https://wa.me/5543998544106?text=${msg}`, '_blank')
+  }
+
+  // Fechar aba e retornar ao sistema principal (Regra 15 - Suporte a Fullscreen)
+  const handleFecharAba = () => {
+    if (window.self !== window.top) {
+      try {
+        window.parent.postMessage({ tipo: 'FECHAR_MODAL_PREVIEW' }, '*')
+      } catch {}
+      return
+    }
+
+    window.close()
+    setTimeout(() => {
+      if (!window.closed) {
+        if (window.history.length > 1) {
+          window.history.back()
+        } else {
+          window.location.href = '/gestao/compras'
+        }
+      }
+    }, 150)
   }
 
   if (carregando) {
@@ -235,17 +294,30 @@ export function CotacaoAutoPecaPage() {
             </div>
           </div>
 
-          {/* Botao WhatsApp Direto com a Oficina */}
-          <a
-            href={WHATSAPP_ACCESS.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="h-9 px-3 rounded-xl bg-[#e0f2fe] hover:bg-[#bae6fd] text-[#0369a1] border border-[#bae6fd] text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
-            title="Falar com a oficina pelo WhatsApp"
-          >
-            <WhatsappLogo size={16} weight="fill" className="text-[#0284c7]" />
-            <span className="hidden sm:inline">WhatsApp Oficina</span>
-          </a>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Botao WhatsApp Direto com a Oficina */}
+            <a
+              href={WHATSAPP_ACCESS.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-9 px-3 rounded-xl bg-[#e0f2fe] hover:bg-[#bae6fd] text-[#0369a1] border border-[#bae6fd] text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+              title="Falar com a oficina pelo WhatsApp"
+            >
+              <WhatsappLogo size={16} weight="fill" className="text-[#0284c7]" />
+              <span className="hidden sm:inline">WhatsApp Oficina</span>
+            </a>
+
+            {/* Botão Fechar Aba e Voltar ao Sistema (Regra 15 - Suporte a Fullscreen) */}
+            <button
+              type="button"
+              onClick={handleFecharAba}
+              className="h-9 px-3.5 rounded-xl bg-[#0f172a] hover:bg-black text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer shadow-2xs"
+              title="Fechar esta aba e voltar para a tela do sistema"
+            >
+              <X size={15} weight="bold" />
+              <span>Fechar Aba</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -309,6 +381,15 @@ export function CotacaoAutoPecaPage() {
               >
                 <ArrowsClockwise size={15} weight="bold" />
                 <span>Revisar / Alterar Preços</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleFecharAba}
+                className="w-full h-11 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-2xs"
+              >
+                <X size={16} weight="bold" />
+                <span>Fechar Esta Aba e Voltar ao Sistema</span>
               </button>
             </div>
           </div>

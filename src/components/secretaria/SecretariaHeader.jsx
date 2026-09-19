@@ -305,15 +305,6 @@ export function SecretariaHeader({ isPinned = false, onTogglePin }) {
                 </div>
 
                 <div className="py-1">
-                  <Link
-                    to="/secretaria/configuracoes"
-                    onClick={() => setShowProfile(false)}
-                    className="w-full px-4 py-2 text-xs font-medium text-[#344054] hover:bg-[#f2f4f7] flex items-center gap-2.5 transition-colors"
-                  >
-                    <GearSix size={16} />
-                    <span>Configurações</span>
-                  </Link>
-
                   <button
                     type="button"
                     onClick={handleSignOut}

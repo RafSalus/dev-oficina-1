@@ -345,6 +345,27 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
     window.open(zapUrl, '_blank')
   }
 
+  // Fechar aba e retornar ao sistema principal (Regra 15 - Suporte a Fullscreen)
+  const handleFecharAba = () => {
+    if (window.self !== window.top) {
+      try {
+        window.parent.postMessage({ tipo: 'FECHAR_MODAL_PREVIEW' }, '*')
+      } catch {}
+      return
+    }
+
+    window.close()
+    setTimeout(() => {
+      if (!window.closed) {
+        if (window.history.length > 1) {
+          window.history.back()
+        } else {
+          window.location.href = '/gestao/ordem-de-servico'
+        }
+      }
+    }, 150)
+  }
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#101828] flex flex-col pb-24 select-none">
       {/* 1. TOPO DA APLICAÇÃO (CLIENT PORTAL HEADER) */}
@@ -386,6 +407,17 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
             >
               <Printer size={14} weight="bold" />
               <span className="hidden md:inline">Folha Oficial</span>
+            </button>
+
+            {/* Botão Fechar Aba e Voltar ao Sistema (Regra 15 - Suporte a Fullscreen) */}
+            <button
+              type="button"
+              onClick={handleFecharAba}
+              className="h-8 px-3 rounded-xl bg-[#101828] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+              title="Fechar esta aba e voltar para a tela do sistema"
+            >
+              <X size={14} weight="bold" />
+              <span>Fechar Aba</span>
             </button>
           </div>
         </div>

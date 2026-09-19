@@ -138,3 +138,43 @@ export function formatarTelefone(valor) {
     .replace(/^(\d{2})(\d)/, '($1) $2')
     .replace(/(\d{5})(\d)/, '$1-$2')
 }
+
+/**
+ * Validação de CPF (11 dígitos numéricos com dígitos verificadores oficiais)
+ */
+export function validarCPF(cpf) {
+  if (!cpf) return false
+  const limpo = String(cpf).replace(/\D/g, '')
+  if (limpo.length !== 11) return false
+  if (/^(\d)\1+$/.test(limpo)) return false
+
+  let soma = 0
+  for (let i = 0; i < 9; i++) {
+    soma += parseInt(limpo.charAt(i), 10) * (10 - i)
+  }
+  let resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(limpo.charAt(9), 10)) return false
+
+  soma = 0
+  for (let i = 0; i < 10; i++) {
+    soma += parseInt(limpo.charAt(i), 10) * (11 - i)
+  }
+  resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(limpo.charAt(10), 10)) return false
+
+  return true
+}
+
+/**
+ * Formatação de CPF: 000.000.000-00
+ */
+export function formatarCPF(valor) {
+  if (!valor) return ''
+  const apenasNumeros = String(valor).replace(/\D/g, '').slice(0, 11)
+  return apenasNumeros
+    .replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1-$2')
+}

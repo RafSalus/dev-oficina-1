@@ -4,6 +4,7 @@ import { Package, FloppyDisk, Barcode, ShieldCheck, TrendUp, WarningCircle, Chec
 import { ModalRedimensionavel } from './ModalRedimensionavel'
 import { customSelectStyles } from './customSelectStyles'
 import {
+  CATEGORIAS_PECAS_OPCOES,
   UNIDADES_MEDIDA_OPCOES,
   CST_CSOSN_OPCOES,
   CFOP_OPCOES,
@@ -15,6 +16,7 @@ import { toast } from 'sonner'
 const FORM_INICIAL = {
   codigo: '',
   nome: '',
+  categoria: 'Lubrificantes e Filtros',
   codigoFabricante: '',
   gtin: 'SEM GTIN',
   ncm: '',
@@ -36,6 +38,7 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
     if (pecaParaEditar) {
       setFormData({
         ...pecaParaEditar,
+        categoria: pecaParaEditar.categoria || 'Outros Componentes',
         precoCusto: pecaParaEditar.precoCusto ?? '',
         precoVenda: pecaParaEditar.precoVenda ?? '',
         estoqueMinimo: pecaParaEditar.estoqueMinimo ?? 5,
@@ -137,6 +140,7 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
       id: pecaParaEditar?.id || `pec-${Date.now()}`,
       codigo: formData.codigo.trim().toUpperCase(),
       nome: formData.nome.trim(),
+      categoria: formData.categoria || 'Outros Componentes',
       codigoFabricante: formData.codigoFabricante?.trim() || '',
       gtin: formData.gtin.trim().toUpperCase(),
       ncm: formData.ncm.replace(/\D/g, ''),
@@ -156,6 +160,10 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
     onClose()
   }
 
+  const categoriaSelecionada = CATEGORIAS_PECAS_OPCOES.find((opt) => opt.value === formData.categoria) || {
+    value: formData.categoria || 'Outros Componentes',
+    label: formData.categoria || 'Outros Componentes',
+  }
   const unidadeSelecionada = UNIDADES_MEDIDA_OPCOES.find((opt) => opt.value === formData.unidade) || null
   const cstSelecionado = CST_CSOSN_OPCOES.find((opt) => opt.value === formData.cstCsosn) || null
   const cfopSelecionado = CFOP_OPCOES.find((opt) => opt.value === formData.cfop) || null
@@ -169,6 +177,7 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
       icone={Package}
       larguraPadrao={800}
       alturaPadrao={680}
+      chaveStorage="peca_modal"
       storageKey="peca_modal"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -223,6 +232,20 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
 
             <div className="md:col-span-4">
               <label className="block text-xs font-medium text-slate-700 mb-1">
+                Categoria da Peça <span className="text-rose-500">*</span>
+              </label>
+              <Select
+                value={categoriaSelecionada}
+                onChange={(opt) => handleChange('categoria', opt ? opt.value : 'Outros Componentes')}
+                options={CATEGORIAS_PECAS_OPCOES}
+                styles={customSelectStyles}
+                placeholder="Selecione a categoria"
+                isSearchable={true}
+              />
+            </div>
+
+            <div className="md:col-span-4">
+              <label className="block text-xs font-medium text-slate-700 mb-1">
                 Unidade de Medida <span className="text-rose-500">*</span>
               </label>
               <Select
@@ -237,7 +260,7 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
 
             <div className="md:col-span-4">
               <label className="block text-xs font-medium text-slate-700 mb-1">
-                Localização no Estoque
+                Localização no Almoxarifado
               </label>
               <input
                 type="text"
@@ -248,7 +271,7 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
               />
             </div>
 
-            <div className="md:col-span-4 flex items-center pt-6">
+            <div className="md:col-span-12 flex items-center pt-2">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -256,7 +279,7 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
                   onChange={(e) => handleChange('ativo', e.target.checked)}
                   className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 cursor-pointer"
                 />
-                <span className="text-xs font-medium text-slate-700">Item Ativo para Venda e OS</span>
+                <span className="text-xs font-medium text-slate-700">Item Ativo no Almoxarifado para Venda e Ordem de Serviço</span>
               </label>
             </div>
           </div>

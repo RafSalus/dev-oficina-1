@@ -26,10 +26,15 @@ import { ClienteLayout } from './layouts/ClienteLayout'
 import { ClienteModulePlaceholder } from './components/cliente/ClienteModulePlaceholder'
 import { ClienteServicosPage } from './pages/cliente/ClienteServicosPage'
 import { SecretariaLayout } from './layouts/SecretariaLayout'
-import { SecretariaModulePlaceholder } from './components/secretaria/SecretariaModulePlaceholder'
 import { ServicosPage } from './pages/dashboard/suprimentos/ServicosPage'
 import { PecasPage } from './pages/dashboard/suprimentos/PecasPage'
+import { EstoquePage } from './pages/dashboard/suprimentos/EstoquePage'
+import { ComprasPage } from './pages/dashboard/suprimentos/ComprasPage'
+import { CotacaoPage } from './pages/dashboard/suprimentos/CotacaoPage'
 import { TerceirosPage } from './pages/dashboard/suprimentos/TerceirosPage'
+import { ClientesPage } from './pages/dashboard/clientes/ClientesPage'
+import { VeiculosPage } from './pages/dashboard/veiculos/VeiculosPage'
+import AgendaPage from './pages/dashboard/agenda/AgendaPage'
 
 export default function App() {
   return (
@@ -82,25 +87,28 @@ export default function App() {
             <Route path="/gestao" element={<DashboardLayout />}>
               <Route index element={<Navigate to="/gestao/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="agenda" element={<DashboardPage />} />
+              <Route path="agenda" element={<AgendaPage />} />
               <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
               <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
               <Route path="orcamento" element={<OrcamentoOSListPage />} />
               <Route path="orcamentos" element={<Navigate to="/gestao/orcamento" replace />} />
               <Route path="pdv" element={<DashboardPage />} />
-              <Route path="clientes" element={<DashboardPage />} />
-              <Route path="veiculos" element={<DashboardPage />} />
+              <Route path="clientes" element={<ClientesPage />} />
+              <Route path="veiculos" element={<VeiculosPage />} />
               <Route path="estacionados" element={<DashboardPage />} />
               <Route path="leva-e-traz" element={<DashboardPage />} />
               <Route path="manutencao-preventiva" element={<DashboardPage />} />
               <Route path="garantias" element={<DashboardPage />} />
               <Route path="ferramentas" element={<DashboardPage />} />
               <Route path="pecas-danificadas" element={<DashboardPage />} />
-              <Route path="estoque" element={<DashboardPage />} />
-              <Route path="compras" element={<DashboardPage />} />
+              <Route path="estoque" element={<EstoquePage />} />
+              <Route path="compras" element={<ComprasPage />} />
+              <Route path="compras/cotacao/:id" element={<CotacaoPage />} />
+              <Route path="compras/cotacao" element={<CotacaoPage />} />
               <Route path="servicos" element={<ServicosPage />} />
               <Route path="pecas" element={<PecasPage />} />
-              <Route path="terceiros" element={<TerceirosPage />} />
+              <Route path="fornecedores" element={<TerceirosPage />} />
+              <Route path="terceiros" element={<Navigate to="/gestao/fornecedores" replace />} />
               <Route path="despesas" element={<DashboardPage />} />
               <Route path="nota-fiscal" element={<DashboardPage />} />
               <Route path="relatorios" element={<DashboardPage />} />
@@ -140,32 +148,38 @@ export default function App() {
               <Route path="agenda" element={<ClienteModulePlaceholder />} />
             </Route>
 
-            {/* Post-login Secretaria Workspace (idêntico ao adm, sem relatórios e sem funcionários) */}
+            {/* Post-login Secretaria Workspace (compartilha todas as telas da gestão, exceto relatórios, funcionários e configurações - Regra 14) */}
             <Route path="/secretaria" element={<SecretariaLayout />}>
               <Route index element={<Navigate to="/secretaria/dashboard" replace />} />
-              <Route path="dashboard" element={<SecretariaModulePlaceholder />} />
-              <Route path="agenda" element={<SecretariaModulePlaceholder />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="agenda" element={<AgendaPage />} />
               <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
               <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
               <Route path="orcamento" element={<OrcamentoOSListPage />} />
               <Route path="orcamentos" element={<Navigate to="/secretaria/orcamento" replace />} />
-              <Route path="pdv" element={<SecretariaModulePlaceholder />} />
-              <Route path="clientes" element={<SecretariaModulePlaceholder />} />
-              <Route path="veiculos" element={<SecretariaModulePlaceholder />} />
-              <Route path="estacionados" element={<SecretariaModulePlaceholder />} />
-              <Route path="leva-e-traz" element={<SecretariaModulePlaceholder />} />
-              <Route path="manutencao-preventiva" element={<SecretariaModulePlaceholder />} />
-              <Route path="garantias" element={<SecretariaModulePlaceholder />} />
-              <Route path="ferramentas" element={<SecretariaModulePlaceholder />} />
-              <Route path="pecas-danificadas" element={<SecretariaModulePlaceholder />} />
-              <Route path="estoque" element={<SecretariaModulePlaceholder />} />
-              <Route path="compras" element={<SecretariaModulePlaceholder />} />
+              <Route path="pdv" element={<DashboardPage />} />
+              <Route path="clientes" element={<ClientesPage />} />
+              <Route path="veiculos" element={<VeiculosPage />} />
+              <Route path="estacionados" element={<DashboardPage />} />
+              <Route path="leva-e-traz" element={<DashboardPage />} />
+              <Route path="manutencao-preventiva" element={<DashboardPage />} />
+              <Route path="garantias" element={<DashboardPage />} />
+              <Route path="ferramentas" element={<DashboardPage />} />
+              <Route path="pecas-danificadas" element={<DashboardPage />} />
+              <Route path="estoque" element={<EstoquePage />} />
+              <Route path="compras" element={<ComprasPage />} />
+              <Route path="compras/cotacao/:id" element={<CotacaoPage />} />
+              <Route path="compras/cotacao" element={<CotacaoPage />} />
               <Route path="servicos" element={<ServicosPage />} />
               <Route path="pecas" element={<PecasPage />} />
-              <Route path="terceiros" element={<TerceirosPage />} />
-              <Route path="despesas" element={<SecretariaModulePlaceholder />} />
-              <Route path="nota-fiscal" element={<SecretariaModulePlaceholder />} />
-              <Route path="configuracoes" element={<SecretariaModulePlaceholder />} />
+              <Route path="fornecedores" element={<TerceirosPage />} />
+              <Route path="terceiros" element={<Navigate to="/secretaria/fornecedores" replace />} />
+              <Route path="despesas" element={<DashboardPage />} />
+              <Route path="nota-fiscal" element={<DashboardPage />} />
+              {/* Telas restritas da Secretaria: Relatórios, Funcionários e Configurações (Regra 14) */}
+              <Route path="relatorios" element={<Navigate to="/secretaria/dashboard" replace />} />
+              <Route path="funcionarios" element={<Navigate to="/secretaria/dashboard" replace />} />
+              <Route path="configuracoes" element={<Navigate to="/secretaria/dashboard" replace />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
