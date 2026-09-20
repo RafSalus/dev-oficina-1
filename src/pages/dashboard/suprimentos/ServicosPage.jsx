@@ -15,6 +15,7 @@ import {
   FileText,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { useIsMobile } from '../../../hooks/useIsMobile'
 import {
   carregarServicosCadastrados,
   salvarServicosCadastrados,
@@ -22,8 +23,10 @@ import {
 } from '../../../constants/cadastrosSuprimentosData'
 import { ServicoModalForm } from '../../../components/suprimentos/ServicoModalForm'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
+import { MobileServicosPage } from './mobile/MobileServicosPage'
 
 export function ServicosPage() {
+  const isMobile = useIsMobile()
   const [servicos, setServicos] = useState([])
   const [busca, setBusca] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('TODAS')
@@ -157,6 +160,10 @@ export function ServicosPage() {
     { value: 'ATIVOS', label: 'Somente Ativos' },
     { value: 'INATIVOS', label: 'Somente Inativos' },
   ]
+
+  if (isMobile) {
+    return <MobileServicosPage />
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f8fafc] overflow-hidden">

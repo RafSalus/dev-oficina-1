@@ -53,6 +53,8 @@ import { customSelectStyles } from '../../../components/suprimentos/customSelect
 import { CompraModalForm } from '../../../components/suprimentos/CompraModalForm'
 import { PecaModalForm } from '../../../components/suprimentos/PecaModalForm'
 import { VisualizarCotacaoModal } from '../../../components/suprimentos/VisualizarCotacaoModal'
+import { useIsMobile } from '../../../hooks/useIsMobile'
+import { MobileComprasPage } from './mobile/MobileComprasPage'
 
 // Helpers seguros de contatos e autopeças (Regra 5: sem & em labels)
 const extrairTelefoneLimpo = (t) => {
@@ -86,6 +88,7 @@ const filtrarFornecedoresAutoPecas = (terceiros) => {
 }
 
 export function ComprasPage() {
+  const isMobile = useIsMobile()
   const navigate = useNavigate()
   const location = useLocation()
   const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
@@ -853,6 +856,10 @@ export function ComprasPage() {
       observacoes: `Pedido de reposição de estoque mínimo do almoxarifado (${item.nome})`,
     })
     setModalCompraAberto(true)
+  }
+
+  if (isMobile) {
+    return <MobileComprasPage />
   }
 
   return (

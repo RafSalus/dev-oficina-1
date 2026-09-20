@@ -24,8 +24,11 @@ import { formatarNCM } from '../../../utils/fiscalValidators'
 import { PecaModalForm } from '../../../components/suprimentos/PecaModalForm'
 import { EstoqueMovimentoModal } from '../../../components/suprimentos/EstoqueMovimentoModal'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
+import { useIsMobile } from '../../../hooks/useIsMobile'
+import { MobilePecasPage } from './mobile/MobilePecasPage'
 
 export function PecasPage() {
+  const isMobile = useIsMobile()
   const [pecas, setPecas] = useState([])
   const [busca, setBusca] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('TODAS')
@@ -199,6 +202,10 @@ export function PecasPage() {
     { value: 'ATIVOS', label: 'Somente Ativos' },
     { value: 'INATIVOS', label: 'Somente Inativos' },
   ]
+
+  if (isMobile) {
+    return <MobilePecasPage />
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f8fafc] overflow-hidden">

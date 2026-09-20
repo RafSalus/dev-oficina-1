@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   Bell,
@@ -10,9 +10,12 @@ import {
   PushPin,
   PushPinSlash,
   FloppyDisk,
+  CaretRight,
 } from '@phosphor-icons/react'
 import { useAdminAuth } from '../../context/AdminAuthContext'
 import { toast } from 'sonner'
+import { SECRETARIA_MENU_CATEGORIES } from '../../constants/secretariaMenus'
+import { obterContextoDeTela } from '../../utils/routeContext'
 
 export function SecretariaHeader({ isPinned = false, onTogglePin }) {
   const { user, signOut } = useAdminAuth()
@@ -27,10 +30,12 @@ export function SecretariaHeader({ isPinned = false, onTogglePin }) {
   const profileRef = useRef(null)
   const leaveTimeoutRef = useRef(null)
 
-  // Verifica se estamos na tela de abertura de Nova OS ou listagem
+  // Verifica se estamos na tela de abertura de Nova OS
   const isOsNovaPage = location.pathname.includes('/ordem-de-servico/nova')
-  const isOsListPage =
-    location.pathname.includes('/ordem-de-servico') || location.pathname.includes('/orcamento')
+  const contextoTela = useMemo(
+    () => obterContextoDeTela(location.pathname, SECRETARIA_MENU_CATEGORIES, '/secretaria'),
+    [location.pathname]
+  )
 
   // Controle de visibilidade
   const isHeaderVisible = isPinned || isHovered || showNotifications || showProfile
@@ -136,21 +141,28 @@ export function SecretariaHeader({ isPinned = false, onTogglePin }) {
             </div>
           </Link>
 
-          {isOsNovaPage && (
-            <div className="hidden sm:flex items-center gap-2 pl-3 sm:pl-4 border-l border-[#e4e7ec] animate-in fade-in duration-200">
-              <span className="text-xs font-semibold text-[#667085]">Ordem de Serviço</span>
-              <span className="text-xs text-[#98a2b3]">/</span>
-              <span className="text-xs font-bold text-[#101828]">Nova OS</span>
-            </div>
-          )}
-
-          {isOsListPage && (
-            <div className="hidden sm:flex items-center gap-2 pl-3 sm:pl-4 border-l border-[#e4e7ec] animate-in fade-in duration-200">
-              <span className="text-xs font-semibold text-[#667085]">Operações</span>
-              <span className="text-xs text-[#98a2b3]">/</span>
-              <span className="text-xs font-bold text-[#101828]">
-                {location.pathname.includes('orcamento') ? 'Orçamento' : 'Ordem de Serviço'}
-              </span>
+          {contextoTela && (
+            <div className="hidden sm:flex items-center gap-2 pl-3 sm:pl-4 border-l border-[#e4e7ec] animate-in fade-in duration-200 min-w-0">
+              <div className="flex flex-col leading-tight min-w-0">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[#98a2b3] truncate">
+                  {contextoTela.categoria}
+                </span>
+                <span
+                  className={`text-xs font-extrabold truncate ${
+                    contextoTela.subRotulo ? 'text-[#667085]' : 'text-[#101828]'
+                  }`}
+                >
+                  {contextoTela.rotulo}
+                </span>
+              </div>
+              {contextoTela.subRotulo && (
+                <>
+                  <CaretRight size={11} weight="bold" className="text-[#d0d5dd] shrink-0" />
+                  <span className="text-xs font-extrabold text-[#0284c7] truncate">
+                    {contextoTela.subRotulo}
+                  </span>
+                </>
+              )}
             </div>
           )}
         </div>

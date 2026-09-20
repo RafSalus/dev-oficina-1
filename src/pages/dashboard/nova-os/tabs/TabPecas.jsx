@@ -1904,17 +1904,8 @@ export function TabPecas({ formData, updateFormData, onSaveStep, onCancel }) {
 
       {/* Barra Inferior Fixa de Navegacao da Etapa */}
       <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] hover:border-[#fecdca] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-        >
-          <X size={14} weight="bold" />
-          <span>Cancelar</span>
-        </button>
-
         <span className="text-xs font-medium text-[#667085]">
-          Aba 5 de 8 • <strong className="text-[#101828] font-bold">Peças e Componentes</strong>
+          Aba 5 de 7 • <strong className="text-[#101828] font-bold">Peças e Componentes</strong>
         </span>
 
         <button

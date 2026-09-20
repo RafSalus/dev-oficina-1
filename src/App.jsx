@@ -34,7 +34,11 @@ import { CotacaoPage } from './pages/dashboard/suprimentos/CotacaoPage'
 import { TerceirosPage } from './pages/dashboard/suprimentos/TerceirosPage'
 import { ClientesPage } from './pages/dashboard/clientes/ClientesPage'
 import { VeiculosPage } from './pages/dashboard/veiculos/VeiculosPage'
+import { EstacionadosPage } from './pages/dashboard/estacionados/EstacionadosPage'
+import { LevaETrazPage } from './pages/dashboard/leva-e-traz/LevaETrazPage'
+import { ManutencaoPreventivaPage } from './pages/dashboard/manutencao-preventiva/ManutencaoPreventivaPage'
 import AgendaPage from './pages/dashboard/agenda/AgendaPage'
+import { PDVPage } from './pages/dashboard/pdv/PDVPage'
 
 export default function App() {
   return (
@@ -90,14 +94,14 @@ export default function App() {
               <Route path="agenda" element={<AgendaPage />} />
               <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
               <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
-              <Route path="orcamento" element={<OrcamentoOSListPage />} />
-              <Route path="orcamentos" element={<Navigate to="/gestao/orcamento" replace />} />
-              <Route path="pdv" element={<DashboardPage />} />
+              <Route path="orcamento" element={<Navigate to="/gestao/ordem-de-servico" replace />} />
+              <Route path="orcamentos" element={<Navigate to="/gestao/ordem-de-servico" replace />} />
+              <Route path="pdv" element={<PDVPage />} />
               <Route path="clientes" element={<ClientesPage />} />
               <Route path="veiculos" element={<VeiculosPage />} />
-              <Route path="estacionados" element={<DashboardPage />} />
-              <Route path="leva-e-traz" element={<DashboardPage />} />
-              <Route path="manutencao-preventiva" element={<DashboardPage />} />
+              <Route path="estacionados" element={<EstacionadosPage />} />
+              <Route path="leva-e-traz" element={<LevaETrazPage />} />
+              <Route path="manutencao-preventiva" element={<ManutencaoPreventivaPage />} />
               <Route path="garantias" element={<DashboardPage />} />
               <Route path="ferramentas" element={<DashboardPage />} />
               <Route path="pecas-danificadas" element={<DashboardPage />} />
@@ -155,14 +159,14 @@ export default function App() {
               <Route path="agenda" element={<AgendaPage />} />
               <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
               <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
-              <Route path="orcamento" element={<OrcamentoOSListPage />} />
-              <Route path="orcamentos" element={<Navigate to="/secretaria/orcamento" replace />} />
-              <Route path="pdv" element={<DashboardPage />} />
+              <Route path="orcamento" element={<Navigate to="/secretaria/ordem-de-servico" replace />} />
+              <Route path="orcamentos" element={<Navigate to="/secretaria/ordem-de-servico" replace />} />
+              <Route path="pdv" element={<PDVPage />} />
               <Route path="clientes" element={<ClientesPage />} />
               <Route path="veiculos" element={<VeiculosPage />} />
-              <Route path="estacionados" element={<DashboardPage />} />
-              <Route path="leva-e-traz" element={<DashboardPage />} />
-              <Route path="manutencao-preventiva" element={<DashboardPage />} />
+              <Route path="estacionados" element={<EstacionadosPage />} />
+              <Route path="leva-e-traz" element={<LevaETrazPage />} />
+              <Route path="manutencao-preventiva" element={<ManutencaoPreventivaPage />} />
               <Route path="garantias" element={<DashboardPage />} />
               <Route path="ferramentas" element={<DashboardPage />} />
               <Route path="pecas-danificadas" element={<DashboardPage />} />

@@ -10,10 +10,11 @@ import {
   FloppyDisk,
   X,
 } from '@phosphor-icons/react'
-import { ITENS_CHECKLIST_ENTRADA, ITENS_CHECKLIST_SAIDA } from '../../../../constants/checklistItems'
+import { ITENS_CHECKLIST_ENTRADA, ITENS_CHECKLIST_SAIDA, checklistCompleto } from '../../../../constants/checklistItems'
+import { podeIniciarDiagnostico } from '../../orcamento/mockOrdensAbertas'
 import { toast } from 'sonner'
 
-export function TabChecklist({ formData, updateFormData, onSaveStep, onCancel }) {
+export function TabChecklist({ formData, updateFormData, onSaveStep, onFinalizarRapido, onCancel }) {
   const [subTab, setSubTab] = useState('entrada') // 'entrada' | 'saida'
 
   const checklistEntrada = formData.checklistEntrada || {}
@@ -419,31 +420,57 @@ export function TabChecklist({ formData, updateFormData, onSaveStep, onCancel })
       </div>
 
       {/* Barra Inferior de Ações da Etapa */}
-      <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] hover:border-[#fecdca] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-        >
-          <X size={14} weight="bold" />
-          <span>Cancelar</span>
-        </button>
-
-        <span className="text-xs font-medium text-[#667085]">
-          Aba 2 de 8 • <strong className="text-[#101828] font-bold">Checklist Oficial</strong>
+      <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-[#667085] shrink-0 hidden sm:block">
+          Aba 2 de 7 • <strong className="text-[#101828] font-bold">Checklist Oficial</strong>
         </span>
 
-        <button
-          type="button"
-          onClick={() => {
-            toast.success('Checklist salvo com sucesso!')
-            onSaveStep?.()
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
-        >
-          <FloppyDisk size={15} weight="bold" />
-          <span>Salvar e Continuar</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (!checklistCompleto(checklistEntrada, ITENS_CHECKLIST_ENTRADA)) {
+                const faltam = ITENS_CHECKLIST_ENTRADA.filter((item) => !checklistEntrada[item.id]?.status).length
+                toast.warning(
+                  `Faltam ${faltam} ${faltam === 1 ? 'item' : 'itens'} do Checklist de Entrada. Marque Conforme, Não Conforme ou Isento em todos antes de continuar.`
+                )
+                setSubTab('entrada')
+                return
+              }
+              if (!podeIniciarDiagnostico(formData)) {
+                toast.warning('Atribua um mecânico responsável (na aba Cliente e Veículo) antes de continuar para o Diagnóstico.')
+                return
+              }
+              toast.success('Checklist salvo com sucesso!')
+              onSaveStep?.()
+            }}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#f2f4f7] text-[#101828] text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+            title="Só disponível com um mecânico já atribuído"
+          >
+            <ArrowRight size={15} weight="bold" />
+            <span>Continuar para Diagnóstico</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!checklistCompleto(checklistEntrada, ITENS_CHECKLIST_ENTRADA)) {
+                const faltam = ITENS_CHECKLIST_ENTRADA.filter((item) => !checklistEntrada[item.id]?.status).length
+                toast.warning(
+                  `Faltam ${faltam} ${faltam === 1 ? 'item' : 'itens'} do Checklist de Entrada. Marque Conforme, Não Conforme ou Isento em todos antes de enviar para a fila.`
+                )
+                setSubTab('entrada')
+                return
+              }
+              onFinalizarRapido?.()
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+            title="Envia a OS para a Fila mesmo sem mecânico atribuído — o diagnóstico fica para depois"
+          >
+            <FloppyDisk size={15} weight="bold" />
+            <span>Salvar e Enviar para Fila</span>
+          </button>
+        </div>
       </div>
     </div>
   )

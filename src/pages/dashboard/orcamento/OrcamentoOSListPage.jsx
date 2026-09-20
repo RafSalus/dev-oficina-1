@@ -23,6 +23,8 @@ import {
   CreditCard,
   FileText,
   CheckCircle,
+  ListBullets,
+  Kanban,
 } from '@phosphor-icons/react'
 import Select from 'react-select'
 import { toast } from 'sonner'
@@ -31,15 +33,26 @@ import {
   obterOrdensAbertas,
   obterOrdensFinalizadas,
   atualizarStatusOrdem,
+  atualizarChecklistSaida,
+  podeIniciarDiagnostico,
+  adicionarItemNaOrdem,
+  atualizarFotoPecaOrdem,
   excluirOrdem,
   finalizarEArquivarOrdem,
   reabrirOrdemFinalizada,
   STATUS_ORCAMENTO,
+  STATUS_PERMITE_FATURAMENTO,
   PRIORIDADE_OPTIONS,
 } from './mockOrdensAbertas'
+import { ITENS_CHECKLIST_SAIDA, checklistCompleto } from '../../../constants/checklistItems'
+import { DRAFT_KEY } from '../nova-os/useOsDraft'
 import { ModalImpressaoOS } from './ModalImpressaoOS'
 import { PainelDetalhesOS } from './PainelDetalhesOS'
 import { MobileOrcamentoOSListPage } from './mobile/MobileOrcamentoOSListPage'
+import { KanbanOSBoard } from './KanbanOSBoard'
+import { ModalChecklistSaida } from './ModalChecklistSaida'
+
+const STORAGE_KEY_VISUALIZACAO_OS = 'dev_oficina_os_visualizacao'
 
 // Estilos customizados sóbrios do react-select conforme SYSTEM_RULES.md
 const selectFilterStyles = {
@@ -107,6 +120,26 @@ export function OrcamentoOSListPage() {
   // Aba ativa: 'abertas' (OS em andamento) ou 'arquivos' (OS finalizadas)
   const [abaAtiva, setAbaAtiva] = useState('abertas')
 
+  // Modo de visualização das OS Abertas: 'lista' (padrão) ou 'kanban'
+  const [visualizacao, setVisualizacao] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY_VISUALIZACAO_OS) === 'kanban' ? 'kanban' : 'lista'
+    } catch {
+      return 'lista'
+    }
+  })
+
+  const handleAlternarVisualizacao = (modo) => {
+    setVisualizacao(modo)
+    if (modo === 'kanban') {
+      // No Kanban o status já é representado pelas colunas — evita um filtro escondido ativo
+      setFiltroStatus(STATUS_ORCAMENTO[0])
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY_VISUALIZACAO_OS, modo)
+    } catch {}
+  }
+
   // Listas de Ordens de Serviço
   const [ordensAbertas, setOrdensAbertas] = useState(() => obterOrdensAbertas())
   const [ordensFinalizadas, setOrdensFinalizadas] = useState(() => obterOrdensFinalizadas())
@@ -122,6 +155,9 @@ export function OrcamentoOSListPage() {
   // Modal de Impressão Oficial da Folha de OS
   const [modalImpressaoAberta, setModalImpressaoAberta] = useState(false)
   const [osParaImpressao, setOsParaImpressao] = useState(null)
+
+  // OS aguardando preenchimento do Checklist de Saída antes de ir para o PDV
+  const [osParaChecklistSaida, setOsParaChecklistSaida] = useState(null)
 
   // Recarrega ambas as listas
   const recarregarListas = () => {
@@ -144,6 +180,83 @@ export function OrcamentoOSListPage() {
     const atualizada = atualizarStatusOrdem(numeroOS, novoStatus)
     if (atualizada) {
       recarregarListas()
+    }
+  }
+
+  // Insere uma peça/serviço avulso direto numa OS já aberta (aba Diagnóstico do painel lateral)
+  const handleAdicionarItem = (numeroOS, tipo, item) => {
+    const atualizada = adicionarItemNaOrdem(numeroOS, tipo, item)
+    if (atualizada) {
+      recarregarListas()
+    }
+  }
+
+  // Anexa a foto tirada na hora (câmera do celular) a uma peça recém-lançada na OS
+  const handleAtualizarFotoPeca = (numeroOS, itemId, fotoUrl) => {
+    const atualizada = atualizarFotoPecaOrdem(numeroOS, itemId, fotoUrl)
+    if (atualizada) {
+      recarregarListas()
+    }
+  }
+
+  // Abre o wizard de edição já na aba pedida (usado pelos atalhos do Kanban em Cotação/Terceirizado)
+  const handleAbrirEdicaoRapida = (os, aba) => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(os))
+      const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
+      toast.info(`Abrindo OS #${os.numeroOS} na aba de ${aba === 'pecas' ? 'Peças' : 'Terceiros'}...`)
+      navigate(`${basePath}/ordem-de-servico/nova?aba=${aba}`)
+    } catch (e) {
+      toast.error('Erro ao preparar edição da OS.')
+    }
+  }
+
+  // Navega para o PDV com a OS carregada — único caminho para faturar e arquivar uma OS.
+  const navegarParaPDV = (os) => {
+    const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
+    navigate(`${basePath}/pdv?os=${os.numeroOS}`)
+  }
+
+  // Ponto único de entrada para faturar uma OS. Antes de ir ao PDV, exige que o Checklist de
+  // Saída (itens de liberação do veículo) esteja preenchido — se não estiver, abre o modal.
+  const handleFaturarNoPDV = (os) => {
+    if (!checklistCompleto(os.checklistSaida, ITENS_CHECKLIST_SAIDA)) {
+      setOsParaChecklistSaida(os)
+      return
+    }
+    navegarParaPDV(os)
+  }
+
+  const handleConfirmarChecklistSaida = ({ checklistSaida, checklistSaidaObs, kmSaida }) => {
+    const os = osParaChecklistSaida
+    if (!os) return
+    const atualizada = atualizarChecklistSaida(os.numeroOS, { checklistSaida, checklistSaidaObs, kmSaida })
+    recarregarListas()
+    setOsParaChecklistSaida(null)
+    if (atualizada) {
+      toast.success('Checklist de saída registrado. Redirecionando para o PDV...')
+      navegarParaPDV(atualizada)
+    }
+  }
+
+  // Move uma OS entre colunas do Kanban. A coluna "Finalizar" (pronto_retirada) não arquiva
+  // direto: passa pelo mesmo portão de faturamento (checklist de saída + PDV).
+  const handleMoverStatusKanban = (numeroOS, novoStatus) => {
+    if (novoStatus === 'em_diagnostico') {
+      const osAtual = ordensAbertas.find((o) => String(o.numeroOS) === String(numeroOS))
+      if (!podeIniciarDiagnostico(osAtual)) {
+        toast.warning('Atribua um mecânico responsável a esta OS antes de mover para Diagnóstico.')
+        return
+      }
+    }
+
+    const atualizada = atualizarStatusOrdem(numeroOS, novoStatus)
+    if (!atualizada) return
+    recarregarListas()
+
+    if (novoStatus === 'pronto_retirada') {
+      toast.success(`OS #${numeroOS} pronta para retirada.`)
+      handleFaturarNoPDV(atualizada)
     }
   }
 
@@ -377,6 +490,32 @@ export function OrcamentoOSListPage() {
             </button>
           </div>
 
+          {/* Alternância Lista / Kanban — só faz sentido para OS Abertas */}
+          {abaAtiva === 'abertas' && (
+            <div className="flex items-center bg-[#f2f4f7] p-1 rounded-xl border border-[#e4e7ec] shrink-0">
+              <button
+                type="button"
+                onClick={() => handleAlternarVisualizacao('lista')}
+                className={`w-8 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                  visualizacao === 'lista' ? 'bg-white text-[#0284c7] shadow-xs' : 'text-[#667085] hover:text-[#101828]'
+                }`}
+                title="Visualização em Lista"
+              >
+                <ListBullets size={15} weight={visualizacao === 'lista' ? 'fill' : 'bold'} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAlternarVisualizacao('kanban')}
+                className={`w-8 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                  visualizacao === 'kanban' ? 'bg-white text-[#0284c7] shadow-xs' : 'text-[#667085] hover:text-[#101828]'
+                }`}
+                title="Visualização em Kanban"
+              >
+                <Kanban size={15} weight={visualizacao === 'kanban' ? 'fill' : 'bold'} />
+              </button>
+            </div>
+          )}
+
           <div className="hidden 2xl:block truncate">
             <span className="text-[11px] text-[#667085] font-medium">
               {abaAtiva === 'abertas'
@@ -416,16 +555,18 @@ export function OrcamentoOSListPage() {
           {/* Filtros específicos para OS Abertas */}
           {abaAtiva === 'abertas' && (
             <>
-              <div className="w-44 xl:w-48">
-                <Select
-                  styles={selectFilterStyles}
-                  value={filtroStatus}
-                  onChange={(opt) => setFiltroStatus(opt || STATUS_ORCAMENTO[0])}
-                  options={STATUS_ORCAMENTO}
-                  isSearchable={false}
-                  placeholder="Status"
-                />
-              </div>
+              {visualizacao === 'lista' && (
+                <div className="w-44 xl:w-48">
+                  <Select
+                    styles={selectFilterStyles}
+                    value={filtroStatus}
+                    onChange={(opt) => setFiltroStatus(opt || STATUS_ORCAMENTO[0])}
+                    options={STATUS_ORCAMENTO}
+                    isSearchable={false}
+                    placeholder="Status"
+                  />
+                </div>
+              )}
 
               <div className="w-40 xl:w-44">
                 <Select
@@ -666,16 +807,18 @@ export function OrcamentoOSListPage() {
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden w-full">
           {/* Cabeçalho Fixo da Tabela */}
           {abaAtiva === 'abertas' ? (
-            <div className="bg-[#f8fafc] border-b border-[#e4e7ec] px-4 py-2.5 grid grid-cols-12 gap-3 text-[11px] font-bold uppercase tracking-wider text-[#667085] shrink-0">
-              <div className="col-span-1">Nº OS</div>
-              <div className="col-span-1">Entrada</div>
-              <div className="col-span-3">Cliente e Contato</div>
-              <div className="col-span-2">Veículo e Placa</div>
-              <div className="col-span-2">Mecânico / Queixa</div>
-              <div className="col-span-1">Status</div>
-              <div className="col-span-1 text-right">Valor Total</div>
-              <div className="col-span-1 text-center">Ações</div>
-            </div>
+            visualizacao === 'kanban' ? null : (
+              <div className="bg-[#f8fafc] border-b border-[#e4e7ec] px-4 py-2.5 grid grid-cols-12 gap-3 text-[11px] font-bold uppercase tracking-wider text-[#667085] shrink-0">
+                <div className="col-span-1">Nº OS</div>
+                <div className="col-span-1">Entrada</div>
+                <div className="col-span-3">Cliente e Contato</div>
+                <div className="col-span-2">Veículo e Placa</div>
+                <div className="col-span-2">Mecânico / Queixa</div>
+                <div className="col-span-1">Status</div>
+                <div className="col-span-1 text-right">Valor Total</div>
+                <div className="col-span-1 text-center">Ações</div>
+              </div>
+            )
           ) : (
             <div className="bg-[#f8fafc] border-b border-[#e4e7ec] px-4 py-2.5 grid grid-cols-12 gap-3 text-[11px] font-bold uppercase tracking-wider text-[#667085] shrink-0">
               <div className="col-span-1">Nº OS</div>
@@ -690,9 +833,23 @@ export function OrcamentoOSListPage() {
           )}
 
           {/* Linhas com Scroll Interno Limpo e Invisível */}
-          <div className="flex-1 overflow-y-auto no-scrollbar min-h-0 divide-y divide-[#f2f4f7]">
+          <div
+            className={
+              abaAtiva === 'abertas' && visualizacao === 'kanban'
+                ? 'flex-1 min-h-0 overflow-hidden flex flex-col p-3'
+                : 'flex-1 overflow-y-auto no-scrollbar min-h-0 divide-y divide-[#f2f4f7]'
+            }
+          >
             {abaAtiva === 'abertas' ? (
-              abertasFiltradas.length === 0 ? (
+              visualizacao === 'kanban' ? (
+                <KanbanOSBoard
+                  ordens={abertasFiltradas}
+                  numeroOsSelecionada={ordemSelecionada?.numeroOS}
+                  onSelecionar={(os) => setOrdemSelecionada((prev) => (prev?.numeroOS === os.numeroOS ? null : os))}
+                  onMoverStatus={handleMoverStatusKanban}
+                  onAbrirEdicaoRapida={handleAbrirEdicaoRapida}
+                />
+              ) : abertasFiltradas.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center p-8 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] border border-[#e4e7ec] flex items-center justify-center text-[#98a2b3] mb-3">
                     <Receipt size={24} weight="duotone" />
@@ -846,14 +1003,16 @@ export function OrcamentoOSListPage() {
                             <WhatsappLogo size={14} weight="fill" />
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleFinalizarEArquivar(os.numeroOS)}
-                            className="w-6 h-6 flex items-center justify-center text-[#475467] hover:text-[#0284c7] hover:bg-white rounded-md cursor-pointer transition-all"
-                            title="Finalizar e Mover para Arquivo"
-                          >
-                            <Archive size={13} weight="bold" />
-                          </button>
+                          {STATUS_PERMITE_FATURAMENTO.includes(os.status) && (
+                            <button
+                              type="button"
+                              onClick={() => handleFaturarNoPDV(os)}
+                              className="w-6 h-6 flex items-center justify-center text-[#475467] hover:text-[#0284c7] hover:bg-white rounded-md cursor-pointer transition-all"
+                              title="Faturar e Finalizar no PDV"
+                            >
+                              <CreditCard size={13} weight="bold" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1032,7 +1191,9 @@ export function OrcamentoOSListPage() {
             onClose={() => setOrdemSelecionada(null)}
             onAbrirImpressao={() => handleAbrirImpressao(ordemSelecionada)}
             onAtualizarStatus={handleAtualizarStatus}
-            onFinalizarEArquivar={handleFinalizarEArquivar}
+            onFaturarNoPDV={handleFaturarNoPDV}
+            onAdicionarItem={handleAdicionarItem}
+            onAtualizarFotoPeca={handleAtualizarFotoPeca}
             onReabrir={handleReabrirOrdem}
             onExcluir={handleExcluirOrdem}
           />
@@ -1044,6 +1205,14 @@ export function OrcamentoOSListPage() {
         isOpen={modalImpressaoAberta}
         onClose={() => setModalImpressaoAberta(false)}
         osData={osParaImpressao}
+      />
+
+      {/* 5. Modal do Checklist de Saída — obrigatório antes de faturar no PDV */}
+      <ModalChecklistSaida
+        isOpen={Boolean(osParaChecklistSaida)}
+        onClose={() => setOsParaChecklistSaida(null)}
+        os={osParaChecklistSaida}
+        onConfirmar={handleConfirmarChecklistSaida}
       />
     </div>
   )

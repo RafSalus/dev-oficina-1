@@ -39,6 +39,8 @@ import {
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 import { PecaModalForm } from '../../../components/suprimentos/PecaModalForm'
 import { EstoqueMovimentoModal } from '../../../components/suprimentos/EstoqueMovimentoModal'
+import { useIsMobile } from '../../../hooks/useIsMobile'
+import { MobileEstoquePage } from './mobile/MobileEstoquePage'
 
 // Helpers seguros de contatos e autopeças (Regra 5: sem & em labels)
 const extrairTelefoneLimpo = (t) => {
@@ -72,6 +74,7 @@ const filtrarFornecedoresAutoPecas = (terceiros) => {
 }
 
 export function EstoquePage() {
+  const isMobile = useIsMobile()
   const navigate = useNavigate()
   const location = useLocation()
   const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
@@ -478,6 +481,10 @@ export function EstoquePage() {
       console.error('Erro ao abrir cotação agrupada no estoque:', err)
       toast.error('Erro ao abrir tela de cotação.')
     }
+  }
+
+  if (isMobile) {
+    return <MobileEstoquePage />
   }
 
   return (

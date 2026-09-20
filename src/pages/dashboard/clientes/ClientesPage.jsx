@@ -27,6 +27,8 @@ import { formatarCPF, formatarCNPJ, formatarTelefone } from '../../../utils/fisc
 import { ClienteModalForm } from '../../../components/clientes/ClienteModalForm'
 import { ClienteFrotaModal } from '../../../components/clientes/ClienteFrotaModal'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
+import { useIsMobile } from '../../../hooks/useIsMobile'
+import { MobileClientesPage } from './mobile/MobileClientesPage'
 
 const FILTRO_TIPO_OPCOES = [
   { value: 'TODOS', label: 'Todos os Tipos (PF e PJ)' },
@@ -47,6 +49,7 @@ const FILTRO_VEICULOS_OPCOES = [
 ]
 
 export function ClientesPage() {
+  const isMobile = useIsMobile()
   const [clientes, setClientes] = useState([])
   const [busca, setBusca] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('TODOS')
@@ -190,6 +193,10 @@ export function ClientesPage() {
         },
       },
     })
+  }
+
+  if (isMobile) {
+    return <MobileClientesPage />
   }
 
   return (

@@ -33,3 +33,10 @@ export const ITENS_CHECKLIST_SAIDA = [
   { id: 'testeVeiculo', label: 'Teste do Veículo', desc: 'Rodagem e validação final de pista' },
   { id: 'etiquetaOleo', label: 'Etiqueta de Óleo', desc: 'Preenchida e afixada no para-brisa' },
 ]
+
+// Confere se todos os itens de um checklist (entrada ou saída) já têm um status marcado
+// (conforme / não conforme / isento). Usado para travar avanço de etapa e liberar o PDV.
+export function checklistCompleto(checklist, itens) {
+  if (!checklist) return false
+  return itens.every((item) => Boolean(checklist[item.id]?.status))
+}

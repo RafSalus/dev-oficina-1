@@ -25,6 +25,9 @@ import {
   SignOut,
   CaretRight,
   Buildings,
+  Money,
+  Hammer,
+  Cube,
 } from '@phosphor-icons/react'
 import { MENU_CATEGORIES } from '../../../constants/dashboardMenus'
 import { useAdminAuth } from '../../../context/AdminAuthContext'
@@ -50,7 +53,9 @@ const ICONS_MAP = {
   IdentificationBadge,
   GearSix,
   Globe,
-  Buildings,
+  Money,
+  Hammer,
+  Cube,
 }
 
 export function MobileMenuSheet({ isOpen, onClose }) {

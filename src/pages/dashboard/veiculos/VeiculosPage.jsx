@@ -18,6 +18,7 @@ import {
   CheckCircle,
   X,
   Funnel,
+  Garage,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import {
@@ -27,7 +28,10 @@ import {
 } from '../../../constants/mockClientesVeiculos'
 import { formatarCPF, formatarCNPJ, formatarTelefone } from '../../../utils/fiscalValidators'
 import { VeiculoModalForm } from '../../../components/veiculos/VeiculoModalForm'
+import { ModalEstacionarVeiculo } from '../../../components/estacionados/ModalEstacionarVeiculo'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
+import { useIsMobile } from '../../../hooks/useIsMobile'
+import { MobileVeiculosPage } from './mobile/MobileVeiculosPage'
 
 const FILTRO_PROPRIETARIO_OPCOES = [
   { value: 'TODOS', label: 'Todos os Proprietários' },
@@ -52,6 +56,7 @@ const FILTRO_STATUS_OPCOES = [
 ]
 
 export function VeiculosPage() {
+  const isMobile = useIsMobile()
   const navigate = useNavigate()
   const [veiculos, setVeiculos] = useState([])
   const [busca, setBusca] = useState('')
@@ -62,6 +67,8 @@ export function VeiculosPage() {
 
   const [modalAberto, setModalAberto] = useState(false)
   const [veiculoEmEdicao, setVeiculoEmEdicao] = useState(null)
+  const [modalEstacionarAberto, setModalEstacionarAberto] = useState(false)
+  const [veiculoParaEstacionar, setVeiculoParaEstacionar] = useState(null)
 
   // Carrega veículos da frota do localStorage
   const recarregarFrota = () => {
@@ -171,6 +178,11 @@ export function VeiculosPage() {
     setModalAberto(true)
   }
 
+  const handleAbrirEstacionar = (v) => {
+    setVeiculoParaEstacionar(v)
+    setModalEstacionarAberto(true)
+  }
+
   const handleSalvarVeiculo = (veiculoData, clienteIdOriginal) => {
     try {
       salvarVeiculoNaFrota(veiculoData, clienteIdOriginal)
@@ -243,6 +255,10 @@ export function VeiculosPage() {
     setFiltroCombustivel('TODOS')
     setFiltroMarca('TODOS')
     setFiltroStatus('TODOS')
+  }
+
+  if (isMobile) {
+    return <MobileVeiculosPage />
   }
 
   return (
@@ -588,6 +604,14 @@ export function VeiculosPage() {
                           <div className="inline-flex items-center gap-1 justify-end">
                             <button
                               type="button"
+                              onClick={() => handleAbrirEstacionar(v)}
+                              className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors cursor-pointer"
+                              title="Estacionar veículo (Cliente vendeu o carro)"
+                            >
+                              <Garage size={15} />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleIniciarOS(v)}
                               className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors cursor-pointer"
                               title="Abrir Nova Ordem de Serviço para este veículo"
@@ -628,6 +652,14 @@ export function VeiculosPage() {
         onClose={() => setModalAberto(false)}
         onSalvar={handleSalvarVeiculo}
         veiculoParaEditar={veiculoEmEdicao}
+      />
+
+      {/* Modal para Estacionar Veículo Vendido */}
+      <ModalEstacionarVeiculo
+        isOpen={modalEstacionarAberto}
+        onClose={() => setModalEstacionarAberto(false)}
+        veiculoInicial={veiculoParaEstacionar}
+        onEstacionadoConcluido={recarregarFrota}
       />
     </div>
   )

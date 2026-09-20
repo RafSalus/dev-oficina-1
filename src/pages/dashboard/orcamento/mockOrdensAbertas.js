@@ -1,6 +1,9 @@
 export const STORAGE_KEY_ORDENS = 'dev_oficina_ordens_servico'
 export const STORAGE_KEY_ORCAMENTOS = 'dev_oficina_orcamentos'
 
+// Atenção: 'em_diagnostico' precisa permanecer no índice 1 — várias telas usam
+// STATUS_ORCAMENTO[1] como fallback padrão (PainelDetalhesOS, portal do cliente e do mecânico).
+// Por isso os status novos do Kanban ('fila' e 'terceirizado') são adicionados no final da lista.
 export const STATUS_ORCAMENTO = [
   { value: 'todos', label: 'Todos os Status', color: 'zinc' },
   { value: 'em_diagnostico', label: 'Em Diagnóstico', color: 'slate', badgeBg: 'bg-[#f2f4f7]', badgeText: 'text-[#344054]', border: 'border-[#d0d5dd]' },
@@ -8,7 +11,20 @@ export const STATUS_ORCAMENTO = [
   { value: 'aguardando_aprovacao', label: 'Aguardando Aprovação', color: 'sky', badgeBg: 'bg-[#e0f2fe]', badgeText: 'text-[#0369a1]', border: 'border-[#bae6fd]' },
   { value: 'aprovado_execucao', label: 'Aprovado e Em Execução', color: 'navy', badgeBg: 'bg-[#101828]', badgeText: 'text-white', border: 'border-[#101828]' },
   { value: 'pronto_retirada', label: 'Pronto para Retirada', color: 'blue', badgeBg: 'bg-[#0284c7]', badgeText: 'text-white', border: 'border-[#0284c7]' },
+  { value: 'fila', label: 'Na Fila', color: 'zinc', badgeBg: 'bg-zinc-100', badgeText: 'text-zinc-700', border: 'border-zinc-200' },
+  { value: 'terceirizado', label: 'Terceirizado', color: 'violet', badgeBg: 'bg-violet-50', badgeText: 'text-violet-700', border: 'border-violet-200' },
 ]
+
+// Status a partir dos quais uma OS pode ser faturada no PDV (orçamento aprovado e execução
+// iniciada). Usado como allowlist única em PainelDetalhesOS, OrcamentoOSListPage e PDVPage —
+// nunca checar isso como "status !== aguardando_aprovacao", pois libera etapas anteriores demais.
+export const STATUS_PERMITE_FATURAMENTO = ['aprovado_execucao', 'pronto_retirada']
+
+// A secretária pode colocar uma OS na Fila sem mecânico atribuído, mas para avançar para
+// Diagnóstico é obrigatório ter um mecânico responsável definido.
+export function podeIniciarDiagnostico(dados) {
+  return Boolean(dados?.mecanicoId || dados?.mecanicoNome)
+}
 
 export const PRIORIDADE_OPTIONS = [
   { value: 'todas', label: 'Todas as Prioridades' },
@@ -333,14 +349,6 @@ export function obterOrdensAbertas() {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map((item) => {
-          if (item.numeroOS === '002908' && (!item.terceirosOS || item.terceirosOS.length === 0)) {
-            return {
-              ...item,
-              terceirosOS: SEED_ORDENS_ABERTAS[0].terceirosOS,
-              totalTerceiros: SEED_ORDENS_ABERTAS[0].totalTerceiros,
-              valorTotal: SEED_ORDENS_ABERTAS[0].valorTotal,
-            }
-          }
           const tTerc = (item.terceirosOS || []).reduce(
             (acc, t) => acc + ((parseFloat(t.valorVenda || t.precoFinal || t.precoUnitario) || 0) * (parseFloat(t.quantidade) || 1) - (parseFloat(t.desconto) || 0)),
             0
@@ -382,6 +390,71 @@ export function atualizarStatusOrdem(numeroOS, novoStatus) {
     return lista[index]
   }
   return null
+}
+
+// Grava o Checklist de Saída (liberação do veículo) na OS. Chamado antes de faturar no PDV.
+export function atualizarChecklistSaida(numeroOS, { checklistSaida, checklistSaidaObs, kmSaida }) {
+  const lista = obterOrdensAbertas()
+  const index = lista.findIndex((item) => String(item.numeroOS) === String(numeroOS))
+  if (index === -1) return null
+  lista[index] = {
+    ...lista[index],
+    checklistSaida,
+    checklistSaidaObs,
+    kmSaida,
+  }
+  salvarOrdensAbertas(lista)
+  return lista[index]
+}
+
+// Acrescenta uma peça ou serviço avulso a uma OS já aberta (usado no "inserir rápido" da aba
+// Diagnóstico do painel lateral, sem precisar reabrir o wizard inteiro) e recalcula os totais.
+export function adicionarItemNaOrdem(numeroOS, tipo, item) {
+  const lista = obterOrdensAbertas()
+  const index = lista.findIndex((o) => String(o.numeroOS) === String(numeroOS))
+  if (index === -1) return null
+
+  const os = lista[index]
+  const chave = tipo === 'servico' ? 'servicosOS' : tipo === 'peca' ? 'pecasOS' : null
+  if (!chave) return null
+
+  const listaAtualizada = [...(os[chave] || []), item]
+
+  const totalPecas = (tipo === 'peca' ? listaAtualizada : os.pecasOS || []).reduce(
+    (acc, p) => acc + ((parseFloat(p.precoUnitario) || 0) * (parseFloat(p.quantidade) || 1) - (parseFloat(p.desconto) || 0)),
+    0
+  )
+  const totalServicos = (tipo === 'servico' ? listaAtualizada : os.servicosOS || []).reduce(
+    (acc, s) => acc + ((parseFloat(s.precoUnitario ?? s.valorUnitario) || 0) * (parseFloat(s.quantidade) || 1) - (parseFloat(s.desconto) || 0)),
+    0
+  )
+  const totalTerceiros = Number(os.totalTerceiros) || 0
+  const descontoTotal = parseFloat(os.descontoGeralOS ?? os.descontoTotal) || 0
+  const valorTotal = Math.max(0, totalPecas + totalServicos + totalTerceiros - descontoTotal)
+
+  lista[index] = {
+    ...os,
+    [chave]: listaAtualizada,
+    totalPecas,
+    totalServicos,
+    valorTotal,
+  }
+  salvarOrdensAbertas(lista)
+  return lista[index]
+}
+
+// Anexa a foto (tirada na hora pela câmera) a uma peça específica já lançada na OS
+export function atualizarFotoPecaOrdem(numeroOS, itemId, fotoUrl) {
+  const lista = obterOrdensAbertas()
+  const index = lista.findIndex((o) => String(o.numeroOS) === String(numeroOS))
+  if (index === -1) return null
+
+  const os = lista[index]
+  const pecasAtualizadas = (os.pecasOS || []).map((p) => (p.id === itemId ? { ...p, fotoUrl } : p))
+
+  lista[index] = { ...os, pecasOS: pecasAtualizadas }
+  salvarOrdensAbertas(lista)
+  return lista[index]
 }
 
 export function excluirOrdem(numeroOS) {
@@ -428,7 +501,7 @@ export function adicionarOuAtualizarOrdem(osData) {
     0
   )
   const totalServicos = (osData.servicosOS || []).reduce(
-    (acc, s) => acc + ((parseFloat(s.valorUnitario) || 0) * (parseFloat(s.quantidade) || 1) - (parseFloat(s.desconto) || 0)),
+    (acc, s) => acc + ((parseFloat(s.precoUnitario ?? s.valorUnitario) || 0) * (parseFloat(s.quantidade) || 1) - (parseFloat(s.desconto) || 0)),
     0
   )
   const totalTerceiros = (osData.terceirosOS || []).reduce(

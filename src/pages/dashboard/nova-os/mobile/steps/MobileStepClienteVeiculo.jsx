@@ -12,7 +12,7 @@ import {
   WhatsappLogo,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { MOCK_CLIENTES_VEICULOS } from '../../../../../constants/mockClientesVeiculos'
+import { carregarClientesCadastrados } from '../../../../../constants/mockClientesVeiculos'
 import { GoogleMapsIcon } from '../../../../../components/icons/GoogleMapsIcon'
 import { MobileStepFooter } from '../MobileStepFooter'
 import { mobileSelectStyles, inputBaseClass, textareaBaseClass, labelBaseClass } from '../mobileSelectStyles'
@@ -50,17 +50,31 @@ export function MobileStepClienteVeiculo({ formData, updateFormData, onContinue 
     relatoCliente = '',
   } = formData
 
+  const listaClientes = useMemo(() => carregarClientesCadastrados(), [])
+
   const selectedClienteOption = useMemo(() => {
-    if (!clienteId) return null
-    return MOCK_CLIENTES_VEICULOS.find((c) => c.value === clienteId) || null
-  }, [clienteId])
+    if (!clienteId && !cliente) return null
+    return (
+      listaClientes.find(
+        (c) =>
+          (clienteId && (c.value === clienteId || c.id === clienteId)) ||
+          (cliente && c.nome?.toLowerCase() === cliente?.toLowerCase())
+      ) || null
+    )
+  }, [clienteId, cliente, listaClientes])
 
   const veiculosDisponiveis = useMemo(() => selectedClienteOption?.veiculos || [], [selectedClienteOption])
 
   const selectedVeiculoOption = useMemo(() => {
-    if (!veiculoId || !veiculosDisponiveis.length) return null
-    return veiculosDisponiveis.find((v) => v.value === veiculoId) || null
-  }, [veiculoId, veiculosDisponiveis])
+    if (!veiculosDisponiveis.length) return null
+    return (
+      veiculosDisponiveis.find(
+        (v) =>
+          (veiculoId && (v.value === veiculoId || v.id === veiculoId)) ||
+          (placa && (v.placa || '').toUpperCase().trim() === (placa || '').toUpperCase().trim())
+      ) || null
+    )
+  }, [veiculoId, placa, veiculosDisponiveis])
 
   const clienteIniciais = useMemo(() => {
     if (!cliente) return 'CL'
@@ -144,7 +158,7 @@ export function MobileStepClienteVeiculo({ formData, updateFormData, onContinue 
         <Select
           value={selectedClienteOption}
           onChange={handleSelectCliente}
-          options={MOCK_CLIENTES_VEICULOS}
+          options={listaClientes}
           isClearable
           isSearchable
           placeholder="Buscar por nome, telefone ou documento..."

@@ -22,6 +22,9 @@ import {
   IdentificationBadge,
   GearSix,
   Globe,
+  Money,
+  Hammer,
+  Cube,
 } from '@phosphor-icons/react'
 import { MENU_CATEGORIES } from '../../../constants/dashboardMenus'
 
@@ -46,6 +49,9 @@ const ICONS_MAP = {
   IdentificationBadge,
   GearSix,
   Globe,
+  Money,
+  Hammer,
+  Cube,
 }
 
 // Rotas que, mesmo "em breve", já possuem uma ação principal disponível

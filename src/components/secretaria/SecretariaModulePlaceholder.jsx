@@ -24,6 +24,9 @@ import {
   Globe,
   ClockCountdown,
   Buildings,
+  Money,
+  Hammer,
+  Cube,
 } from '@phosphor-icons/react'
 import { SECRETARIA_MENU_CATEGORIES } from '../../constants/secretariaMenus'
 
@@ -47,6 +50,9 @@ const ICONS_MAP = {
   GearSix,
   Globe,
   Buildings,
+  Money,
+  Hammer,
+  Cube,
 }
 
 export function SecretariaModulePlaceholder() {

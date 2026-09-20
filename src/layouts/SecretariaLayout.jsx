@@ -20,6 +20,9 @@ import {
   GearSix,
   Globe,
   Buildings,
+  Money,
+  Hammer,
+  Cube,
 } from '@phosphor-icons/react'
 import { SecretariaHeader } from '../components/secretaria/SecretariaHeader'
 import { SecretariaSidebar } from '../components/secretaria/SecretariaSidebar'
@@ -50,6 +53,9 @@ const ICONS_MAP = {
   GearSix,
   Globe,
   Buildings,
+  Money,
+  Hammer,
+  Cube,
 }
 
 const MOBILE_NAV_ITEMS = [

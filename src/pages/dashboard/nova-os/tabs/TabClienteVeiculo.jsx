@@ -15,7 +15,8 @@ import {
   X,
 } from '@phosphor-icons/react'
 import { useNotice } from '../../../../context/NoticeContext'
-import { MOCK_CLIENTES_VEICULOS } from '../../../../constants/mockClientesVeiculos'
+import { carregarClientesCadastrados } from '../../../../constants/mockClientesVeiculos'
+import { MOCK_MECANICOS } from '../../../../constants/mecanicos'
 import { GoogleMapsIcon } from '../../../../components/icons/GoogleMapsIcon'
 import { toast } from 'sonner'
 
@@ -142,7 +143,19 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
     tipoAtendimento = 'orcamento',
     prioridade = 'normal',
     relatoCliente = '',
+    mecanicoId = '',
   } = formData
+
+  const selectedMecanicoOption = useMemo(() => {
+    return MOCK_MECANICOS.find((m) => m.value === mecanicoId) || MOCK_MECANICOS[0]
+  }, [mecanicoId])
+
+  const handleSelectMecanico = (option) => {
+    updateFormData({
+      mecanicoId: option?.value || '',
+      mecanicoNome: option?.value ? option.nome : '',
+    })
+  }
 
   const handleSave = () => {
     if (!clienteId || !cliente?.trim()) {
@@ -164,11 +177,19 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
     onSaveStep?.()
   }
 
+  const listaClientes = useMemo(() => carregarClientesCadastrados(), [])
+
   // Cliente selecionado atualmente
   const selectedClienteOption = useMemo(() => {
-    if (!clienteId) return null
-    return MOCK_CLIENTES_VEICULOS.find((c) => c.value === clienteId) || null
-  }, [clienteId])
+    if (!clienteId && !cliente) return null
+    return (
+      listaClientes.find(
+        (c) =>
+          (clienteId && (c.value === clienteId || c.id === clienteId)) ||
+          (cliente && c.nome?.toLowerCase() === cliente?.toLowerCase())
+      ) || null
+    )
+  }, [clienteId, cliente, listaClientes])
 
   // Veículos vinculados estritamente ao cliente selecionado
   const veiculosDisponiveis = useMemo(() => {
@@ -178,9 +199,15 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
 
   // Veículo selecionado atualmente
   const selectedVeiculoOption = useMemo(() => {
-    if (!veiculoId || !veiculosDisponiveis.length) return null
-    return veiculosDisponiveis.find((v) => v.value === veiculoId) || null
-  }, [veiculoId, veiculosDisponiveis])
+    if (!veiculosDisponiveis.length) return null
+    return (
+      veiculosDisponiveis.find(
+        (v) =>
+          (veiculoId && (v.value === veiculoId || v.id === veiculoId)) ||
+          (placa && (v.placa || '').toUpperCase().trim() === (placa || '').toUpperCase().trim())
+      ) || null
+    )
+  }, [veiculoId, placa, veiculosDisponiveis])
 
   // Iniciais do cliente para o avatar
   const clienteIniciais = useMemo(() => {
@@ -289,7 +316,7 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
               <Select
                 value={selectedClienteOption}
                 onChange={handleSelectCliente}
-                options={MOCK_CLIENTES_VEICULOS}
+                options={listaClientes}
                 isClearable
                 isSearchable
                 placeholder="Buscar por nome, telefone ou documento..."
@@ -595,8 +622,8 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
           </div>
 
           <div className="flex-1 flex flex-col justify-between py-2.5 space-y-2.5 overflow-hidden min-h-0">
-            {/* Tipo de Atendimento e Prioridade com react-select */}
-            <div className="grid grid-cols-2 gap-2.5 shrink-0">
+            {/* Tipo de Atendimento, Prioridade e Mecânico com react-select */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 shrink-0">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-1.5">
                   Tipo de Atendimento
@@ -632,6 +659,20 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
                   styles={customSelectStyles}
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#344054] mb-1.5">
+                  Mecânico Responsável
+                </label>
+                <Select
+                  value={selectedMecanicoOption}
+                  onChange={handleSelectMecanico}
+                  options={MOCK_MECANICOS}
+                  isSearchable
+                  placeholder="Selecionar mecânico..."
+                  styles={customSelectStyles}
+                />
+              </div>
             </div>
 
             {/* Relato do Cliente / Queixa Principal */}
@@ -652,17 +693,8 @@ export function TabClienteVeiculo({ formData, updateFormData, onSaveStep, onCanc
 
       {/* Barra Inferior de Ações da Etapa */}
       <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] hover:border-[#fecdca] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-        >
-          <X size={14} weight="bold" />
-          <span>Cancelar</span>
-        </button>
-
         <span className="text-xs font-medium text-[#667085]">
-          Aba 1 de 8 • <strong className="text-[#101828] font-bold">Cliente e Veiculo</strong>
+          Aba 1 de 7 • <strong className="text-[#101828] font-bold">Cliente e Veiculo</strong>
         </span>
 
         <button

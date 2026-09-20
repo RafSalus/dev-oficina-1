@@ -14,6 +14,7 @@ import {
   CalendarDots,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { useIsMobile } from '../../../hooks/useIsMobile'
 import {
   MECANICOS_AGENDA,
   obterDatasDaSemana,
@@ -27,8 +28,11 @@ import { AgendaGradeSemanal } from '../../../components/agenda/AgendaGradeSemana
 import { AgendaAgendamentoModal } from '../../../components/agenda/AgendaAgendamentoModal'
 import { AgendaTratarAtrasoModal } from '../../../components/agenda/AgendaTratarAtrasoModal'
 import { AgendaFilaDedicada } from '../../../components/agenda/AgendaFilaDedicada'
+import { MobileAgendaPage } from './mobile/MobileAgendaPage'
 
 export default function AgendaPage() {
+  const isMobile = useIsMobile()
+
   // Aba Ativa Principal: 'grade' (Agenda Semanal) | 'fila' (Fila de Atendimento Dedicada)
   const [abaAtivaPrincipal, setAbaAtivaPrincipal] = useState('grade')
 
@@ -133,6 +137,10 @@ export default function AgendaPage() {
     setIsModalAgendamentoAberto(true)
   }
 
+  const handleFecharModalAgendamento = () => {
+    setIsModalAgendamentoAberto(false)
+  }
+
   const handleSalvarAgendamento = (agendamentoSalvo) => {
     let novaLista = []
     const existe = agendamentos.some((a) => a.id === agendamentoSalvo.id)
@@ -206,6 +214,49 @@ export default function AgendaPage() {
 
     toast.success(
       `Slot preenchido automaticamente! ${clienteFila.clienteNome} foi agendado(a) com ${mecanicoAtivo.nome} às ${horario}.`
+    )
+  }
+
+  if (isMobile) {
+    return (
+      <MobileAgendaPage
+        abaAtivaPrincipal={abaAtivaPrincipal}
+        setAbaAtivaPrincipal={setAbaAtivaPrincipal}
+        mecanicoAtivo={mecanicoAtivo}
+        mecanicoSelecionadoId={mecanicoSelecionadoId}
+        setMecanicoSelecionadoId={setMecanicoSelecionadoId}
+        semanaDias={semanaDias}
+        irParaSemanaAnterior={irParaSemanaAnterior}
+        irParaProximaSemana={irParaProximaSemana}
+        irParaSemanaAtual={irParaSemanaAtual}
+        agendamentos={agendamentos}
+        filaEspera={filaEspera}
+        termoBusca={termoBusca}
+        setTermoBusca={setTermoBusca}
+        totalFila={totalFila}
+        totalGarantiasFila={totalGarantiasFila}
+        onNovoAgendamento={handleAbrirNovoAgendamento}
+        onEditarAgendamento={handleEditarAgendamento}
+        onPreencherHorarioAutomatico={handlePreencherHorarioAutomatico}
+        onAtualizarFila={(novaFila) => {
+          salvarFilaEspera(novaFila)
+          setFilaEspera(novaFila)
+        }}
+        isModalAgendamentoAberto={isModalAgendamentoAberto}
+        onFecharModalAgendamento={handleFecharModalAgendamento}
+        onSalvarAgendamento={handleSalvarAgendamento}
+        onExcluirAgendamento={handleExcluirAgendamento}
+        agendamentoEmEdicao={agendamentoEmEdicao}
+        slotPreSelecionado={slotPreSelecionado}
+        isModalAtrasoAberto={isModalAtrasoAberto}
+        onAbrirTratarAtraso={handleTratarAtraso}
+        onFecharModalAtraso={() => {
+          setIsModalAtrasoAberto(false)
+          setAgendamentoAtrasadoAlvo(null)
+        }}
+        agendamentoAtrasadoAlvo={agendamentoAtrasadoAlvo}
+        onSalvarAtrasoTratado={handleSalvarAtrasoTratado}
+      />
     )
   }
 

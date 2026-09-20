@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { Receipt } from '@phosphor-icons/react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { Receipt, LockSimple } from '@phosphor-icons/react'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useNotice } from '../../../context/NoticeContext'
 import { useIsMobile } from '../../../hooks/useIsMobile'
 import { TabClienteVeiculo } from './tabs/TabClienteVeiculo'
@@ -10,13 +10,44 @@ import { TabServicos } from './tabs/TabServicos'
 import { TabPecas } from './tabs/TabPecas'
 import { TabTerceiros } from './tabs/TabTerceiros'
 import { TabOrcamento } from './tabs/TabOrcamento'
-import { TabEmBreve } from './tabs/TabEmBreve'
 import { MobileNovaOrdemDeServicoPage } from './mobile/MobileNovaOrdemDeServicoPage'
 import { OS_TABS, DRAFT_KEY, useOsDraft } from './useOsDraft'
-import { adicionarOuAtualizarOrdem } from '../orcamento/mockOrdensAbertas'
+import { adicionarOuAtualizarOrdem, podeIniciarDiagnostico } from '../orcamento/mockOrdensAbertas'
+import { ITENS_CHECKLIST_ENTRADA, checklistCompleto } from '../../../constants/checklistItems'
+import { carregarClientesCadastrados } from '../../../constants/mockClientesVeiculos'
 import { toast } from 'sonner'
 
 export { OS_TABS }
+
+// No desktop, a única aba removida é "Finalizar" (o próprio Orçamento já finaliza). O Checklist
+// volta a ser sua própria aba: a secretária pode preencher só até ali e enviar a OS para a Fila
+// sem mecânico atribuído — Diagnóstico em diante fica reservado para quando houver um mecânico.
+const DESKTOP_TABS = OS_TABS.filter((tab) => tab.id !== 'finalizar')
+
+// Cada etapa só libera a próxima quando os dados mínimos dela estão preenchidos. O Checklist de
+// Entrada só libera o Diagnóstico se, além de completo, já houver um mecânico responsável
+// atribuído (pode ser deixado sem mecânico até aqui, mas não para avançar ao diagnóstico).
+function calcularEtapasValidas(formData) {
+  return {
+    'cliente-veiculo': Boolean(
+      formData.clienteId && formData.cliente?.trim() && formData.veiculoId && formData.placa?.trim() && formData.km?.trim()
+    ),
+    checklist: checklistCompleto(formData.checklistEntrada, ITENS_CHECKLIST_ENTRADA) && podeIniciarDiagnostico(formData),
+    diagnostico: Boolean(formData.laudoTecnico?.trim()),
+    servicos: true,
+    pecas: true,
+    terceiros: true,
+    orcamento: true,
+  }
+}
+
+function abaEstaDesbloqueada(tabId, etapasValidas) {
+  const indexAlvo = DESKTOP_TABS.findIndex((t) => t.id === tabId)
+  for (let i = 0; i < indexAlvo; i += 1) {
+    if (!etapasValidas[DESKTOP_TABS[i].id]) return false
+  }
+  return true
+}
 
 export function NovaOrdemDeServicoPage() {
   const isMobile = useIsMobile()
@@ -25,9 +56,165 @@ export function NovaOrdemDeServicoPage() {
   const { openNotice } = useNotice()
 
   const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
+  const [searchParams] = useSearchParams()
 
-  const [activeTab, setActiveTab] = useState('cliente-veiculo')
+  // Permite abrir o wizard já numa aba específica (ex: vindo do Kanban direto para "Peças")
+  const abaInicial = searchParams.get('aba')
+  const [activeTab, setActiveTab] = useState(
+    DESKTOP_TABS.some((t) => t.id === abaInicial) ? abaInicial : 'cliente-veiculo'
+  )
   const { formData, updateFormData, clearDraft } = useOsDraft()
+  const etapasValidas = calcularEtapasValidas(formData)
+
+  const lastLoadedKeyRef = useRef(null)
+
+  useEffect(() => {
+    if (lastLoadedKeyRef.current === location.key) return
+    const state = location.state
+    if (
+      !state ||
+      (!state.veiculoPlaca &&
+        !state.placa &&
+        !state.clienteId &&
+        !state.veiculo &&
+        !state.itensPreventivosSugeridos)
+    ) {
+      return
+    }
+    lastLoadedKeyRef.current = location.key
+
+    // Carrega a base unificada de clientes e frota
+    const listaClientes = carregarClientesCadastrados()
+    const veiculoParam = state.veiculo || {}
+    const placaAlvo = (state.veiculoPlaca || state.placa || veiculoParam.placa || '')
+      .toUpperCase()
+      .trim()
+    const clienteIdAlvo = state.clienteId || veiculoParam.clienteId
+    const clienteNomeAlvo = state.clienteNome || veiculoParam.clienteNome
+
+    // 1. Localiza o cliente proprietário
+    let clienteEncontrado = null
+    if (clienteIdAlvo) {
+      clienteEncontrado = listaClientes.find(
+        (c) => c.value === clienteIdAlvo || c.id === clienteIdAlvo
+      )
+    }
+    if (!clienteEncontrado && placaAlvo) {
+      clienteEncontrado = listaClientes.find(
+        (c) =>
+          Array.isArray(c.veiculos) &&
+          c.veiculos.some((v) => (v.placa || '').toUpperCase().trim() === placaAlvo)
+      )
+    }
+    if (!clienteEncontrado && clienteNomeAlvo) {
+      clienteEncontrado = listaClientes.find(
+        (c) => c.nome?.toLowerCase().trim() === clienteNomeAlvo.toLowerCase().trim()
+      )
+    }
+
+    // 2. Localiza o veículo dentro do cadastro do cliente
+    let veiculoEncontrado = null
+    if (clienteEncontrado && Array.isArray(clienteEncontrado.veiculos)) {
+      if (state.veiculoId) {
+        veiculoEncontrado = clienteEncontrado.veiculos.find(
+          (v) => v.value === state.veiculoId || v.id === state.veiculoId
+        )
+      }
+      if (!veiculoEncontrado && placaAlvo) {
+        veiculoEncontrado = clienteEncontrado.veiculos.find(
+          (v) => (v.placa || '').toUpperCase().trim() === placaAlvo
+        )
+      }
+      if (!veiculoEncontrado && clienteEncontrado.veiculos.length > 0) {
+        veiculoEncontrado = clienteEncontrado.veiculos[0]
+      }
+    }
+
+    // 3. Monta o relato do cliente detalhando os pontos de atenção e revisão preventiva
+    const itens = state.itensPreventivosSugeridos || []
+    let relatoTexto = state.relatoPreventivo || ''
+
+    if (!relatoTexto && Array.isArray(itens) && itens.length > 0) {
+      const linhas = itens
+        .map((item) => {
+          const nome = item.nome || item.itemNome || 'Item Preventivo'
+          const motivo = item.motivoAlerta ? ` - ${item.motivoAlerta}` : ''
+          const garantiaOrigem = item.servicoOrigem
+            ? ` (Origem da Garantia: ${item.servicoOrigem})`
+            : ''
+          return `• ${nome}${motivo}${garantiaOrigem}`
+        })
+        .join('\n')
+
+      relatoTexto = [
+        'REVISÃO PREVENTIVA E PONTOS DE ATENÇÃO:',
+        linhas,
+        '',
+        'Veículo recepcionado para inspeção preventiva geral e execução dos serviços indicados no prontuário de saúde veicular.',
+      ].join('\n')
+    }
+
+    const temItemVencido = Array.isArray(itens) && itens.some((i) => i.status === 'vencido')
+    const temGarantia =
+      Array.isArray(itens) &&
+      itens.some((i) => i.id === 'revisao_garantia' || i.garantiaPendente)
+    const prioridadeSugerida = temItemVencido ? 'alta' : 'normal'
+    const tipoAtendimentoSugerido =
+      state.tipoAtendimento ||
+      (temGarantia && itens.length === 1
+        ? 'garantia'
+        : itens.length > 0
+        ? 'preventiva'
+        : 'orcamento')
+
+    const patch = {
+      clienteId: clienteEncontrado
+        ? clienteEncontrado.value || clienteEncontrado.id
+        : clienteIdAlvo || '',
+      cliente: clienteEncontrado ? clienteEncontrado.nome : clienteNomeAlvo || '',
+      telefone: clienteEncontrado
+        ? clienteEncontrado.telefone || ''
+        : veiculoParam.clienteTelefone || '',
+      documento: clienteEncontrado
+        ? clienteEncontrado.documento || ''
+        : veiculoParam.clienteDocumento || '',
+      email: clienteEncontrado ? clienteEncontrado.email || '' : '',
+      endereco: clienteEncontrado
+        ? clienteEncontrado.endereco || ''
+        : veiculoParam.clienteCidade
+        ? `${veiculoParam.clienteCidade} - ${veiculoParam.clienteUf || 'PR'}`
+        : '',
+
+      veiculoId: veiculoEncontrado
+        ? veiculoEncontrado.value || veiculoEncontrado.id
+        : state.veiculoId || veiculoParam.id || veiculoParam.value || '',
+      placa: veiculoEncontrado
+        ? veiculoEncontrado.placa
+        : placaAlvo || veiculoParam.placa || '',
+      marcaModelo: veiculoEncontrado
+        ? veiculoEncontrado.marcaModelo ||
+          `${veiculoEncontrado.marca || ''} ${veiculoEncontrado.modelo || ''}`.trim()
+        : veiculoParam.marcaModelo ||
+          `${veiculoParam.marca || ''} ${veiculoParam.modelo || ''}`.trim(),
+      ano: veiculoEncontrado ? veiculoEncontrado.ano : veiculoParam.ano || '',
+      cor: veiculoEncontrado ? veiculoEncontrado.cor : veiculoParam.cor || '',
+      km: veiculoEncontrado
+        ? veiculoEncontrado.kmPadrao || veiculoEncontrado.kmAtual || ''
+        : veiculoParam.kmPadrao || veiculoParam.kmAtual || '',
+
+      tipoAtendimento: tipoAtendimentoSugerido,
+      prioridade: prioridadeSugerida,
+      relatoCliente: relatoTexto || formData.relatoCliente,
+    }
+
+    updateFormData(patch)
+    setActiveTab('cliente-veiculo')
+
+    const nomeExibicao = patch.cliente ? patch.cliente.split(' ')[0] : 'Cliente'
+    toast.success(
+      `Ordem de Serviço preparada para ${nomeExibicao} (${patch.placa}) com os pontos de revisão preenchidos!`
+    )
+  }, [location.state, location.key])
 
   const handleSaveStep = (stepName, nextTabId) => {
     try {
@@ -44,8 +231,41 @@ export function NovaOrdemDeServicoPage() {
   }
 
   const handleCancel = () => {
+    toast('Cancelar a abertura desta Ordem de Serviço?', {
+      description: 'Todos os dados preenchidos (cliente, checklist, diagnóstico, peças e serviços) serão descartados.',
+      action: {
+        label: 'Descartar Tudo',
+        onClick: () => {
+          clearDraft()
+          toast.info('Abertura de Ordem de Serviço cancelada.')
+          navigate(`${basePath}/ordem-de-servico`)
+        },
+      },
+    })
+  }
+
+  // Fluxo curto da secretária: preenche Cliente/Veículo e Checklist, e já envia a OS para a Fila,
+  // sem precisar passar por Diagnóstico/Serviços/Peças/Terceiros/Orçamento (isso fica para quando
+  // o mecânico for atribuído e assumir a OS).
+  const handleSalvarEEnviarParaFila = () => {
+    if (!formData.cliente?.trim() || !formData.placa?.trim() || !formData.km?.trim()) {
+      setActiveTab('cliente-veiculo')
+      toast.warning('Preencha cliente, veículo e KM antes de enviar para a fila.')
+      return
+    }
+    if (!checklistCompleto(formData.checklistEntrada, ITENS_CHECKLIST_ENTRADA)) {
+      toast.warning('Preencha todo o Checklist de Entrada antes de enviar a OS para a fila.')
+      return
+    }
+
+    try {
+      adicionarOuAtualizarOrdem({ ...formData, status: 'fila' })
+    } catch (err) {
+      console.error('Erro ao registrar ordem na fila:', err)
+    }
+
     clearDraft()
-    toast.info('Abertura de Ordem de Serviço cancelada.')
+    toast.success(`Ordem de Serviço #${formData.numeroOS} enviada para a Fila!`)
     navigate(`${basePath}/ordem-de-servico`)
   }
 
@@ -118,25 +338,30 @@ export function NovaOrdemDeServicoPage() {
         <div className="h-6 w-px bg-[#e4e7ec] shrink-0" />
 
         <div className="flex items-center gap-1 flex-1 justify-between min-w-0">
-          {OS_TABS.map((tab, index) => {
+          {DESKTOP_TABS.map((tab, index) => {
             const isActive = activeTab === tab.id
+            const desbloqueada = abaEstaDesbloqueada(tab.id, etapasValidas)
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-1.5 px-2 rounded-xl text-xs transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer truncate ${
+                disabled={!desbloqueada}
+                onClick={() => desbloqueada && setActiveTab(tab.id)}
+                title={desbloqueada ? tab.label : 'Conclua as etapas anteriores para liberar esta aba'}
+                className={`flex-1 py-1.5 px-2 rounded-xl text-xs transition-all duration-150 flex items-center justify-center gap-1.5 truncate ${
                   isActive
-                    ? 'bg-[#101828] text-white font-bold shadow-xs'
-                    : 'text-[#475467] hover:text-[#101828] hover:bg-[#f2f4f7] font-medium'
+                    ? 'bg-[#101828] text-white font-bold shadow-xs cursor-pointer'
+                    : desbloqueada
+                    ? 'text-[#475467] hover:text-[#101828] hover:bg-[#f2f4f7] font-medium cursor-pointer'
+                    : 'text-[#c0c5cd] cursor-not-allowed font-medium'
                 }`}
               >
                 <span
                   className={`text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold shrink-0 ${
-                    isActive ? 'bg-[#0284c7] text-white' : 'bg-[#f2f4f7] text-[#667085]'
+                    isActive ? 'bg-[#0284c7] text-white' : desbloqueada ? 'bg-[#f2f4f7] text-[#667085]' : 'bg-[#f2f4f7] text-[#c0c5cd]'
                   }`}
                 >
-                  {index + 1}
+                  {desbloqueada ? index + 1 : <LockSimple size={9} weight="bold" />}
                 </span>
                 <span className="truncate">{tab.label}</span>
               </button>
@@ -160,7 +385,8 @@ export function NovaOrdemDeServicoPage() {
           <TabChecklist
             formData={formData}
             updateFormData={updateFormData}
-            onSaveStep={() => handleSaveStep('Checklist', 'diagnostico')}
+            onSaveStep={() => handleSaveStep('Checklist de Entrada', 'diagnostico')}
+            onFinalizarRapido={handleSalvarEEnviarParaFila}
             onCancel={handleCancel}
           />
         )}
@@ -205,25 +431,9 @@ export function NovaOrdemDeServicoPage() {
           <TabOrcamento
             formData={formData}
             updateFormData={updateFormData}
-            onSaveStep={() => handleSaveStep('Composição de Orçamento', 'finalizar')}
             onCancel={handleCancel}
           />
         )}
-
-        {activeTab !== 'cliente-veiculo' &&
-          activeTab !== 'checklist' &&
-          activeTab !== 'diagnostico' &&
-          activeTab !== 'servicos' &&
-          activeTab !== 'pecas' &&
-          activeTab !== 'terceiros' &&
-          activeTab !== 'orcamento' && (
-            <TabEmBreve
-              tabId={activeTab}
-              onSelectTab={setActiveTab}
-              onSaveStep={handleSaveStep}
-              onCancel={handleCancel}
-            />
-          )}
       </div>
     </form>
   )

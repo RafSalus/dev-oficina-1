@@ -24,11 +24,27 @@ import {
   Archive,
   ArrowUUpLeft,
   Handshake,
+  CreditCard,
+  Plus,
+  Camera,
+  CheckCircle,
 } from '@phosphor-icons/react'
 import Select from 'react-select'
+import CreatableSelect from 'react-select/creatable'
 import { toast } from 'sonner'
-import { STATUS_ORCAMENTO } from './mockOrdensAbertas'
+import { STATUS_ORCAMENTO, STATUS_PERMITE_FATURAMENTO, podeIniciarDiagnostico } from './mockOrdensAbertas'
+import { KANBAN_COLUNAS_OS } from './kanbanColunas'
 import { DRAFT_KEY } from '../nova-os/useOsDraft'
+import { ITENS_CHECKLIST_ENTRADA, checklistCompleto } from '../../../constants/checklistItems'
+import { carregarPecasCadastradas, carregarServicosCadastrados } from '../../../constants/cadastrosSuprimentosData'
+import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
+
+// Ordem real do fluxo (igual às colunas do Kanban) — usada para ordenar o seletor de status e
+// para só permitir mudar para a etapa anterior ou seguinte, nunca pular direto para qualquer uma.
+const SEQUENCIA_STATUS = KANBAN_COLUNAS_OS.map((c) => c.status)
+const OPCOES_STATUS_ORDENADAS = SEQUENCIA_STATUS.map((status) =>
+  STATUS_ORCAMENTO.find((s) => s.value === status)
+).filter(Boolean)
 
 const STORAGE_KEY_PAINEL_WIDTH = 'dev_oficina_painel_os_width'
 const LARGURA_PADRAO_PAINEL = 520
@@ -61,9 +77,9 @@ const selectStatusStyles = {
     ...base,
     fontSize: '0.75rem',
     fontWeight: state.isSelected ? '700' : '500',
-    backgroundColor: state.isSelected ? '#101828' : state.isFocused ? '#f2f4f7' : '#ffffff',
-    color: state.isSelected ? '#ffffff' : '#101828',
-    cursor: 'pointer',
+    backgroundColor: state.isDisabled ? '#ffffff' : state.isSelected ? '#101828' : state.isFocused ? '#f2f4f7' : '#ffffff',
+    color: state.isDisabled ? '#d0d5dd' : state.isSelected ? '#ffffff' : '#101828',
+    cursor: state.isDisabled ? 'not-allowed' : 'pointer',
   }),
 }
 
@@ -74,13 +90,53 @@ export function PainelDetalhesOS({
   onAtualizarStatus,
   onExcluir,
   isArquivada = false,
-  onFinalizarEArquivar,
+  onFaturarNoPDV,
+  onAdicionarItem,
+  onAtualizarFotoPeca,
   onReabrir,
 }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [copiado, setCopiado] = useState(false)
   const [activeSubTab, setActiveSubTab] = useState('resumo') // 'resumo', 'itens', 'diagnostico'
+
+  // Inserção rápida de peça/serviço direto na aba Diagnóstico, sem reabrir o wizard inteiro.
+  // Peças vêm do Almoxarifado real (mesma base de /gestao/estoque e /gestao/pecas): se tiver
+  // saldo suficiente, usa o preço e a peça do cadastro; se não tiver (ou não existir), a peça
+  // entra marcada "Para Cotação" — mesmo padrão usado em TabPecas.jsx.
+  const [catalogoPecas, setCatalogoPecas] = useState([])
+  const [catalogoServicos, setCatalogoServicos] = useState([])
+  const [pecaRapidaSelecao, setPecaRapidaSelecao] = useState(null)
+  const [pecaRapidaQtd, setPecaRapidaQtd] = useState('1')
+  const [servicoRapidoSelecao, setServicoRapidoSelecao] = useState(null)
+  const [servicoRapidoQtd, setServicoRapidoQtd] = useState('1')
+  const [servicoRapidoPreco, setServicoRapidoPreco] = useState('')
+
+  // Última peça adicionada nesta sessão — permite tirar a foto dela na hora (câmera do celular)
+  const [ultimaPecaAdicionada, setUltimaPecaAdicionada] = useState(null) // { id, nome }
+  const inputFotoPecaRef = useRef(null)
+  const [fotoZoomUrl, setFotoZoomUrl] = useState(null)
+
+  useEffect(() => {
+    setCatalogoPecas(carregarPecasCadastradas())
+    setCatalogoServicos(carregarServicosCadastrados())
+  }, [])
+
+  const opcoesPecasCatalogo = catalogoPecas
+    .filter((p) => p.ativo !== false)
+    .map((p) => ({
+      value: p.id,
+      label: `${p.codigo} - ${p.nome} (estoque: ${p.estoqueAtual ?? 0} ${p.unidade || 'UN'})`,
+      peca: p,
+    }))
+
+  const opcoesServicosCatalogo = catalogoServicos
+    .filter((s) => s.ativo !== false)
+    .map((s) => ({
+      value: s.id,
+      label: `${s.codigo} - ${s.nome}`,
+      servico: s,
+    }))
 
   // Largura com suporte a redimensionamento e persistência
   const [painelLargura, setPainelLargura] = useState(() => {
@@ -185,8 +241,106 @@ export function PainelDetalhesOS({
   }
 
   const handleAprovarRapido = () => {
-    onAtualizarStatus(os.numeroOS, 'aprovado_execucao')
-    toast.success(`Orçamento #${os.numeroOS} aprovado! Status atualizado para Aprovado e Em Execução.`)
+    toast(`Aprovar o orçamento #${os.numeroOS} e iniciar a execução?`, {
+      description: 'Use esta opção quando o cliente já autorizou por telefone, WhatsApp ou presencialmente.',
+      action: {
+        label: 'Aprovar Agora',
+        onClick: () => {
+          onAtualizarStatus(os.numeroOS, 'aprovado_execucao')
+          toast.success(`Orçamento #${os.numeroOS} aprovado! Status atualizado para Aprovado e Em Execução.`)
+        },
+      },
+    })
+  }
+
+  // Adiciona uma peça avulsa direto na OS a partir da aba Diagnóstico (sem reabrir o wizard)
+  const handleAdicionarPecaRapida = () => {
+    const nome = (pecaRapidaSelecao?.peca?.nome || pecaRapidaSelecao?.value || pecaRapidaSelecao?.label || '').trim()
+    if (!nome) {
+      toast.warning('Busque a peça no almoxarifado ou digite o nome dela.')
+      return
+    }
+
+    const pecaCadastro = pecaRapidaSelecao?.peca || null
+    const qtd = parseFloat(pecaRapidaQtd) || 1
+    const disponivel = pecaCadastro ? Number(pecaCadastro.estoqueAtual) || 0 : 0
+    const paraCotacao = !pecaCadastro || qtd > disponivel
+    const itemId = `peca-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+
+    onAdicionarItem?.(os.numeroOS, 'peca', {
+      id: itemId,
+      codigo: pecaCadastro?.codigo || 'A COTAR',
+      nome,
+      unidade: pecaCadastro?.unidade || 'UN',
+      quantidade: qtd,
+      precoUnitario: paraCotacao ? 0 : Number(pecaCadastro.precoVenda) || 0,
+      desconto: 0,
+      categoria: pecaCadastro?.categoria || '',
+      statusEstoque: paraCotacao ? 'para_cotacao' : 'em_estoque',
+      estoqueAtual: disponivel,
+      estoqueMinimo: pecaCadastro?.estoqueMinimo || 1,
+      fornecedorId: paraCotacao ? '' : 'estoque-interno',
+      fornecedorNome: paraCotacao ? 'Cotação Externa' : 'Estoque Interno',
+    })
+
+    if (paraCotacao) {
+      toast.warning(
+        `"${nome}" não tem saldo suficiente no almoxarifado e foi marcada para Cotação. Mova a OS para "Cotação" no Kanban para disparar a cotação com fornecedores.`
+      )
+    } else {
+      toast.success(`Peça "${nome}" adicionada à OS #${os.numeroOS} (baixa do estoque interno).`)
+    }
+
+    setUltimaPecaAdicionada({ id: itemId, nome })
+    setPecaRapidaSelecao(null)
+    setPecaRapidaQtd('1')
+  }
+
+  // Abre a câmera do celular (não a galeria) para fotografar a peça recém-adicionada
+  const handleTirarFotoPeca = () => {
+    inputFotoPecaRef.current?.click()
+  }
+
+  const handleFotoPecaSelecionada = (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !ultimaPecaAdicionada) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      onAtualizarFotoPeca?.(os.numeroOS, ultimaPecaAdicionada.id, event.target.result)
+      toast.success(`Foto de "${ultimaPecaAdicionada.nome}" anexada com sucesso!`)
+      setUltimaPecaAdicionada(null)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  // Adiciona um serviço avulso direto na OS a partir da aba Diagnóstico (sem reabrir o wizard)
+  const handleAdicionarServicoRapido = () => {
+    const nome = (servicoRapidoSelecao?.servico?.nome || servicoRapidoSelecao?.value || servicoRapidoSelecao?.label || '').trim()
+    if (!nome) {
+      toast.warning('Busque o serviço no catálogo ou digite o nome dele.')
+      return
+    }
+    const preco = parseFloat(servicoRapidoPreco)
+    if (!preco || preco <= 0) {
+      toast.warning('Informe o valor da mão de obra.')
+      return
+    }
+    const servicoCadastro = servicoRapidoSelecao?.servico || null
+    onAdicionarItem?.(os.numeroOS, 'servico', {
+      codigo: servicoCadastro?.codigo || 'AVULSO',
+      nome,
+      unidade: 'MO',
+      quantidade: parseFloat(servicoRapidoQtd) || 1,
+      precoUnitario: preco,
+      desconto: 0,
+      categoria: servicoCadastro?.categoria || '',
+    })
+    toast.success(`Serviço "${nome}" adicionado à OS #${os.numeroOS}.`)
+    setServicoRapidoSelecao(null)
+    setServicoRapidoQtd('1')
+    setServicoRapidoPreco('')
   }
 
   return (
@@ -264,12 +418,22 @@ export function PainelDetalhesOS({
               styles={selectStatusStyles}
               value={statusAtual}
               onChange={(opt) => {
-                if (opt && opt.value !== os.status) {
-                  onAtualizarStatus(os.numeroOS, opt.value)
-                  toast.success(`Status da OS #${os.numeroOS} alterado para "${opt.label}"!`)
+                if (!opt || opt.value === os.status) return
+                const indiceAtual = SEQUENCIA_STATUS.indexOf(os.status)
+                const indiceNovo = SEQUENCIA_STATUS.indexOf(opt.value)
+                if (Math.abs(indiceNovo - indiceAtual) !== 1) {
+                  toast.warning('Só é possível mover a OS para a etapa anterior ou a etapa seguinte, sem pular colunas.')
+                  return
                 }
+                if (opt.value === 'em_diagnostico' && !podeIniciarDiagnostico(os)) {
+                  toast.warning('Atribua um mecânico responsável a esta OS antes de mover para Diagnóstico.')
+                  return
+                }
+                onAtualizarStatus(os.numeroOS, opt.value)
+                toast.success(`Status da OS #${os.numeroOS} alterado para "${opt.label}"!`)
               }}
-              options={STATUS_ORCAMENTO.filter((s) => s.value !== 'todos')}
+              options={OPCOES_STATUS_ORDENADAS}
+              isOptionDisabled={(opt) => Math.abs(SEQUENCIA_STATUS.indexOf(opt.value) - SEQUENCIA_STATUS.indexOf(os.status)) !== 1}
               isSearchable={false}
             />
           </div>
@@ -456,7 +620,7 @@ export function PainelDetalhesOS({
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   {os.status === 'aguardando_aprovacao' ? (
                     <button
                       type="button"
@@ -467,31 +631,21 @@ export function PainelDetalhesOS({
                       <ShieldCheck size={16} weight="bold" className="text-[#0284c7]" />
                       <span className="truncate">Aprovar OS</span>
                     </button>
-                  ) : (
-                    <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 bg-[#f0f9ff] border border-[#bae6fd] text-[#0284c7] text-xs font-bold rounded-xl">
-                      <ShieldCheck size={16} weight="bold" />
-                      <span className="truncate">Em Execução</span>
-                    </div>
-                  )}
-
-                  {onFinalizarEArquivar && (
+                  ) : STATUS_PERMITE_FATURAMENTO.includes(os.status) ? (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Confirmar finalização do atendimento da OS #${os.numeroOS}? O veículo será dado como entregue e a OS será transferida para os Arquivos.`
-                          )
-                        ) {
-                          onFinalizarEArquivar(os.numeroOS)
-                        }
-                      }}
-                      className="flex items-center justify-center gap-1.5 py-2 px-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
-                      title="Concluir entrega do veículo e arquivar OS"
+                      onClick={() => onFaturarNoPDV?.(os)}
+                      className="flex items-center justify-center gap-1.5 py-2 px-2.5 bg-[#101828] hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+                      title="Concluir o checklist de saída, ir ao PDV, cobrar e emitir nota fiscal — a OS só é arquivada depois do pagamento confirmado"
                     >
-                      <Archive size={16} weight="bold" />
-                      <span className="truncate">Finalizar e Arquivar</span>
+                      <CreditCard size={16} weight="bold" className="text-[#38bdf8]" />
+                      <span className="truncate">Faturar e Finalizar no PDV</span>
                     </button>
+                  ) : (
+                    <div className="flex items-center justify-center gap-1.5 py-2 px-2.5 bg-[#f8fafc] border border-[#e4e7ec] text-[#667085] text-xs font-bold rounded-xl">
+                      <Clock size={16} weight="bold" />
+                      <span className="truncate">Etapa Atual: {statusAtual.label}</span>
+                    </div>
                   )}
                 </div>
               )}
@@ -515,12 +669,31 @@ export function PainelDetalhesOS({
                   <p className="p-4 text-center text-[#98a2b3] italic text-xs">Nenhuma peça adicionada ainda.</p>
                 ) : (
                   os.pecasOS.map((p, idx) => (
-                    <div key={idx} className="p-3 text-xs flex items-center justify-between hover:bg-[#f8fafc] transition-colors">
-                      <div className="min-w-0 pr-3">
+                    <div key={idx} className="p-3 text-xs flex items-center justify-between hover:bg-[#f8fafc] transition-colors gap-2.5">
+                      {p.fotoUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => setFotoZoomUrl(p.fotoUrl)}
+                          className="w-10 h-10 rounded-lg overflow-hidden border border-[#d0d5dd] shrink-0 cursor-pointer"
+                          title="Ver foto da peça"
+                        >
+                          <img src={p.fotoUrl} alt={p.nome} className="w-full h-full object-cover" />
+                        </button>
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg border border-dashed border-[#d0d5dd] bg-[#f8fafc] flex items-center justify-center text-[#98a2b3] shrink-0">
+                          <Camera size={15} weight="regular" />
+                        </div>
+                      )}
+                      <div className="min-w-0 pr-3 flex-1">
                         <p className="font-bold text-[#101828] truncate text-xs">{p.nome}</p>
                         <span className="text-[#667085] text-[11px] mt-0.5 block">
                           Cód: {p.codigo || '—'} • {p.quantidade} {p.unidade || 'UN'} × R$ {formatMoeda(p.precoUnitario)}
                         </span>
+                        {p.statusEstoque === 'para_cotacao' && (
+                          <span className="inline-block mt-1 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#fffaeb] text-[#b54708] border border-[#fedf89]">
+                            Para Cotação
+                          </span>
+                        )}
                       </div>
                       <span className="font-black text-[#101828] shrink-0 text-xs font-mono">
                         R$ {formatMoeda(p.quantidade * p.precoUnitario - (p.desconto || 0))}
@@ -553,7 +726,7 @@ export function PainelDetalhesOS({
                         </span>
                       </div>
                       <span className="font-black text-[#101828] shrink-0 text-xs font-mono">
-                        R$ {formatMoeda((s.quantidade || 1) * (s.precoUnitario || 0) - (s.desconto || 0))}
+                        R$ {formatMoeda((s.quantidade || 1) * (s.precoUnitario ?? s.valorUnitario ?? 0) - (s.desconto || 0))}
                       </span>
                     </div>
                   ))
@@ -598,14 +771,9 @@ export function PainelDetalhesOS({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleEditarNaNovaOS}
-              className="w-full py-2.5 px-4 bg-white hover:bg-[#f2f4f7] text-[#101828] border border-[#d0d5dd] rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-2xs transition-all active:scale-95"
-            >
-              <PencilSimple size={15} weight="bold" />
-              <span>Adicionar ou Alterar Itens na OS</span>
-            </button>
+            <p className="text-center text-[11px] text-[#98a2b3]">
+              Use "Editar OS" no rodapé para adicionar ou alterar peças, serviços e terceiros.
+            </p>
           </div>
         )}
 
@@ -637,10 +805,138 @@ export function PainelDetalhesOS({
                 <span className="font-bold text-[#101828] block text-xs">Checklist de Entrada</span>
                 <span className="text-[#667085] text-[11px]">22 itens inspecionados</span>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-[#101828] text-white text-[10px] font-bold">
-                Concluído
-              </span>
+              {checklistCompleto(os.checklistEntrada, ITENS_CHECKLIST_ENTRADA) ? (
+                <span className="px-2.5 py-1 rounded-full bg-[#101828] text-white text-[10px] font-bold">
+                  Concluído
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-full bg-[#fffaeb] text-[#b54708] border border-[#fedf89] text-[10px] font-bold">
+                  Pendente
+                </span>
+              )}
             </div>
+
+            {/* Inserção rápida de Peça e Serviço, sem precisar reabrir o wizard inteiro */}
+            {!isArquivada && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-white border border-[#d0d5dd] rounded-2xl p-3.5 space-y-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#667085] flex items-center gap-1.5">
+                    <Package size={14} weight="bold" className="text-[#0284c7]" />
+                    Adicionar Peça do Almoxarifado
+                  </span>
+                  <CreatableSelect
+                    value={pecaRapidaSelecao}
+                    onChange={setPecaRapidaSelecao}
+                    options={opcoesPecasCatalogo}
+                    isClearable
+                    placeholder="Buscar peça cadastrada ou digitar nova..."
+                    styles={customSelectStyles}
+                    formatCreateLabel={(input) => `Peça não cadastrada: "${input}" (vai para cotação)`}
+                    noOptionsMessage={() => 'Nenhuma peça cadastrada com este termo'}
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    value={pecaRapidaQtd}
+                    onChange={(e) => setPecaRapidaQtd(e.target.value)}
+                    placeholder="Quantidade"
+                    className="w-full h-9 px-2.5 rounded-xl border border-[#d0d5dd] text-xs font-bold text-[#101828] bg-[#f8fafc] focus:outline-none focus:border-[#0284c7] text-center"
+                  />
+                  {pecaRapidaSelecao?.peca ? (
+                    <p className="text-[10.5px] text-[#667085]">
+                      R$ {Number(pecaRapidaSelecao.peca.precoVenda || 0).toFixed(2)} • Estoque: {pecaRapidaSelecao.peca.estoqueAtual ?? 0} {pecaRapidaSelecao.peca.unidade || 'UN'}
+                      {(parseFloat(pecaRapidaQtd) || 1) > (Number(pecaRapidaSelecao.peca.estoqueAtual) || 0) && (
+                        <span className="text-[#b54708] font-bold"> — estoque insuficiente, entrará para Cotação</span>
+                      )}
+                    </p>
+                  ) : pecaRapidaSelecao ? (
+                    <p className="text-[10.5px] text-[#b54708] font-semibold">Peça não cadastrada — entrará para Cotação</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleAdicionarPecaRapida}
+                    className="w-full h-9 rounded-xl bg-[#101828] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Plus size={14} weight="bold" />
+                    Adicionar Peça
+                  </button>
+
+                  {ultimaPecaAdicionada && (
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#ecfdf3] border border-[#a6f4c5]">
+                      <span className="text-[10.5px] font-bold text-[#027a48] truncate flex items-center gap-1">
+                        <CheckCircle size={13} weight="fill" />
+                        {ultimaPecaAdicionada.nome}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleTirarFotoPeca}
+                        className="h-7 px-2.5 rounded-lg bg-[#027a48] hover:bg-[#026a3f] text-white text-[10.5px] font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
+                      >
+                        <Camera size={13} weight="bold" />
+                        Tirar Foto
+                      </button>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={inputFotoPecaRef}
+                    onChange={handleFotoPecaSelecionada}
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="bg-white border border-[#d0d5dd] rounded-2xl p-3.5 space-y-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#667085] flex items-center gap-1.5">
+                    <Wrench size={14} weight="bold" className="text-[#0284c7]" />
+                    Adicionar Serviço do Catálogo
+                  </span>
+                  <CreatableSelect
+                    value={servicoRapidoSelecao}
+                    onChange={(opt) => {
+                      setServicoRapidoSelecao(opt)
+                      if (opt?.servico) {
+                        setServicoRapidoPreco(String(opt.servico.valorMaoDeObra || ''))
+                      }
+                    }}
+                    options={opcoesServicosCatalogo}
+                    isClearable
+                    placeholder="Buscar serviço cadastrado ou digitar novo..."
+                    styles={customSelectStyles}
+                    formatCreateLabel={(input) => `Adicionar serviço "${input}"`}
+                    noOptionsMessage={() => 'Nenhum serviço cadastrado com este termo'}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={servicoRapidoQtd}
+                      onChange={(e) => setServicoRapidoQtd(e.target.value)}
+                      placeholder="Qtd"
+                      className="h-9 px-2.5 rounded-xl border border-[#d0d5dd] text-xs font-bold text-[#101828] bg-[#f8fafc] focus:outline-none focus:border-[#0284c7] text-center"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={servicoRapidoPreco}
+                      onChange={(e) => setServicoRapidoPreco(e.target.value)}
+                      placeholder="Valor R$"
+                      className="h-9 px-2.5 rounded-xl border border-[#d0d5dd] text-xs font-bold text-[#101828] bg-[#f8fafc] focus:outline-none focus:border-[#0284c7]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAdicionarServicoRapido}
+                    className="w-full h-9 rounded-xl bg-[#101828] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Plus size={14} weight="bold" />
+                    Adicionar Serviço
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -674,10 +970,16 @@ export function PainelDetalhesOS({
         <button
           type="button"
           onClick={() => {
-            if (window.confirm(`Deseja realmente cancelar/excluir a OS #${os.numeroOS}?`)) {
-              onExcluir(os.numeroOS)
-              toast.success(`OS #${os.numeroOS} cancelada e removida com sucesso.`)
-            }
+            toast(`Cancelar e excluir a OS #${os.numeroOS}?`, {
+              description: 'Esta ação remove a ordem de serviço permanentemente e não pode ser desfeita.',
+              action: {
+                label: 'Excluir Definitivamente',
+                onClick: () => {
+                  onExcluir(os.numeroOS)
+                  toast.success(`OS #${os.numeroOS} cancelada e removida com sucesso.`)
+                },
+              },
+            })
           }}
           className="inline-flex items-center gap-1.5 px-3 py-2 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-medium cursor-pointer transition-colors"
           title="Excluir ou Cancelar Ordem de Serviço"
@@ -686,6 +988,25 @@ export function PainelDetalhesOS({
           <span>Excluir</span>
         </button>
       </footer>
+
+      {/* Zoom da foto da peça (clicada na aba Itens) */}
+      {fotoZoomUrl && (
+        <div
+          className="fixed inset-0 z-70 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setFotoZoomUrl(null)}
+        >
+          <div className="relative max-w-2xl max-h-[85vh] bg-black rounded-2xl overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <img src={fotoZoomUrl} alt="Foto da peça ampliada" className="max-h-[80vh] w-auto object-contain" />
+            <button
+              type="button"
+              onClick={() => setFotoZoomUrl(null)}
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer"
+            >
+              <X size={16} weight="bold" />
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

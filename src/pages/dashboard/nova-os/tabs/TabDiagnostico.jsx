@@ -26,7 +26,7 @@ import {
   Printer,
 } from '@phosphor-icons/react'
 import { MOCK_MECANICOS } from '../../../../constants/mecanicos'
-import { ITENS_CHECKLIST_ENTRADA } from '../../../../constants/checklistItems'
+import { ITENS_CHECKLIST_ENTRADA, checklistCompleto } from '../../../../constants/checklistItems'
 import {
   SUGESTOES_PECAS,
   SUGESTOES_SERVICOS,
@@ -184,6 +184,26 @@ export function TabDiagnostico({ formData, updateFormData, onSaveStep, onCancel 
     updateFormData({
       mecanicoId: option?.value || '',
       mecanicoNome: option?.value ? option.nome : '',
+    })
+  }
+
+  const checklistPendente = !checklistCompleto(checklistEntrada, ITENS_CHECKLIST_ENTRADA)
+
+  // Marca o status (conforme / não conforme / isento) de um item do Checklist de Entrada
+  const handleStatusItemChecklist = (itemId, status) => {
+    const atual = checklistEntrada[itemId] || { status: '', obs: '' }
+    updateFormData({
+      checklistEntrada: {
+        ...checklistEntrada,
+        [itemId]: { ...atual, status: atual.status === status ? '' : status },
+      },
+    })
+  }
+
+  const handleObsItemChecklist = (itemId, obsValue) => {
+    const atual = checklistEntrada[itemId] || { status: '', obs: '' }
+    updateFormData({
+      checklistEntrada: { ...checklistEntrada, [itemId]: { ...atual, obs: obsValue } },
     })
   }
 
@@ -359,16 +379,20 @@ export function TabDiagnostico({ formData, updateFormData, onSaveStep, onCancel 
             </span>
           </button>
 
-          {/* Botão 2: Ver Checklist (Substitui todo o bloco extenso anterior) */}
+          {/* Botão 2: Preencher Checklist de Entrada (obrigatório para sair desta aba) */}
           <button
             type="button"
             onClick={() => setModalChecklistAberto(true)}
             className="h-8 px-2.5 sm:px-3 rounded-xl bg-[#f8fafc] hover:bg-[#f2f4f7] active:bg-[#eaecf0] border border-[#d0d5dd] text-[#101828] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
-            title="Visualizar checklist de entrada com os 22 itens vistoriados"
+            title="Preencher o checklist de entrada com os 22 itens vistoriados"
           >
             <ClipboardText size={15} weight="bold" className="text-[#344054]" />
-            <span>Ver Checklist</span>
-            {totalNaoConformes > 0 ? (
+            <span>Checklist de Entrada</span>
+            {checklistPendente ? (
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#fffaeb] text-[#b54708] border border-[#fedf89]">
+                Pendente
+              </span>
+            ) : totalNaoConformes > 0 ? (
               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#fef3f2] text-[#b42318] border border-[#fecdca]">
                 {totalNaoConformes} avarias
               </span>
@@ -746,22 +770,25 @@ export function TabDiagnostico({ formData, updateFormData, onSaveStep, onCancel 
 
       {/* Barra Inferior de Ações da Etapa */}
       <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] hover:border-[#fecdca] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-        >
-          <X size={14} weight="bold" />
-          <span>Cancelar</span>
-        </button>
-
         <span className="text-xs font-medium text-[#667085]">
-          Aba 3 de 8 • <strong className="text-[#101828] font-bold">Diagnóstico Técnico</strong>
+          Aba 3 de 7 • <strong className="text-[#101828] font-bold">Diagnóstico Técnico</strong>
         </span>
 
         <button
           type="button"
-          onClick={onSaveStep}
+          onClick={() => {
+            if (checklistPendente) {
+              toast.warning('Preencha o Checklist de Entrada antes de avançar para os serviços.')
+              setModalChecklistAberto(true)
+              return
+            }
+            if (!laudoTecnico.trim()) {
+              toast.warning('Gere ou digite o laudo técnico antes de avançar para os serviços.')
+              setModalLaudoAberto(true)
+              return
+            }
+            onSaveStep?.()
+          }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
         >
           <FloppyDisk size={15} weight="bold" />
@@ -889,10 +916,10 @@ export function TabDiagnostico({ formData, updateFormData, onSaveStep, onCancel 
         </div>
       )}
 
-      {/* MODAL 2: Checklist de Entrada Completo (22 Itens) */}
+      {/* MODAL 2: Checklist de Entrada Editável (22 Itens) — obrigatório para sair do Diagnóstico */}
       {modalChecklistAberto && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-2xl max-h-[85vh] rounded-2xl border border-[#d0d5dd] shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white w-full max-w-3xl max-h-[88vh] rounded-2xl border border-[#d0d5dd] shadow-2xl flex flex-col overflow-hidden">
             {/* Header */}
             <div className="px-5 py-3.5 border-b border-[#f2f4f7] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
@@ -904,7 +931,7 @@ export function TabDiagnostico({ formData, updateFormData, onSaveStep, onCancel 
                     Checklist de Entrada • Vistoria Inicial
                   </h3>
                   <p className="text-[11px] text-[#667085]">
-                    {placa || 'Sem placa'} • 22 itens vistoriados na recepção
+                    {placa || 'Sem placa'} • marque os 22 itens vistoriados na recepção
                   </p>
                 </div>
               </div>
@@ -921,70 +948,91 @@ export function TabDiagnostico({ formData, updateFormData, onSaveStep, onCancel 
             <div className="p-5 overflow-y-auto flex-1 flex flex-col gap-2.5 text-xs min-h-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {ITENS_CHECKLIST_ENTRADA.map((item) => {
-                  const state = checklistEntrada[item.id] || {}
-                  const isConforme = state.status === 'conforme' || state.ok === true
-                  const isNaoConforme = state.status === 'nao_conforme'
+                  const state = checklistEntrada[item.id] || { status: '', obs: '' }
 
                   return (
                     <div
                       key={item.id}
-                      className={`p-2.5 rounded-xl border flex flex-col justify-between ${
-                        isConforme
-                          ? 'bg-[#f0fdf4] border-[#a6f4c5]'
-                          : isNaoConforme
+                      className={`p-2.5 rounded-xl border flex flex-col gap-1.5 ${
+                        state.status === 'conforme'
+                          ? 'bg-[#f0f9ff] border-[#bae6fd]'
+                          : state.status === 'nao_conforme'
                           ? 'bg-[#fef3f2] border-[#fecdca]'
-                          : 'bg-[#f8fafc] border-[#d0d5dd]'
+                          : state.status === 'isento'
+                          ? 'bg-[#f8fafc] border-[#d0d5dd]'
+                          : 'bg-white border-[#d0d5dd]'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-[#101828] uppercase text-[10.5px]">
-                          {item.label}
-                        </span>
-                        <span
-                          className={`text-[8.5px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                            isConforme
-                              ? 'bg-[#027a48] text-white'
-                              : isNaoConforme
-                              ? 'bg-[#b42318] text-white'
-                              : 'bg-[#344054] text-white'
-                          }`}
-                        >
-                          {isConforme ? 'Conforme' : isNaoConforme ? 'Avaria' : 'Isento'}
-                        </span>
-                      </div>
-                      {item.desc && (
-                        <span className="text-[10px] text-[#667085] mt-0.5">{item.desc}</span>
-                      )}
-                      {state.obs && (
-                        <div className="mt-1 pt-1 border-t border-black/5 text-[10px] font-medium text-[#101828]">
-                          <strong>OBS:</strong> {state.obs}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="font-bold text-[#101828] uppercase text-[10.5px] block">
+                            {item.label}
+                          </span>
+                          {item.desc && (
+                            <span className="text-[10px] text-[#667085]">{item.desc}</span>
+                          )}
                         </div>
-                      )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {[
+                            { valor: 'conforme', label: 'OK' },
+                            { valor: 'nao_conforme', label: 'Avaria' },
+                            { valor: 'isento', label: 'Isento' },
+                          ].map((opt) => (
+                            <button
+                              key={opt.valor}
+                              type="button"
+                              onClick={() => handleStatusItemChecklist(item.id, opt.valor)}
+                              className={`px-1.5 py-1 rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer border ${
+                                state.status === opt.valor
+                                  ? opt.valor === 'nao_conforme'
+                                    ? 'bg-[#b42318] text-white border-[#b42318]'
+                                    : opt.valor === 'isento'
+                                    ? 'bg-[#344054] text-white border-[#344054]'
+                                    : 'bg-[#0284c7] text-white border-[#0284c7]'
+                                  : 'bg-white text-[#475467] border-[#d0d5dd] hover:bg-[#f8fafc]'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        value={state.obs || ''}
+                        onChange={(e) => handleObsItemChecklist(item.id, e.target.value)}
+                        placeholder="Observação (opcional)"
+                        className="w-full bg-transparent hover:bg-[#f2f4f7] focus:bg-white border border-transparent focus:border-[#e4e7ec] rounded px-1.5 py-0.5 text-[10px] text-[#101828] placeholder-[#d0d5dd] focus:outline-none transition-all"
+                      />
                     </div>
                   )
                 })}
               </div>
 
-              {checklistEntradaObs && (
-                <div className="p-3 rounded-xl bg-[#f8fafc] border border-[#d0d5dd] mt-2">
-                  <span className="font-bold text-[#101828] block mb-0.5">
-                    Observações Gerais da Vistoria:
-                  </span>
-                  <p className="text-[#475467] text-[11px] leading-relaxed">
-                    {checklistEntradaObs}
-                  </p>
-                </div>
-              )}
+              <div className="pt-2">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#344054] mb-1">
+                  Observações Gerais da Vistoria
+                </label>
+                <textarea
+                  value={checklistEntradaObs}
+                  onChange={(e) => updateFormData({ checklistEntradaObs: e.target.value })}
+                  placeholder="Pertences deixados pelo cliente, avarias prévias na lataria..."
+                  className="w-full h-16 p-2.5 rounded-xl border border-[#d0d5dd] focus:border-[#101828] text-xs text-[#101828] bg-[#f8fafc] focus:outline-none transition-all resize-none"
+                />
+              </div>
             </div>
 
             {/* Rodapé */}
-            <div className="px-5 py-3 border-t border-[#f2f4f7] flex justify-end shrink-0">
+            <div className="px-5 py-3 border-t border-[#f2f4f7] flex items-center justify-between shrink-0">
+              <span className="text-[11px] font-semibold text-[#667085]">
+                {ITENS_CHECKLIST_ENTRADA.filter((i) => checklistEntrada[i.id]?.status).length}/{ITENS_CHECKLIST_ENTRADA.length} itens marcados
+              </span>
               <button
                 type="button"
                 onClick={() => setModalChecklistAberto(false)}
                 className="px-4 py-1.5 rounded-xl bg-black text-white text-xs font-bold hover:bg-zinc-800 transition-colors cursor-pointer shadow-xs"
               >
-                Fechar Checklist
+                Fechar
               </button>
             </div>
           </div>

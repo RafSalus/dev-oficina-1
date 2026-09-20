@@ -22,6 +22,9 @@ import {
   GearSix,
   Globe,
   Buildings,
+  Money,
+  Hammer,
+  Cube,
 } from '@phosphor-icons/react'
 import { MENU_CATEGORIES } from '../../constants/dashboardMenus'
 
@@ -47,6 +50,9 @@ const ICONS_MAP = {
   GearSix,
   Globe,
   Buildings,
+  Money,
+  Hammer,
+  Cube,
 }
 
 export function DashboardSidebar() {

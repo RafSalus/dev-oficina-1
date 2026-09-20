@@ -18,6 +18,9 @@ import {
   FileText,
   GearSix,
   Globe,
+  Money,
+  Hammer,
+  Cube,
 } from '@phosphor-icons/react'
 import { SECRETARIA_MENU_CATEGORIES } from '../../../constants/secretariaMenus'
 import { MobilePortalComingSoon } from '../../mobile/MobilePortalComingSoon'
@@ -41,6 +44,9 @@ const ICONS_MAP = {
   FileText,
   GearSix,
   Globe,
+  Money,
+  Hammer,
+  Cube,
 }
 
 export function MobileSecretariaComingSoon() {

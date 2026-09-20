@@ -26,8 +26,11 @@ import {
 import { formatarCNPJ, formatarTelefone } from '../../../utils/fiscalValidators'
 import { TerceiroModalForm } from '../../../components/suprimentos/TerceiroModalForm'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
+import { useIsMobile } from '../../../hooks/useIsMobile'
+import { MobileTerceirosPage } from './mobile/MobileTerceirosPage'
 
 export function TerceirosPage() {
+  const isMobile = useIsMobile()
   const [fornecedores, setFornecedores] = useState([])
   const [busca, setBusca] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('TODOS')
@@ -195,6 +198,10 @@ export function TerceirosPage() {
     { value: 'ATIVOS', label: 'Somente Ativos' },
     { value: 'INATIVOS', label: 'Somente Inativos' },
   ]
+
+  if (isMobile) {
+    return <MobileTerceirosPage />
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f8fafc] overflow-hidden">

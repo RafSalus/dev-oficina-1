@@ -23,6 +23,7 @@ import {
 } from '@phosphor-icons/react'
 import { FolhaOrdemServicoImpressao } from '../components/dashboard/FolhaOrdemServicoImpressao'
 import { toast } from 'sonner'
+import { obterOrdensAbertas, obterOrdensFinalizadas, atualizarStatusOrdem } from './dashboard/orcamento/mockOrdensAbertas'
 
 export function AprovacaoOrcamentoClientePage() {
   const { id } = useParams()
@@ -45,6 +46,12 @@ export function AprovacaoOrcamentoClientePage() {
   // Carrega dados salvos da OS do localStorage
   const [dadosOS, setDadosOS] = useState(() => {
     try {
+      // Prioridade 1: a OS real do sistema da oficina (abertas ou já finalizadas)
+      const ordemReal =
+        obterOrdensAbertas().find((o) => String(o.numeroOS) === String(numeroOS)) ||
+        obterOrdensFinalizadas().find((o) => String(o.numeroOS) === String(numeroOS))
+      if (ordemReal) return ordemReal
+
       // Tenta carregar dados da OS salva ou do rascunho
       const orcamentosRaw = localStorage.getItem('dev_oficina_orcamentos')
       if (orcamentosRaw) {
@@ -213,7 +220,7 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
     let descServicos = 0
     ;(dadosOS.servicosOS || []).forEach((s) => {
       const qtd = parseFloat(s.quantidade) || 1
-      const pr = parseFloat(s.valorUnitario) || 0
+      const pr = parseFloat(s.valorUnitario ?? s.precoUnitario) || 0
       const desc = parseFloat(s.desconto) || 0
       totalServicos += pr * qtd
       descServicos += desc
@@ -247,9 +254,20 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
     }
   }, [dadosOS])
 
-  // Coleta todas as pecas e itens que possuem fotos anexadas
+  // Coleta todas as pecas e itens que possuem fotos anexadas (orçamento e diagnóstico técnico)
   const fotosDasPecas = useMemo(() => {
     const lista = []
+    ;(dadosOS.pecasDiagnostico || []).forEach((p) => {
+      if (p.fotoUrl) {
+        lista.push({
+          id: p.id || p.nome,
+          nome: p.nome,
+          fotoUrl: p.fotoUrl,
+          observacao: p.observacao || 'Registro fotográfico feito durante o diagnóstico técnico.',
+        })
+      }
+    })
+
     ;(dadosOS.pecasOS || []).forEach((p) => {
       if (p.fotoUrl) {
         lista.push({
@@ -271,24 +289,6 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
         })
       }
     })
-
-    // Se nao houver fotos no cadastro, inclui itens ilustrativos do diagnóstico para o cliente
-    if (lista.length === 0) {
-      return [
-        {
-          id: 'foto-1',
-          nome: 'Tubo de Arrefecimento e Flange Metálica',
-          fotoUrl: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800',
-          observacao: 'Fissura e oxidação extrema constatadas durante teste de pressão.',
-        },
-        {
-          id: 'foto-2',
-          nome: 'Anéis Vedadores de Admissão Ressecados',
-          fotoUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800',
-          observacao: 'Material de borracha quebradiço, sem vedação hermética.',
-        },
-      ]
-    }
 
     return lista
   }, [dadosOS])
@@ -316,6 +316,12 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
       localStorage.setItem('dev_oficina_aprovacoes', JSON.stringify(parsed))
     } catch (err) {
       console.error('Erro ao gravar aprovacao:', err)
+    }
+
+    // Reflete a aprovação na OS real da oficina, para que ela avance sozinha no Kanban/lista
+    // sem depender de um aviso manual do cliente por WhatsApp.
+    if (dadosOS.status === 'aguardando_aprovacao') {
+      atualizarStatusOrdem(numeroOS, 'aprovado_execucao')
     }
 
     setEstaAprovado(true)
@@ -684,7 +690,7 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
                     <div className="text-right shrink-0">
                       <span className="text-xs font-extrabold text-[#101828]">
                         R$ {(
-                          (parseFloat(servico.valorUnitario) || 0) * (parseFloat(servico.quantidade) || 1) -
+                          (parseFloat(servico.valorUnitario ?? servico.precoUnitario) || 0) * (parseFloat(servico.quantidade) || 1) -
                           (parseFloat(servico.desconto) || 0)
                         ).toFixed(2)}
                       </span>
@@ -789,6 +795,16 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
                 Fotos reais registradas durante a desmontagem e triagem do veículo para comprovação do desgaste e transparência total.
               </p>
             </div>
+
+            {fotosDasPecas.length === 0 && (
+              <div className="p-6 text-center bg-white border border-dashed border-[#d0d5dd] rounded-2xl">
+                <Camera size={28} weight="light" className="mx-auto text-[#98a2b3] mb-2" />
+                <p className="text-sm font-bold text-[#101828]">Nenhuma foto anexada a este orçamento</p>
+                <p className="text-xs text-[#667085] mt-1">
+                  Fale com nosso consultor pelo WhatsApp se quiser ver evidências das peças antes de aprovar.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {fotosDasPecas.map((item, idx) => (

@@ -276,7 +276,7 @@ export function ModalRedimensionavel({
         </div>
 
         {/* Corpo rolável do formulário sem barra de rolagem visual */}
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-5 sm:p-6 bg-[#f8fafc]">
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-5 sm:p-6 bg-[#f8fafc] flex flex-col">
           {children}
         </div>
 

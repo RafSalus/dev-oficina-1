@@ -28,7 +28,7 @@ import {
 import { FolhaOrdemServicoImpressao } from '../../../../components/dashboard/FolhaOrdemServicoImpressao'
 import { toast } from 'sonner'
 
-export function TabOrcamento({ formData, updateFormData, onSaveStep, onCancel }) {
+export function TabOrcamento({ formData, updateFormData, onCancel }) {
   const {
     numeroOS = '',
     cliente = '',
@@ -107,7 +107,7 @@ export function TabOrcamento({ formData, updateFormData, onSaveStep, onCancel })
     let descServicos = 0
     servicosOS.forEach((s) => {
       const qtd = parseFloat(s.quantidade) || 1
-      const pr = parseFloat(s.valorUnitario) || 0
+      const pr = parseFloat(s.valorUnitario ?? s.precoUnitario) || 0
       const desc = parseFloat(s.desconto) || 0
       totalServicos += pr * qtd
       descServicos += desc
@@ -422,29 +422,18 @@ export function TabOrcamento({ formData, updateFormData, onSaveStep, onCancel })
 
       {/* 4. BARRA INFERIOR DE AÇÕES (NAVEGAÇÃO OFICIAL DA OS) */}
       <div className="h-11 shrink-0 bg-white px-5 rounded-2xl border border-[#d0d5dd] shadow-sm flex items-center justify-between print:hidden">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#d0d5dd] bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] hover:border-[#fecdca] text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
-        >
-          <X size={14} weight="bold" />
-          <span>Cancelar</span>
-        </button>
-
         <span className="text-xs font-medium text-[#667085]">
-          Aba 7 de 8 • <strong className="text-[#101828] font-bold">Composição de Orçamento</strong>
+          Aba 7 de 7 • <strong className="text-[#101828] font-bold">Composição de Orçamento</strong>
         </span>
 
         <button
-          type="button"
-          onClick={() => {
-            salvarNoStorageCompartilhado()
-            onSaveStep?.()
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+          type="submit"
+          form="form-nova-os"
+          onClick={() => salvarNoStorageCompartilhado()}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
         >
           <FloppyDisk size={15} weight="bold" />
-          <span>Salvar e Finalizar</span>
+          <span>Salvar e Finalizar OS</span>
         </button>
       </div>
 
