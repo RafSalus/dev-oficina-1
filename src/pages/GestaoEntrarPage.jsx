@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeSlash, Wrench, User } from '@phosphor-icons/react'
+import { Eye, EyeSlash } from '@phosphor-icons/react'
 import { ManagementAuthLayout } from '../layouts/ManagementAuthLayout'
 import { useAdminAuth } from '../context/AdminAuthContext'
 import { MESSAGES } from '../constants/company'
@@ -21,7 +21,7 @@ function validateLoginForm(email, password) {
 }
 
 export function GestaoEntrarPage() {
-  const { status, signIn } = useAdminAuth()
+  const { status, role, signIn } = useAdminAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -38,6 +38,14 @@ export function GestaoEntrarPage() {
 
   useEffect(() => {
     if (status === 'aal2') {
+      if (role === 'secretaria') {
+        navigate(returnUrl || '/secretaria/dashboard', { replace: true })
+        return
+      }
+      if (role === 'mecanico') {
+        navigate(returnUrl || '/mecanico/dashboard', { replace: true })
+        return
+      }
       navigate(returnUrl || '/gestao/dashboard', { replace: true })
       return
     }
@@ -52,7 +60,7 @@ export function GestaoEntrarPage() {
     if (status === 'disabled' || status === 'role_missing' || status === 'denied') {
       navigate('/gestao/acesso-negado', { replace: true })
     }
-  }, [status, navigate, returnUrl])
+  }, [status, role, navigate, returnUrl])
 
   useEffect(() => {
     if (formError && alertRef.current) {
@@ -185,38 +193,6 @@ export function GestaoEntrarPage() {
             >
               {submitting ? 'Entrando...' : 'Entrar no sistema'}
             </button>
-
-            {/* Acesso Direto para Secretaria ou Mecânico */}
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-gray-500 font-semibold uppercase tracking-wider text-[10px]">
-                  OU ACESSOS DA EQUIPE
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => navigate('/secretaria/dashboard')}
-                className="bg-[#f8fafc] hover:bg-[#f2f4f7] border border-[#0284c7]/40 hover:border-[#0284c7] text-[#0284c7] font-bold h-11 rounded-xl shadow-2xs transition-all active:bg-[#e0f2fe] active:border-[#0284c7] active:shadow-none active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 text-xs"
-              >
-                <User size={16} weight="bold" />
-                <span>Entrar Secretaria</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate('/mecanico/dashboard')}
-                className="bg-[#f8fafc] hover:bg-[#f2f4f7] border border-zinc-300 hover:border-zinc-500 text-zinc-800 font-bold h-11 rounded-xl shadow-2xs transition-all active:bg-zinc-200 active:border-zinc-500 active:shadow-none active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 text-xs"
-              >
-                <Wrench size={16} weight="bold" />
-                <span>Entrar Mecânico</span>
-              </button>
-            </div>
 
             <div className="mt-4 flex items-center justify-between text-xs">
               <Link

@@ -23,9 +23,9 @@ export function AdminAuthProvider({ children }) {
         if (raw) localSession = JSON.parse(raw)
       } catch {}
 
-      if (localSession?.user && localSession?.role === 'admin') {
+      if (localSession?.user && localSession?.role) {
         setUser(localSession.user)
-        setRole('admin')
+        setRole(localSession.role)
         setStatus(localSession.status || 'aal2')
         setIsLoading(false)
         return
@@ -47,16 +47,16 @@ export function AdminAuthProvider({ children }) {
     try {
       const { data, error } = await client.auth.getSession()
       if (error || !data?.session) {
-        // Verificar se existe sessão administrativa local ativa (ex: Rafael Amaral Salustiano)
+        // Verificar se existe sessão local ativa (ex: Rafael Amaral Salustiano ou colaboradores)
         let localSession = null
         try {
           const raw = localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)
           if (raw) localSession = JSON.parse(raw)
         } catch {}
 
-        if (localSession?.user && localSession?.role === 'admin') {
+        if (localSession?.user && localSession?.role) {
           setUser(localSession.user)
-          setRole('admin')
+          setRole(localSession.role)
           setStatus(localSession.status || 'aal2')
           setIsLoading(false)
           return
@@ -178,6 +178,66 @@ export function AdminAuthProvider({ children }) {
           setRole('admin')
           setStatus('aal2')
           return { ok: true, user: rafaelUser }
+        }
+
+        // Reconhecimento de colaboradores cadastrados na equipe (Secretária ou Mecânico)
+        const equipeCadastrada = [
+          {
+            email: 'bianca.amaral@mecanicagabriel.com.br',
+            role: 'secretaria',
+            nome: 'Bianca Amaral',
+            cargoLabel: 'Secretária e Recepção',
+          },
+          {
+            email: 'carlos.eduardo@mecanicagabriel.com.br',
+            role: 'mecanico',
+            nome: 'Carlos Eduardo Silveira',
+            cargoLabel: 'Chefe de Oficina',
+          },
+          {
+            email: 'gabriel.amaral@mecanicagabriel.com.br',
+            role: 'mecanico',
+            nome: 'Gabriel Amaral',
+            cargoLabel: 'Mecânico Especialista',
+          },
+          {
+            email: 'danilo.silva@mecanicagabriel.com.br',
+            role: 'mecanico',
+            nome: 'Danilo Silva',
+            cargoLabel: 'Eletricista Automotivo',
+          },
+        ]
+
+        const membroEquipe = equipeCadastrada.find((m) => m.email.toLowerCase() === normalizedEmail)
+        if (membroEquipe && (password === 'Oficina2026!' || password === 'GabrielAdmin2026!')) {
+          const colaboradorUser = {
+            id: `staff-${membroEquipe.role}-${Date.now()}`,
+            email: membroEquipe.email,
+            role: membroEquipe.role,
+            aud: 'authenticated',
+            user_metadata: {
+              name: membroEquipe.nome,
+              nome: membroEquipe.nome,
+              role: membroEquipe.role,
+              cargoLabel: membroEquipe.cargoLabel,
+            },
+          }
+          try {
+            localStorage.setItem(
+              ADMIN_SESSION_STORAGE_KEY,
+              JSON.stringify({
+                user: colaboradorUser,
+                role: membroEquipe.role,
+                status: 'aal2',
+                timestamp: Date.now(),
+              })
+            )
+          } catch {}
+
+          setUser(colaboradorUser)
+          setRole(membroEquipe.role)
+          setStatus('aal2')
+          return { ok: true, user: colaboradorUser }
         }
 
         if (error) {
