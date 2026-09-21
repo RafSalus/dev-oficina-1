@@ -33,7 +33,7 @@ export function MobileDashboardHeader() {
     navigate('/gestao/entrar', { replace: true })
   }
 
-  const userName = user?.user_metadata?.name || 'Administrador'
+  const userName = user?.user_metadata?.name || user?.user_metadata?.nome || 'Administrador'
   const userEmail = user?.email || 'admin@mecanicagabriel.com.br'
 
   return (

@@ -10,7 +10,7 @@ import {
   GasPump,
   CalendarDots,
 } from '@phosphor-icons/react'
-import { ClienteProvider, useCliente } from '../context/ClienteContext'
+import { useCliente } from '../context/ClienteContext'
 import { ClienteHeader } from '../components/cliente/ClienteHeader'
 import { ClienteSidebar } from '../components/cliente/ClienteSidebar'
 import { ClienteFooter } from '../components/cliente/ClienteFooter'
@@ -38,11 +38,7 @@ const MOBILE_NAV_ITEMS = [
 ]
 
 export function ClienteLayout() {
-  return (
-    <ClienteProvider>
-      <ClienteLayoutInner />
-    </ClienteProvider>
-  )
+  return <ClienteLayoutInner />
 }
 
 function ClienteLayoutInner() {

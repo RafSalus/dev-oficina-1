@@ -202,7 +202,7 @@ export function GestaoEntrarPage() {
               <button
                 type="button"
                 onClick={() => navigate('/secretaria/dashboard')}
-                className="bg-[#f8fafc] hover:bg-[#f2f4f7] border border-[#0284c7]/40 hover:border-[#0284c7] text-[#0284c7] font-bold h-11 rounded-xl shadow-2xs transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-1.5 text-xs"
+                className="bg-[#f8fafc] hover:bg-[#f2f4f7] border border-[#0284c7]/40 hover:border-[#0284c7] text-[#0284c7] font-bold h-11 rounded-xl shadow-2xs transition-all active:bg-[#e0f2fe] active:border-[#0284c7] active:shadow-none active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 text-xs"
               >
                 <User size={16} weight="bold" />
                 <span>Entrar Secretaria</span>
@@ -211,7 +211,7 @@ export function GestaoEntrarPage() {
               <button
                 type="button"
                 onClick={() => navigate('/mecanico/dashboard')}
-                className="bg-[#f8fafc] hover:bg-[#f2f4f7] border border-zinc-300 hover:border-zinc-500 text-zinc-800 font-bold h-11 rounded-xl shadow-2xs transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-1.5 text-xs"
+                className="bg-[#f8fafc] hover:bg-[#f2f4f7] border border-zinc-300 hover:border-zinc-500 text-zinc-800 font-bold h-11 rounded-xl shadow-2xs transition-all active:bg-zinc-200 active:border-zinc-500 active:shadow-none active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 text-xs"
               >
                 <Wrench size={16} weight="bold" />
                 <span>Entrar Mecânico</span>

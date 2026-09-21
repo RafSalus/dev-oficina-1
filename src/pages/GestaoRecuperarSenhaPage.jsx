@@ -111,7 +111,7 @@ export function GestaoRecuperarSenhaPage() {
             {success && (
               <p
                 role="status"
-                className="mt-5 bg-green-50 border border-green-200 rounded-xl p-3.5 text-xs font-medium text-green-800"
+                className="mt-5 bg-sky-50 border border-sky-200 rounded-xl p-3.5 text-xs font-medium text-[#0284c7]"
               >
                 {MESSAGES.recoveryInstructions}
               </p>

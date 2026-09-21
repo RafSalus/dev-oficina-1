@@ -53,7 +53,7 @@ export function MobileHomeScreen() {
   const { canPromptInstall, showIosInstructions, isInstalled, promptInstall } = usePwaInstall()
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
-  const userName = user?.user_metadata?.name || 'Administrador'
+  const userName = user?.user_metadata?.name || user?.user_metadata?.nome || 'Administrador'
   const firstName = userName.split(' ')[0]
 
   const dateLabel = useMemo(() => {

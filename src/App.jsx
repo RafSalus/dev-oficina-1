@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { NoticeProvider } from './context/NoticeContext'
 import { AdminAuthProvider } from './context/AdminAuthContext'
+import { ClienteProvider } from './context/ClienteContext'
 import { PwaStandaloneRedirect } from './components/PwaStandaloneRedirect'
 import { PwaManifestSwitcher } from './components/PwaManifestSwitcher'
 
@@ -13,10 +14,11 @@ import { ClienteEntrarPage } from './pages/ClienteEntrarPage'
 import { GestaoEntrarPage } from './pages/GestaoEntrarPage'
 import { GestaoRecuperarSenhaPage } from './pages/GestaoRecuperarSenhaPage'
 import { GestaoAcessoNegadoPage } from './pages/GestaoAcessoNegadoPage'
+import { GestaoMfaConfigurarPage } from './pages/GestaoMfaConfigurarPage'
+import { GestaoMfaVerificarPage } from './pages/GestaoMfaVerificarPage'
+import { ProtectedRoute } from './components/auth/ProtectedRoute'
 
 import { DashboardLayout } from './layouts/DashboardLayout'
-import { DashboardPage } from './pages/dashboard/DashboardPage'
-import { OrcamentoOSListPage } from './pages/dashboard/orcamento/OrcamentoOSListPage'
 import { CotacaoAutoPecaPage } from './pages/CotacaoAutoPecaPage'
 import { AprovacaoOrcamentoClientePage } from './pages/AprovacaoOrcamentoClientePage'
 import { VistoriaEntradaClientePage } from './pages/VistoriaEntradaClientePage'
@@ -26,25 +28,14 @@ import { ClienteLayout } from './layouts/ClienteLayout'
 import { ClienteModulePlaceholder } from './components/cliente/ClienteModulePlaceholder'
 import { ClienteServicosRedirect } from './pages/cliente/ClienteServicosRedirect'
 import { SecretariaLayout } from './layouts/SecretariaLayout'
-import { ServicosPage } from './pages/dashboard/suprimentos/ServicosPage'
-import { PecasPage } from './pages/dashboard/suprimentos/PecasPage'
-import { EstoquePage } from './pages/dashboard/suprimentos/EstoquePage'
-import { ComprasPage } from './pages/dashboard/suprimentos/ComprasPage'
-import { CotacaoPage } from './pages/dashboard/suprimentos/CotacaoPage'
-import { TerceirosPage } from './pages/dashboard/suprimentos/TerceirosPage'
-import { ClientesPage } from './pages/dashboard/clientes/ClientesPage'
-import { VeiculosPage } from './pages/dashboard/veiculos/VeiculosPage'
-import { EstacionadosPage } from './pages/dashboard/estacionados/EstacionadosPage'
-import { LevaETrazPage } from './pages/dashboard/leva-e-traz/LevaETrazPage'
-import { ManutencaoPreventivaPage } from './pages/dashboard/manutencao-preventiva/ManutencaoPreventivaPage'
-import AgendaPage from './pages/dashboard/agenda/AgendaPage'
-import { PDVPage } from './pages/dashboard/pdv/PDVPage'
+import { renderRotasOperacionais } from './routes/rotasCompartilhadas'
 
 export default function App() {
   return (
     <NoticeProvider>
       <AdminAuthProvider>
-        <BrowserRouter>
+        <ClienteProvider>
+          <BrowserRouter>
           <PwaStandaloneRedirect />
           <PwaManifestSwitcher />
           <Toaster
@@ -87,41 +78,30 @@ export default function App() {
             <Route path="/gestao/entrar" element={<GestaoEntrarPage />} />
             <Route path="/gestao/recuperar-senha" element={<GestaoRecuperarSenhaPage />} />
             <Route path="/gestao/acesso-negado" element={<GestaoAcessoNegadoPage />} />
+            <Route path="/gestao/mfa/configurar" element={<GestaoMfaConfigurarPage />} />
+            <Route path="/gestao/mfa/verificar" element={<GestaoMfaVerificarPage />} />
 
             {/* Post-login Management Workspace with Shell (Header + Sidebar + Center + Footer) */}
-            <Route path="/gestao" element={<DashboardLayout />}>
-              <Route index element={<Navigate to="/gestao/dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="agenda" element={<AgendaPage />} />
-              <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
-              <Route path="orcamento" element={<Navigate to="/gestao/ordem-de-servico" replace />} />
-              <Route path="orcamentos" element={<Navigate to="/gestao/ordem-de-servico" replace />} />
-              <Route path="pdv" element={<PDVPage />} />
-              <Route path="clientes" element={<ClientesPage />} />
-              <Route path="veiculos" element={<VeiculosPage />} />
-              <Route path="estacionados" element={<EstacionadosPage />} />
-              <Route path="leva-e-traz" element={<LevaETrazPage />} />
-              <Route path="manutencao-preventiva" element={<ManutencaoPreventivaPage />} />
-              <Route path="garantias" element={<DashboardPage />} />
-              <Route path="ferramentas" element={<DashboardPage />} />
-              <Route path="pecas-danificadas" element={<DashboardPage />} />
-              <Route path="estoque" element={<EstoquePage />} />
-              <Route path="compras" element={<ComprasPage />} />
-              <Route path="compras/cotacao/:id" element={<CotacaoPage />} />
-              <Route path="compras/cotacao" element={<CotacaoPage />} />
-              <Route path="servicos" element={<ServicosPage />} />
-              <Route path="pecas" element={<PecasPage />} />
-              <Route path="fornecedores" element={<TerceirosPage />} />
-              <Route path="terceiros" element={<Navigate to="/gestao/fornecedores" replace />} />
-              <Route path="despesas" element={<DashboardPage />} />
-              <Route path="nota-fiscal" element={<DashboardPage />} />
-              <Route path="relatorios" element={<DashboardPage />} />
-              <Route path="funcionarios" element={<DashboardPage />} />
-              <Route path="configuracoes" element={<DashboardPage />} />
+            <Route
+              path="/gestao"
+              element={
+                <ProtectedRoute portal="gestao">
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              {renderRotasOperacionais('gestao')}
             </Route>
 
             {/* Post-login Mechanic Workspace with Dedicated Menus and Layout */}
-            <Route path="/mecanico" element={<MecanicoLayout />}>
+            <Route
+              path="/mecanico"
+              element={
+                <ProtectedRoute portal="mecanico">
+                  <MecanicoLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Navigate to="/mecanico/dashboard" replace />} />
               <Route path="dashboard" element={<MecanicoDashboardPage />} />
               <Route path="agenda" element={<MecanicoDashboardPage />} />
@@ -139,7 +119,14 @@ export default function App() {
             </Route>
 
             {/* Post-login Customer Portal with Dedicated Menus and Layout */}
-            <Route path="/cliente" element={<ClienteLayout />}>
+            <Route
+              path="/cliente"
+              element={
+                <ProtectedRoute portal="cliente">
+                  <ClienteLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Navigate to="/cliente/resumo" replace />} />
               <Route path="inicio" element={<Navigate to="/cliente/resumo" replace />} />
               <Route path="resumo" element={<ClienteModulePlaceholder />} />
@@ -152,42 +139,22 @@ export default function App() {
               <Route path="agenda" element={<ClienteModulePlaceholder />} />
             </Route>
 
-            {/* Post-login Secretaria Workspace (compartilha todas as telas da gestão, exceto relatórios, funcionários e configurações - Regra 14) */}
-            <Route path="/secretaria" element={<SecretariaLayout />}>
-              <Route index element={<Navigate to="/secretaria/dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="agenda" element={<AgendaPage />} />
-              <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
-              <Route path="orcamento" element={<Navigate to="/secretaria/ordem-de-servico" replace />} />
-              <Route path="orcamentos" element={<Navigate to="/secretaria/ordem-de-servico" replace />} />
-              <Route path="pdv" element={<PDVPage />} />
-              <Route path="clientes" element={<ClientesPage />} />
-              <Route path="veiculos" element={<VeiculosPage />} />
-              <Route path="estacionados" element={<EstacionadosPage />} />
-              <Route path="leva-e-traz" element={<LevaETrazPage />} />
-              <Route path="manutencao-preventiva" element={<ManutencaoPreventivaPage />} />
-              <Route path="garantias" element={<DashboardPage />} />
-              <Route path="ferramentas" element={<DashboardPage />} />
-              <Route path="pecas-danificadas" element={<DashboardPage />} />
-              <Route path="estoque" element={<EstoquePage />} />
-              <Route path="compras" element={<ComprasPage />} />
-              <Route path="compras/cotacao/:id" element={<CotacaoPage />} />
-              <Route path="compras/cotacao" element={<CotacaoPage />} />
-              <Route path="servicos" element={<ServicosPage />} />
-              <Route path="pecas" element={<PecasPage />} />
-              <Route path="fornecedores" element={<TerceirosPage />} />
-              <Route path="terceiros" element={<Navigate to="/secretaria/fornecedores" replace />} />
-              <Route path="despesas" element={<DashboardPage />} />
-              <Route path="nota-fiscal" element={<DashboardPage />} />
-              {/* Telas restritas da Secretaria: Relatórios, Funcionários e Configurações (Regra 14) */}
-              <Route path="relatorios" element={<Navigate to="/secretaria/dashboard" replace />} />
-              <Route path="funcionarios" element={<Navigate to="/secretaria/dashboard" replace />} />
-              <Route path="configuracoes" element={<Navigate to="/secretaria/dashboard" replace />} />
+            {/* Post-login Secretaria Workspace (compartilha rotas da gestão, com restrições da Regra 14) */}
+            <Route
+              path="/secretaria"
+              element={
+                <ProtectedRoute portal="secretaria">
+                  <SecretariaLayout />
+                </ProtectedRoute>
+              }
+            >
+              {renderRotasOperacionais('secretaria')}
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </ClienteProvider>
       </AdminAuthProvider>
     </NoticeProvider>
   )

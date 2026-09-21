@@ -39,7 +39,7 @@ export function LocationMap() {
 
         <div className="order-1 lg:order-2" data-reveal>
           <span aria-hidden="true" className="block w-12 h-1 bg-brand-blue mb-4" />
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e0f2fe] text-[#0284c7] border border-sky-100 text-sm font-medium mb-6">
             <ShieldCheck size={16} weight="fill" aria-hidden="true" />
             Tradição e Qualidade
           </div>

@@ -20,6 +20,17 @@ import {
 } from '@phosphor-icons/react'
 import { COMPANY, WHATSAPP_ACCESS } from '../constants/company'
 import { toast } from 'sonner'
+import Select from 'react-select'
+import { customSelectStyles } from '../components/suprimentos/customSelectStyles'
+
+const PRAZO_ENTREGA_OPCOES = [
+  { value: 'Pronta Entrega (Imediato)', label: 'Pronta Entrega (Imediato)' },
+  { value: 'Em até 1 hora (Moto Express)', label: 'Em até 1 hora (Moto Express)' },
+  { value: 'Em até 2 horas', label: 'Em até 2 horas' },
+  { value: 'Hoje até o fim do dia', label: 'Hoje até o fim do dia' },
+  { value: 'Para amanhã pela manhã', label: 'Para amanhã pela manhã' },
+  { value: 'Retirada no balcão da loja', label: 'Retirada no balcão da loja' },
+]
 
 // Dados padrao de demonstracao
 const MOCK_COTACAO = {
@@ -699,18 +710,13 @@ export function CotacaoAutoPecaPage() {
                   <label className="block text-[11px] font-black text-slate-900 mb-1">
                     Prazo de Entrega
                   </label>
-                  <select
-                    value={prazoEntrega}
-                    onChange={(e) => setPrazoEntrega(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-xs sm:text-sm font-bold text-black focus:outline-none focus:border-[#0284c7] cursor-pointer"
-                  >
-                    <option value="Pronta Entrega (Imediato)">Pronta Entrega (Imediato)</option>
-                    <option value="Em até 1 hora (Moto Express)">Em até 1 hora (Moto Express)</option>
-                    <option value="Em até 2 horas">Em até 2 horas</option>
-                    <option value="Hoje até o fim do dia">Hoje até o fim do dia</option>
-                    <option value="Para amanhã pela manhã">Para amanhã pela manhã</option>
-                    <option value="Retirada no balcão da loja">Retirada no balcão da loja</option>
-                  </select>
+                  <Select
+                    options={PRAZO_ENTREGA_OPCOES}
+                    value={PRAZO_ENTREGA_OPCOES.find((opt) => opt.value === prazoEntrega) || PRAZO_ENTREGA_OPCOES[0]}
+                    onChange={(opt) => setPrazoEntrega(opt ? opt.value : 'Pronta Entrega (Imediato)')}
+                    styles={customSelectStyles}
+                    isSearchable={false}
+                  />
                 </div>
               </div>
             </div>

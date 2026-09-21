@@ -1,4 +1,5 @@
 import React from 'react'
+import { Car } from '@phosphor-icons/react'
 import { BRANDS } from '../constants/company'
 
 function BrandList({ hidden = false }) {
@@ -7,8 +8,9 @@ function BrandList({ hidden = false }) {
       {BRANDS.map((brand, i) => (
         <span
           key={`${brand}-${i}`}
-          className="text-xl md:text-2xl font-bold tracking-tight text-gray-400 hover:text-black transition-colors whitespace-nowrap"
+          className="inline-flex items-center gap-2 text-xl md:text-2xl font-bold tracking-tight text-gray-400 hover:text-black transition-colors whitespace-nowrap"
         >
+          <Car size={20} aria-hidden="true" />
           {brand}
         </span>
       ))}

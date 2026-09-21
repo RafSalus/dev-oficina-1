@@ -58,6 +58,23 @@ import { MobileMecanicoOrdensPage } from '../../components/mecanico/mobile/Mobil
 import { MobileMecanicoComingSoon } from '../../components/mecanico/mobile/MobileMecanicoComingSoon'
 import { toast } from 'sonner'
 
+const OPCOES_URGENCIA_PEDIR = [
+  { value: 'normal', label: 'Normal (Fluxo Padrão)' },
+  { value: 'urgente', label: 'Urgente (Veículo no Elevador)' },
+]
+
+const OPCOES_DESTINO_PECA = [
+  { value: 'Descarte Ambiental', label: 'Descarte Ambiental Responsável' },
+  { value: 'Garantia do Fabricante', label: 'Acionamento de Garantia do Fabricante' },
+  { value: 'Devolução ao Cliente', label: 'Devolução ao Cliente (Visualização)' },
+]
+
+const OPCOES_URGENCIA_FERRAMENTA = [
+  { value: 'baixa', label: 'Baixa (Pode aguardar revisão mensal)' },
+  { value: 'media', label: 'Média (Uso diário)' },
+  { value: 'alta', label: 'Alta (Impede o andamento do trabalho)' },
+]
+
 export function MecanicoDashboardPage() {
   const {
     mecanicoAtivo,
@@ -1409,14 +1426,15 @@ export function MecanicoDashboardPage() {
                   </h4>
                   <div className="flex items-center gap-2">
                     <label className="text-xs font-bold text-[#475467]">Urgência:</label>
-                    <select
-                      value={urgenciaPedir}
-                      onChange={(e) => setUrgenciaPedir(e.target.value)}
-                      className="h-8 px-2.5 bg-white border border-[#d0d5dd] rounded-xl text-xs font-bold text-[#101828]"
-                    >
-                      <option value="normal">Normal (Fluxo Padrão)</option>
-                      <option value="urgente">Urgente (Veículo no Elevador)</option>
-                    </select>
+                    <div className="w-52">
+                      <Select
+                        options={OPCOES_URGENCIA_PEDIR}
+                        value={OPCOES_URGENCIA_PEDIR.find((o) => o.value === urgenciaPedir) || OPCOES_URGENCIA_PEDIR[0]}
+                        onChange={(opt) => setUrgenciaPedir(opt ? opt.value : 'normal')}
+                        styles={customSelectStyles}
+                        isSearchable={false}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1512,19 +1530,14 @@ export function MecanicoDashboardPage() {
                     Consulte localização física de prateleira, quantidade em estoque e valores unitários.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={categoriaEstoque}
-                    onChange={(e) => setCategoriaEstoque(e.target.value)}
-                    className="h-8.5 px-3 bg-white border border-[#d0d5dd] rounded-xl text-xs font-bold text-[#101828]"
-                  >
-                    <option value="Todas">Todas as Categorias</option>
-                    {CATEGORIAS_PECAS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                <div className="w-56">
+                  <Select
+                    options={[{ value: 'Todas', label: 'Todas as Categorias' }, ...CATEGORIAS_PECAS.map((c) => ({ value: c, label: c }))]}
+                    value={{ value: categoriaEstoque, label: categoriaEstoque === 'Todas' ? 'Todas as Categorias' : categoriaEstoque }}
+                    onChange={(opt) => setCategoriaEstoque(opt ? opt.value : 'Todas')}
+                    styles={customSelectStyles}
+                    isSearchable={false}
+                  />
                 </div>
               </div>
 
@@ -1942,15 +1955,13 @@ export function MecanicoDashboardPage() {
 
               <div>
                 <label className="font-bold text-[#344054] block mb-1">Destino da Peça:</label>
-                <select
-                  value={formPecaDanificada.tipoDestino}
-                  onChange={(e) => setFormPecaDanificada({ ...formPecaDanificada, tipoDestino: e.target.value })}
-                  className="w-full h-9 px-3 border border-[#d0d5dd] rounded-xl text-xs font-bold"
-                >
-                  <option value="Descarte Ambiental">Descarte Ambiental Responsável</option>
-                  <option value="Garantia do Fabricante">Acionamento de Garantia do Fabricante</option>
-                  <option value="Devolução ao Cliente">Devolução ao Cliente (Visualização)</option>
-                </select>
+                <Select
+                  options={OPCOES_DESTINO_PECA}
+                  value={OPCOES_DESTINO_PECA.find((o) => o.value === formPecaDanificada.tipoDestino) || OPCOES_DESTINO_PECA[0]}
+                  onChange={(opt) => setFormPecaDanificada({ ...formPecaDanificada, tipoDestino: opt ? opt.value : 'Descarte Ambiental' })}
+                  styles={customSelectStyles}
+                  isSearchable={false}
+                />
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
@@ -2017,15 +2028,13 @@ export function MecanicoDashboardPage() {
 
               <div>
                 <label className="font-bold text-[#344054] block mb-1">Nível de Urgência:</label>
-                <select
-                  value={formFerramenta.urgencia}
-                  onChange={(e) => setFormFerramenta({ ...formFerramenta, urgencia: e.target.value })}
-                  className="w-full h-9 px-3 border border-[#d0d5dd] rounded-xl text-xs font-bold"
-                >
-                  <option value="baixa">Baixa (Pode aguardar revisão mensal)</option>
-                  <option value="media">Média (Uso diário)</option>
-                  <option value="alta">Alta (Impede o andamento do trabalho)</option>
-                </select>
+                <Select
+                  options={OPCOES_URGENCIA_FERRAMENTA}
+                  value={OPCOES_URGENCIA_FERRAMENTA.find((o) => o.value === formFerramenta.urgencia) || OPCOES_URGENCIA_FERRAMENTA[0]}
+                  onChange={(opt) => setFormFerramenta({ ...formFerramenta, urgencia: opt ? opt.value : 'baixa' })}
+                  styles={customSelectStyles}
+                  isSearchable={false}
+                />
               </div>
 
               <div className="pt-2 flex justify-end gap-2">

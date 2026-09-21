@@ -20,6 +20,7 @@ import { IMaskInput } from 'react-imask'
 import { toast } from 'sonner'
 import { carregarClientesCadastrados } from '../../../../constants/mockClientesVeiculos'
 import { MOCK_MECANICOS } from '../../../../constants/mecanicos'
+import { obterMecanicosAtivos } from '../../../../repositories/funcionariosRepository'
 import { ITENS_CHECKLIST_ENTRADA } from '../../../../constants/checklistItems'
 import { formatarCPF, formatarCNPJ, formatarTelefone } from '../../../../utils/fiscalValidators'
 import { mobileSelectStyles, inputBaseClass, labelBaseClass } from './mobileSelectStyles'
@@ -84,6 +85,36 @@ export function MobileNovaOrdemDeServicoPage({
       ) || null
     )
   }, [formData.veiculoId, formData.placa, veiculosOptions])
+
+  const [mecanicosLista, setMecanicosLista] = useState(MOCK_MECANICOS)
+
+  useEffect(() => {
+    let cancelado = false
+    const carregarMecs = async () => {
+      try {
+        const ativos = await obterMecanicosAtivos()
+        if (!cancelado && ativos && ativos.length > 0) {
+          setMecanicosLista([
+            MOCK_MECANICOS[0],
+            ...ativos.map((a) => ({
+              value: a.id,
+              label: a.nome,
+              nome: a.nome,
+              cargo: a.cargoLabel || a.cargo,
+            })),
+          ])
+        }
+      } catch (e) {
+        console.error('Erro ao carregar mecânicos ativos no mobile:', e)
+      }
+    }
+    carregarMecs()
+    window.addEventListener('dev_oficina_funcionarios_updated', carregarMecs)
+    return () => {
+      cancelado = true
+      window.removeEventListener('dev_oficina_funcionarios_updated', carregarMecs)
+    }
+  }, [])
 
   const handleSelectCliente = (option) => {
     if (!option) {
@@ -300,8 +331,8 @@ export function MobileNovaOrdemDeServicoPage({
             <div className="bg-white p-3 rounded-2xl border border-[#d0d5dd] space-y-1">
               <label className={labelBaseClass}>Mecanico Responsavel</label>
               <Select
-                options={MOCK_MECANICOS}
-                value={MOCK_MECANICOS.find((m) => m.value === formData.mecanicoId) || MOCK_MECANICOS[0]}
+                options={mecanicosLista}
+                value={mecanicosLista.find((m) => m.value === formData.mecanicoId) || mecanicosLista[0]}
                 onChange={(opt) =>
                   updateFormData({
                     mecanicoId: opt?.value || '',

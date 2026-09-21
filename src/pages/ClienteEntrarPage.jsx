@@ -1,8 +1,11 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Eye, EyeSlash, WhatsappLogo, CarProfile } from '@phosphor-icons/react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Eye, EyeSlash, WhatsappLogo } from '@phosphor-icons/react'
+import { IMaskInput } from 'react-imask'
 import { CustomerAuthLayout } from '../layouts/CustomerAuthLayout'
 import { WHATSAPP_ACCESS, MESSAGES } from '../constants/company'
+import { useCliente } from '../context/ClienteContext'
+import { MOCK_CLIENTES_VEICULOS } from '../constants/mockClientesVeiculos'
 import { toast } from 'sonner'
 
 function PasswordInput({ id, label, autoComplete, value, onChange, error }) {
@@ -24,7 +27,7 @@ function PasswordInput({ id, label, autoComplete, value, onChange, error }) {
           aria-invalid={!!error}
           aria-describedby={error ? errorId : undefined}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border-2 border-transparent focus:border-brand-blue rounded-xl px-4 h-13 text-sm font-medium text-black placeholder-gray-400 focus:outline-none transition-all ${
+          className={`w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border-2 border-transparent focus:border-brand-blue rounded-xl px-4 h-13 text-base sm:text-sm font-medium text-black placeholder-gray-400 focus:outline-none transition-all ${
             error ? 'border-red-500' : ''
           }`}
         />
@@ -49,20 +52,38 @@ function PasswordInput({ id, label, autoComplete, value, onChange, error }) {
 
 function CustomerLoginForm({ onRequestRecovery }) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { definirClienteAtivo } = useCliente()
   const [cpfCnpj, setCpfCnpj] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState({})
 
+  const returnUrl = searchParams.get('returnUrl')
+
   const handleSubmit = (e) => {
     e.preventDefault()
     const newErrors = {}
-    if (!cpfCnpj.trim()) newErrors.cpfCnpj = MESSAGES.cpfCnpjRequired
-    if (!password) newErrors.password = MESSAGES.passwordRequired
+    const digits = (cpfCnpj || '').replace(/\D/g, '')
+
+    if (!digits) {
+      newErrors.cpfCnpj = MESSAGES.cpfCnpjRequired
+    }
+    if (!password) {
+      newErrors.password = MESSAGES.passwordRequired
+    }
 
     setErrors(newErrors)
     if (!newErrors.cpfCnpj && !newErrors.password) {
-      toast.success('Login realizado com sucesso! Bem-vindo ao Portal do Cliente.')
-      navigate('/cliente/resumo')
+      // Localizar cliente pelo documento ou utilizar registro correspondente
+      const found = MOCK_CLIENTES_VEICULOS.find((c) => {
+        const cDoc = (c.documento || '').replace(/\D/g, '')
+        const cTel = (c.telefone || '').replace(/\D/g, '')
+        return cDoc === digits || cTel === digits
+      }) || MOCK_CLIENTES_VEICULOS[0]
+
+      definirClienteAtivo(found)
+      toast.success(`Login realizado com sucesso! Bem-vindo(a), ${found.nome}.`)
+      navigate(returnUrl || '/cliente/resumo', { replace: true })
     }
   }
 
@@ -72,7 +93,7 @@ function CustomerLoginForm({ onRequestRecovery }) {
         Acessar conta
       </h1>
       <p className="text-xs sm:text-sm text-gray-500 mb-6">
-        Entre para acompanhar informações do seu veículo.
+        Entre com seu CPF ou CNPJ para acompanhar seus veículos e ordens de serviço.
       </p>
 
       <div className="space-y-4">
@@ -83,20 +104,23 @@ function CustomerLoginForm({ onRequestRecovery }) {
           >
             CPF ou CNPJ
           </label>
-          <input
+          <IMaskInput
             id="cpf-cnpj"
             name="cpf-cnpj"
-            type="text"
-            inputMode="text"
+            mask={[
+              { mask: '000.000.000-00' },
+              { mask: '00.000.000/0000-00' },
+            ]}
+            inputMode="numeric"
             autoComplete="username"
             value={cpfCnpj}
             aria-invalid={!!errors.cpfCnpj}
             aria-describedby={errors.cpfCnpj ? 'cpf-cnpj-erro' : undefined}
-            onChange={(e) => {
-              setCpfCnpj(e.target.value)
+            onAccept={(value) => {
+              setCpfCnpj(value)
               if (errors.cpfCnpj) setErrors((prev) => ({ ...prev, cpfCnpj: undefined }))
             }}
-            className={`w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border-2 border-transparent focus:border-brand-blue rounded-xl px-4 h-13 text-sm font-medium text-black placeholder-gray-400 focus:outline-none transition-all ${
+            className={`w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border-2 border-transparent focus:border-brand-blue rounded-xl px-4 h-13 text-base sm:text-sm font-medium text-black placeholder-gray-400 focus:outline-none transition-all ${
               errors.cpfCnpj ? 'border-red-500' : ''
             }`}
             placeholder="000.000.000-00"
@@ -128,31 +152,7 @@ function CustomerLoginForm({ onRequestRecovery }) {
         Acessar Painel
       </button>
 
-      {/* Acesso Rápido para Demonstração */}
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-white px-2 text-gray-500 font-semibold uppercase tracking-wider text-[10px]">
-            OU ACESSO RÁPIDO
-          </span>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          toast.success('Acesso ao Portal do Cliente!')
-          navigate('/cliente/resumo')
-        }}
-        className="w-full bg-[#f8fafc] hover:bg-[#f2f4f7] border border-[#0284c7]/40 hover:border-[#0284c7] text-[#0284c7] font-bold h-12 rounded-xl shadow-2xs transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2 text-sm"
-      >
-        <CarProfile size={18} weight="bold" />
-        <span>Entrar como Cliente (Demonstração)</span>
-      </button>
-
-      <div className="mt-3 text-right">
+      <div className="mt-4 text-right">
         <button
           type="button"
           onClick={onRequestRecovery}
@@ -165,15 +165,15 @@ function CustomerLoginForm({ onRequestRecovery }) {
   )
 }
 
-
 function CustomerRecoveryForm({ onBack }) {
-  const [submitted, setSubmitted] = useState(false)
   const [cpfCnpj, setCpfCnpj] = useState('')
   const [error, setError] = useState(null)
+  const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!cpfCnpj.trim()) {
+    const digits = (cpfCnpj || '').replace(/\D/g, '')
+    if (!digits) {
       setError(MESSAGES.cpfCnpjRequired)
       return
     }
@@ -186,7 +186,7 @@ function CustomerRecoveryForm({ onBack }) {
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-black bg-gray-100 hover:bg-gray-200 rounded-full mb-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black cursor-pointer"
+        className="text-xs font-semibold text-gray-500 hover:text-black mb-4 inline-flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black cursor-pointer"
       >
         ← Voltar
       </button>
@@ -196,7 +196,7 @@ function CustomerRecoveryForm({ onBack }) {
         Recuperar senha
       </h1>
       <p className="text-xs sm:text-sm text-gray-500 mb-6">
-        Informe seu CPF ou CNPJ para iniciar a recuperação de acesso.
+        Informe seu CPF ou CNPJ para receber instruções de acesso.
       </p>
 
       <div>
@@ -206,20 +206,23 @@ function CustomerRecoveryForm({ onBack }) {
         >
           CPF ou CNPJ
         </label>
-        <input
+        <IMaskInput
           id="recuperar-cpf-cnpj"
           name="recuperar-cpf-cnpj"
-          type="text"
-          inputMode="text"
+          mask={[
+            { mask: '000.000.000-00' },
+            { mask: '00.000.000/0000-00' },
+          ]}
+          inputMode="numeric"
           autoComplete="username"
           value={cpfCnpj}
           aria-invalid={!!error}
           aria-describedby={error ? 'recuperar-cpf-cnpj-erro' : undefined}
-          onChange={(e) => {
-            setCpfCnpj(e.target.value)
+          onAccept={(value) => {
+            setCpfCnpj(value)
             if (error) setError(null)
           }}
-          className={`w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border-2 border-transparent focus:border-brand-blue rounded-xl px-4 h-13 text-sm font-medium text-black placeholder-gray-400 focus:outline-none transition-all ${
+          className={`w-full bg-gray-50 hover:bg-gray-100/70 focus:bg-white border-2 border-transparent focus:border-brand-blue rounded-xl px-4 h-13 text-base sm:text-sm font-medium text-black placeholder-gray-400 focus:outline-none transition-all ${
             error ? 'border-red-500' : ''
           }`}
           placeholder="000.000.000-00"

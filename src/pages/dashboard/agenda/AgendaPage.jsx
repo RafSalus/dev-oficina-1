@@ -24,6 +24,7 @@ import {
   salvarFilaEspera,
   recalcularCascataDeAtrasos,
 } from '../../../constants/agendaData'
+import { obterMecanicosAtivos } from '../../../repositories/funcionariosRepository'
 import { AgendaGradeSemanal } from '../../../components/agenda/AgendaGradeSemanal'
 import { AgendaAgendamentoModal } from '../../../components/agenda/AgendaAgendamentoModal'
 import { AgendaTratarAtrasoModal } from '../../../components/agenda/AgendaTratarAtrasoModal'
@@ -40,6 +41,9 @@ export default function AgendaPage() {
   const [dataReferencia, setDataReferencia] = useState(new Date())
   const semanaDias = useMemo(() => obterDatasDaSemana(dataReferencia), [dataReferencia])
 
+  // Lista dinâmica de mecânicos vindos do repositório de funcionários
+  const [mecanicosLista, setMecanicosLista] = useState(MECANICOS_AGENDA)
+
   // Mecânico Selecionado: Mostra SOMENTE a agenda deste mecânico
   const [mecanicoSelecionadoId, setMecanicoSelecionadoId] = useState(MECANICOS_AGENDA[0].id)
 
@@ -55,6 +59,42 @@ export default function AgendaPage() {
 
   const [isModalAtrasoAberto, setIsModalAtrasoAberto] = useState(false)
   const [agendamentoAtrasadoAlvo, setAgendamentoAtrasadoAlvo] = useState(null)
+
+  // Carregar lista dinâmica de colaboradores mecânicos ativos
+  useEffect(() => {
+    let cancelado = false
+    const carregarMecs = async () => {
+      try {
+        const ativos = await obterMecanicosAtivos()
+        if (!cancelado && ativos && ativos.length > 0) {
+          setMecanicosLista(ativos)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar mecânicos para agenda:', err)
+      }
+    }
+
+    carregarMecs()
+
+    const handleUpdate = () => carregarMecs()
+    window.addEventListener('dev_oficina_funcionarios_updated', handleUpdate)
+    return () => {
+      cancelado = true
+      window.removeEventListener('dev_oficina_funcionarios_updated', handleUpdate)
+    }
+  }, [])
+
+  // Helper para casamento flexível de IDs de mecânico (mec- ou func-)
+  const matchMecanico = (a, mec) => {
+    if (!a || !mec) return false
+    const mecId = String(mec.id || mec.value || '')
+    const agMecId = String(a.mecanicoId || '')
+    return (
+      agMecId === mecId ||
+      agMecId === mecId.replace('func-', 'mec-') ||
+      agMecId === mecId.replace('mec-', 'func-')
+    )
+  }
 
   // Carregar dados e sincronizar com storage/eventos
   const recarregarDados = () => {
@@ -81,8 +121,12 @@ export default function AgendaPage() {
 
   // Mecânico Ativo Atual
   const mecanicoAtivo = useMemo(() => {
-    return MECANICOS_AGENDA.find((m) => m.id === mecanicoSelecionadoId) || MECANICOS_AGENDA[0]
-  }, [mecanicoSelecionadoId])
+    return (
+      mecanicosLista.find((m) => m.id === mecanicoSelecionadoId) ||
+      mecanicosLista[0] ||
+      MECANICOS_AGENDA[0]
+    )
+  }, [mecanicosLista, mecanicoSelecionadoId])
 
   // Navegação da Semana
   const irParaSemanaAnterior = () => {
@@ -103,7 +147,7 @@ export default function AgendaPage() {
 
   // Agendamentos filtrados por mecânico ativo e busca
   const agendamentosMecanico = useMemo(() => {
-    let lista = agendamentos.filter((a) => a.mecanicoId === mecanicoAtivo.id)
+    let lista = agendamentos.filter((a) => matchMecanico(a, mecanicoAtivo))
     if (termoBusca.trim()) {
       const t = termoBusca.toLowerCase().trim()
       lista = lista.filter(
@@ -115,7 +159,7 @@ export default function AgendaPage() {
       )
     }
     return lista
-  }, [agendamentos, mecanicoAtivo.id, termoBusca])
+  }, [agendamentos, mecanicoAtivo, termoBusca])
 
   // Contadores
   const totalFila = filaEspera.length
@@ -332,10 +376,10 @@ export default function AgendaPage() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mr-1 hidden sm:inline">
                 Mecânico:
               </span>
-              {MECANICOS_AGENDA.map((mec) => {
+              {mecanicosLista.map((mec) => {
                 const isAtivo = mecanicoSelecionadoId === mec.id
-                const totalMec = agendamentos.filter((a) => a.mecanicoId === mec.id).length
-                const temAtraso = agendamentos.some((a) => a.mecanicoId === mec.id && a.emAtraso)
+                const totalMec = agendamentos.filter((a) => matchMecanico(a, mec)).length
+                const temAtraso = agendamentos.some((a) => matchMecanico(a, mec) && a.emAtraso)
 
                 return (
                   <button

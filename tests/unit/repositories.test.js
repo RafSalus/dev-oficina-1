@@ -1,0 +1,223 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import {
+  carregarClientes,
+  obterClientePorId,
+  buscarClientePorDocumento,
+  salvarCliente,
+  excluirCliente,
+  obterVeiculosDoCliente,
+} from '../../src/repositories/clientesRepository'
+import {
+  carregarPecas,
+  salvarPeca,
+  excluirPeca,
+  carregarServicos,
+  salvarServico,
+  carregarTerceiros,
+  salvarTerceiro,
+} from '../../src/repositories/suprimentosRepository'
+import {
+  carregarMovimentacoes,
+  registrarMovimentacao,
+  obterSaldoPeca,
+} from '../../src/repositories/estoqueRepository'
+import {
+  carregarCompras,
+  salvarCompra,
+} from '../../src/repositories/comprasRepository'
+import {
+  carregarFuncionarios,
+  obterMecanicosAtivos,
+  obterFuncionarioPorId,
+  salvarFuncionario,
+  alternarStatusFuncionario,
+  excluirFuncionario,
+} from '../../src/repositories/funcionariosRepository'
+
+describe('Story 1.5 & Story 1.10: Camada de Repositórios Assíncronos (Async Contract First)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  describe('clientesRepository', () => {
+    it('deve auto-semear clientes e retornar uma Promise com a lista', async () => {
+      const clientes = await carregarClientes()
+      expect(Array.isArray(clientes)).toBe(true)
+      expect(clientes.length).toBeGreaterThan(0)
+      expect(clientes[0].nome).toBeDefined()
+    })
+
+    it('deve buscar cliente por ID e por documento', async () => {
+      const todos = await carregarClientes()
+      const primeiro = todos[0]
+
+      const porId = await obterClientePorId(primeiro.value)
+      expect(porId).not.toBeNull()
+      expect(porId.nome).toBe(primeiro.nome)
+
+      const porDoc = await buscarClientePorDocumento(primeiro.documento)
+      expect(porDoc).not.toBeNull()
+      expect(porDoc.value).toBe(primeiro.value)
+    })
+
+    it('deve salvar novo cliente e permitir exclusão', async () => {
+      const novo = {
+        nome: 'Cliente Teste Repositório',
+        documento: '111.222.333-44',
+        telefone: '(43) 99999-8888',
+      }
+      const salvo = await salvarCliente(novo)
+      expect(salvo.id).toBeDefined()
+      expect(salvo.nome).toBe('Cliente Teste Repositório')
+
+      const recuperado = await obterClientePorId(salvo.id)
+      expect(recuperado).not.toBeNull()
+
+      const excluido = await excluirCliente(salvo.id)
+      expect(excluido).toBe(true)
+
+      const aposExclusao = await obterClientePorId(salvo.id)
+      expect(aposExclusao).toBeNull()
+    })
+
+    it('deve retornar a lista de veículos de um cliente', async () => {
+      const todos = await carregarClientes()
+      const clienteComVeiculos = todos.find((c) => c.veiculos && c.veiculos.length > 0)
+      if (clienteComVeiculos) {
+        const veiculos = await obterVeiculosDoCliente(clienteComVeiculos.value)
+        expect(Array.isArray(veiculos)).toBe(true)
+        expect(veiculos.length).toBeGreaterThan(0)
+      }
+    })
+  })
+
+  describe('suprimentosRepository', () => {
+    it('deve carregar e salvar peças de forma assíncrona', async () => {
+      const pecas = await carregarPecas()
+      expect(Array.isArray(pecas)).toBe(true)
+
+      const novaPeca = {
+        codigo: 'TEST-001',
+        nome: 'Filtro de Teste Repositório',
+        precoUnitario: 35.0,
+      }
+      const salva = await salvarPeca(novaPeca)
+      expect(salva.id).toBeDefined()
+
+      const excluiu = await excluirPeca(salva.id)
+      expect(excluiu).toBe(true)
+    })
+
+    it('deve carregar e salvar serviços e terceiros', async () => {
+      const servicos = await carregarServicos()
+      expect(Array.isArray(servicos)).toBe(true)
+
+      const terceiros = await carregarTerceiros()
+      expect(Array.isArray(terceiros)).toBe(true)
+
+      const novoServ = await salvarServico({ nome: 'Alinhamento Especial', valorUnitario: 120 })
+      expect(novoServ.id).toBeDefined()
+
+      const novoTerc = await salvarTerceiro({ razaoSocial: 'Torno e Solda Teste' })
+      expect(novoTerc.id).toBeDefined()
+    })
+  })
+
+  describe('estoqueRepository', () => {
+    it('deve registrar movimentação de estoque e atualizar saldo da peça', async () => {
+      const peca = await salvarPeca({
+        codigo: 'PEC-ESTOQUE',
+        nome: 'Vela de Ignição',
+        estoque: 10,
+        estoqueAtual: 10,
+      })
+
+      // Registrar entrada de 5 unidades
+      await registrarMovimentacao({
+        pecaId: peca.id,
+        tipo: 'entrada',
+        quantidade: 5,
+        motivo: 'Compra NF 1234',
+      })
+
+      const saldoAposEntrada = await obterSaldoPeca(peca.id)
+      expect(saldoAposEntrada).toBe(15)
+
+      // Registrar saída de 3 unidades
+      await registrarMovimentacao({
+        pecaId: peca.id,
+        tipo: 'saida',
+        quantidade: 3,
+        motivo: 'Consumo na OS 100',
+      })
+
+      const saldoAposSaida = await obterSaldoPeca(peca.id)
+      expect(saldoAposSaida).toBe(12)
+
+      const todasMovs = await carregarMovimentacoes()
+      expect(Array.isArray(todasMovs)).toBe(true)
+      expect(todasMovs.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('comprasRepository', () => {
+    it('deve carregar pedidos de compra e salvar novo pedido', async () => {
+      const compras = await carregarCompras()
+      expect(Array.isArray(compras)).toBe(true)
+
+      const nova = await salvarCompra({
+        fornecedorNome: 'Auto Peças Londrina',
+        itens: [{ descricao: 'Correia', quantidade: 2, valorUnitario: 50 }],
+        valorTotal: 100,
+      })
+      expect(nova.id).toBeDefined()
+    })
+  })
+
+  describe('funcionariosRepository (Story 1.10)', () => {
+    it('deve auto-semear a equipe inicial com mecânicos, secretária e cargos variados', async () => {
+      const equipe = await carregarFuncionarios()
+      expect(Array.isArray(equipe)).toBe(true)
+      expect(equipe.length).toBeGreaterThanOrEqual(4)
+
+      const carlos = await obterFuncionarioPorId('func-carlos')
+      expect(carlos).not.toBeNull()
+      expect(carlos.nome).toContain('Carlos Eduardo')
+      expect(carlos.cargo).toBe('mecanico')
+    })
+
+    it('deve filtrar apenas mecânicos ativos para escala de trabalho', async () => {
+      const mecanicos = await obterMecanicosAtivos()
+      expect(Array.isArray(mecanicos)).toBe(true)
+      expect(mecanicos.every((m) => m.ativo)).toBe(true)
+      expect(mecanicos.every((m) => ['mecanico', 'eletricista', 'auxiliar'].includes(m.cargo))).toBe(true)
+    })
+
+    it('deve salvar, alternar status e excluir colaborador', async () => {
+      const novo = {
+        nome: 'Roberto Teste',
+        cpf: '777.888.999-00',
+        telefone: '(43) 99111-2233',
+        cargo: 'mecanico',
+        comissaoServicos: 10,
+        comissaoPecas: 2,
+      }
+      const salvo = await salvarFuncionario(novo)
+      expect(salvo.id).toBeDefined()
+      expect(salvo.ativo).toBe(true)
+
+      const inativado = await alternarStatusFuncionario(salvo.id, false)
+      expect(inativado.ativo).toBe(false)
+
+      const excluiu = await excluirFuncionario(salvo.id)
+      expect(excluiu).toBe(true)
+
+      const busca = await obterFuncionarioPorId(salvo.id)
+      expect(busca).toBeNull()
+    })
+  })
+})

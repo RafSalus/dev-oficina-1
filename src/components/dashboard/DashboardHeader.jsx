@@ -85,7 +85,7 @@ export function DashboardHeader({ isPinned = false, onTogglePin }) {
   }
 
   const userEmail = user?.email || 'admin@mecanicagabriel.com.br'
-  const userName = user?.user_metadata?.name || 'Administrador'
+  const userName = user?.user_metadata?.name || user?.user_metadata?.nome || 'Administrador'
 
   return (
     <>

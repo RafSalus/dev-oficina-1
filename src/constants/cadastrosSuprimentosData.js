@@ -6,20 +6,8 @@ export const CHAVE_STORAGE_PECAS = 'dev_oficina_cadastros_pecas'
 export const CHAVE_STORAGE_TERCEIROS = 'dev_oficina_cadastros_terceiros'
 export const CHAVE_STORAGE_MOVIMENTACOES_ESTOQUE = 'dev_oficina_movimentacoes_estoque'
 
-export const CATEGORIAS_PECAS_OPCOES = [
-  { value: 'Freios', label: 'Freios' },
-  { value: 'Suspensão', label: 'Suspensão' },
-  { value: 'Motor', label: 'Motor' },
-  { value: 'Lubrificantes e Filtros', label: 'Lubrificantes e Filtros' },
-  { value: 'Arrefecimento', label: 'Arrefecimento' },
-  { value: 'Elétrica e Ignição', label: 'Elétrica e Ignição' },
-  { value: 'Transmissão', label: 'Transmissão' },
-  { value: 'Direção', label: 'Direção' },
-  { value: 'Ar Condicionado', label: 'Ar Condicionado' },
-  { value: 'Escapamento', label: 'Escapamento' },
-  { value: 'Pneus e Rodas', label: 'Pneus e Rodas' },
-  { value: 'Outros Componentes', label: 'Outros Componentes' },
-]
+import { CATEGORIAS_PECAS_OPCOES } from './catalogoPecasEstoque'
+export { CATEGORIAS_PECAS_OPCOES }
 
 export const CATEGORIAS_SERVICOS_OPCOES = [
   { value: 'Motor', label: 'Motor' },

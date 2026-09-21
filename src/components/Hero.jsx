@@ -46,7 +46,7 @@ export function Hero() {
           </div>
 
           <div className="mt-10 lg:hidden inline-flex items-center gap-4 bg-white/10 backdrop-blur-md p-4 rounded-sm border border-white/20">
-            <div className="bg-green-500/20 text-green-400 p-2 rounded-full">
+            <div className="bg-[#0284c7]/25 text-[#38bdf8] p-2 rounded-full">
               <ShieldCheck size={24} weight="fill" aria-hidden="true" />
             </div>
             <div>
@@ -59,7 +59,7 @@ export function Hero() {
         <div data-reveal="100" className="hidden lg:block relative justify-self-end">
           <div className="bg-white text-black p-6 shadow-2xl rounded-sm max-w-[280px]">
             <div className="flex items-center gap-4">
-              <div className="bg-green-100 text-green-700 p-3 rounded-full flex-shrink-0">
+              <div className="bg-[#e0f2fe] text-[#0284c7] p-3 rounded-full flex-shrink-0">
                 <ShieldCheck size={28} weight="fill" aria-hidden="true" />
               </div>
               <div>

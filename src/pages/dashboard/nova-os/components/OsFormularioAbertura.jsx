@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner'
 import { carregarClientesCadastrados } from '../../../../constants/mockClientesVeiculos'
 import { MOCK_MECANICOS } from '../../../../constants/mecanicos'
+import { obterMecanicosAtivos } from '../../../../repositories/funcionariosRepository'
 import { obterOrdensAbertas } from '../../orcamento/mockOrdensAbertas'
 import { customSelectStyles } from '../../../../components/suprimentos/customSelectStyles'
 import { formatarCPF, formatarCNPJ, formatarTelefone } from '../../../../utils/fiscalValidators'
@@ -198,28 +199,77 @@ export function OsFormularioAbertura({ formData, updateFormData, onEnviarAssinat
     )
   }, [formData.veiculoId, formData.placa, veiculosOptions])
 
+  const [mecanicosDinamicos, setMecanicosDinamicos] = useState(MOCK_MECANICOS)
+
+  useEffect(() => {
+    let cancelado = false
+    const carregar = async () => {
+      try {
+        const ativos = await obterMecanicosAtivos()
+        if (!cancelado && ativos && ativos.length > 0) {
+          const formatados = [
+            MOCK_MECANICOS[0],
+            ...ativos.map((a) => ({
+              value: a.id,
+              label: a.nome,
+              nome: a.nome,
+              cargo: a.cargoLabel || a.cargo,
+              especialidade: a.especialidade,
+              boxElevador: a.boxElevador,
+              comissaoPerc: a.comissaoServicos,
+              telefone: a.telefone,
+            })),
+          ]
+          setMecanicosDinamicos(formatados)
+        }
+      } catch (e) {
+        console.error('Erro ao carregar mecânicos ativos para nova OS:', e)
+      }
+    }
+    carregar()
+
+    window.addEventListener('dev_oficina_funcionarios_updated', carregar)
+    return () => {
+      cancelado = true
+      window.removeEventListener('dev_oficina_funcionarios_updated', carregar)
+    }
+  }, [])
+
   const mecanicosOptions = useMemo(
-    () => MOCK_MECANICOS.map((m) => ({ value: m.value, label: m.nome, nome: m.nome })),
-    []
+    () => mecanicosDinamicos.map((m) => ({ value: m.value, label: m.nome, nome: m.nome })),
+    [mecanicosDinamicos]
   )
   const selectedMecanicoOption = useMemo(
-    () => mecanicosOptions.find((m) => m.value === formData.mecanicoId) || mecanicosOptions[0],
-    [formData.mecanicoId, mecanicosOptions]
+    () =>
+      mecanicosOptions.find((m) => m.value === formData.mecanicoId) ||
+      mecanicosOptions.find(
+        (m) =>
+          formData.mecanicoNome &&
+          m.nome.trim().toLowerCase() === formData.mecanicoNome.trim().toLowerCase()
+      ) ||
+      mecanicosOptions[0],
+    [formData.mecanicoId, formData.mecanicoNome, mecanicosOptions]
   )
 
   const ordensAbertas = useMemo(() => obterOrdensAbertas(), [])
   const empenhoPorMecanico = useMemo(() => {
-    return MOCK_MECANICOS.filter((m) => Boolean(m.value))
+    return mecanicosDinamicos
+      .filter((m) => Boolean(m.value))
       .map((mec) => {
         const totalOs = ordensAbertas.filter((o) => {
-          const matchNome = o.mecanicoNome && o.mecanicoNome.trim().toLowerCase() === mec.nome.trim().toLowerCase()
-          const matchId = o.mecanicoId && o.mecanicoId === mec.value
+          const matchNome =
+            o.mecanicoNome && o.mecanicoNome.trim().toLowerCase() === mec.nome.trim().toLowerCase()
+          const matchId =
+            o.mecanicoId &&
+            (o.mecanicoId === mec.value ||
+              o.mecanicoId === mec.value.replace('func-', 'mec-') ||
+              o.mecanicoId === mec.value.replace('mec-', 'func-'))
           return (matchNome || matchId) && o.status !== 'finalizada'
         }).length
         return { ...mec, totalOs }
       })
       .sort((a, b) => a.totalOs - b.totalOs)
-  }, [ordensAbertas])
+  }, [mecanicosDinamicos, ordensAbertas])
 
   const handleSelectCliente = (option) => {
     if (!option) {
