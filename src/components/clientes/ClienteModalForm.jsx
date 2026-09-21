@@ -17,7 +17,9 @@ import {
   IdentificationCard,
   Notebook,
 } from '@phosphor-icons/react'
+import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
+import { ModalConfirmacao } from '../ModalConfirmacao'
 import { customSelectStyles } from '../suprimentos/customSelectStyles'
 import { ESTADOS_BRASIL_OPCOES } from '../../constants/cadastrosSuprimentosData'
 import {
@@ -41,7 +43,6 @@ import {
   formatarTelefone,
 } from '../../utils/fiscalValidators'
 import { IMaskInput } from 'react-imask'
-import { toast } from 'sonner'
 
 const customSelectStylesCompact = {
   ...customSelectStyles,
@@ -142,6 +143,7 @@ const NOVO_VEICULO_INICIAL = {
 export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar }) {
   const [formData, setFormData] = useState(FORM_INICIAL)
   const [buscandoCep, setBuscandoCep] = useState(false)
+  const [confirmandoDescarte, setConfirmandoDescarte] = useState(false)
   const numeroInputRef = useRef(null)
 
   // Estado para adicionar novo veículo
@@ -499,17 +501,42 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
     onClose()
   }
 
+  const handleCancelar = () => {
+    const temDados = Boolean(
+      formData.nome?.trim() ||
+      formData.documento?.trim() ||
+      formData.telefone?.trim() ||
+      (formData.veiculos && formData.veiculos.length > 0)
+    )
+    if (temDados) {
+      setConfirmandoDescarte(true)
+    } else {
+      onClose()
+    }
+  }
+
+  const confirmarDescarte = () => {
+    setConfirmandoDescarte(false)
+    toast.info('Alterações descartadas.')
+    onClose()
+  }
+
   const ufSelecionada = ESTADOS_BRASIL_OPCOES.find((opt) => opt.value === formData.uf) || null
 
   return (
-    <ModalRedimensionavel
-      isOpen={isOpen}
-      onClose={onClose}
+    <>
+      <ModalRedimensionavel
+        isOpen={isOpen}
+        onClose={handleCancelar}
       titulo={clienteParaEditar ? 'Editar Cadastro de Cliente' : 'Novo Cadastro de Cliente'}
       subtitulo="Dados cadastrais completos, contato, endereço e gestão de veículos vinculados"
       icone={User}
-      larguraPadrao={860}
+      larguraPadrao={880}
       alturaPadrao={740}
+      larguraMinima={640}
+      alturaMinima={480}
+      larguraMaxima={1360}
+      alturaMaxima={940}
       storageKey="cliente_modal"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -553,7 +580,7 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 flex flex-col">
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-medium text-slate-700">
                   Código do Cliente
@@ -568,11 +595,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 readOnly
                 placeholder="0000166"
                 title="Código gerado automaticamente pelo sistema"
-                className="w-full px-3 py-2 text-sm bg-slate-100 border border-slate-300 rounded-md font-mono font-bold text-slate-700 select-none cursor-not-allowed outline-none"
+                className="w-full px-3 py-2 text-sm bg-slate-100 border border-slate-300 rounded-md font-mono font-bold text-slate-700 select-none cursor-not-allowed outline-none mt-auto"
               />
             </div>
 
-            <div className="md:col-span-6">
+            <div className="md:col-span-6 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {formData.tipoPessoa === 'F' ? 'Nome Completo do Cliente' : 'Razão Social da Empresa'} <span className="text-rose-500">*</span>
               </label>
@@ -582,11 +609,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 onChange={(e) => handleChange('nome', e.target.value)}
                 placeholder={formData.tipoPessoa === 'F' ? 'Ex: Carlos Alberto da Silva' : 'Ex: Transportes e Logística Silva Ltda'}
                 required
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-medium"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-medium mt-auto"
               />
             </div>
 
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {formData.tipoPessoa === 'F' ? 'Apelido / Como Chamar' : 'Nome Fantasia'}
               </label>
@@ -595,15 +622,15 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 value={formData.nomeFantasia}
                 onChange={(e) => handleChange('nomeFantasia', e.target.value)}
                 placeholder={formData.tipoPessoa === 'F' ? 'Ex: Beto' : 'Ex: Silva Transportes'}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none mt-auto"
               />
             </div>
 
-            <div className="md:col-span-4">
+            <div className="md:col-span-4 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {formData.tipoPessoa === 'F' ? 'CPF' : 'CNPJ'} <span className="text-rose-500">*</span>
               </label>
-              <div className="relative">
+              <div className="relative mt-auto">
                 <IMaskInput
                   mask={formData.tipoPessoa === 'F' ? '000.000.000-00' : '00.000.000/0000-00'}
                   value={formData.documento}
@@ -629,7 +656,7 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
               </span>
             </div>
 
-            <div className="md:col-span-4">
+            <div className="md:col-span-4 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 {formData.tipoPessoa === 'F' ? 'RG (Registro Geral)' : 'Inscrição Estadual (IE)'}
               </label>
@@ -638,11 +665,12 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 value={formData.rgIe}
                 onChange={(e) => handleChange('rgIe', e.target.value.toUpperCase())}
                 placeholder={formData.tipoPessoa === 'F' ? 'Ex: 12.345.678-9' : 'Ex: 987654321 ou ISENTO'}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-mono"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-mono mt-auto"
               />
+              <span className="block h-[19px]"></span>
             </div>
 
-            <div className="md:col-span-4 flex items-center pt-6">
+            <div className="md:col-span-4 flex items-end pb-0.5">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -664,11 +692,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+            <div className="flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Celular ou WhatsApp <span className="text-rose-500">*</span>
               </label>
-              <div className="relative">
+              <div className="relative mt-auto">
                 <IMaskInput
                   mask="(00) 00000-0000"
                   value={formData.telefone}
@@ -682,11 +710,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
               <span className="block text-[11px] text-slate-500 mt-1">Usado para envio de orçamento e WhatsApp</span>
             </div>
 
-            <div>
+            <div className="flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Telefone Fixo / Recado
               </label>
-              <div className="relative">
+              <div className="relative mt-auto">
                 <IMaskInput
                   mask="(00) 0000-0000"
                   value={formData.telefoneFixo}
@@ -696,13 +724,14 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 />
                 <Phone size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
+              <span className="block h-[19px]"></span>
             </div>
 
-            <div>
+            <div className="flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 E-mail do Cliente
               </label>
-              <div className="relative">
+              <div className="relative mt-auto">
                 <input
                   type="email"
                   value={formData.email}
@@ -728,11 +757,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 CEP
               </label>
-              <div className="relative flex items-center">
+              <div className="relative flex items-center mt-auto">
                 <IMaskInput
                   mask="00000-000"
                   value={formData.cep}
@@ -768,7 +797,7 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
               </div>
             </div>
 
-            <div className="md:col-span-7">
+            <div className="md:col-span-7 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Logradouro (Rua, Avenida)
               </label>
@@ -777,11 +806,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 value={formData.logradouro}
                 onChange={(e) => handleChange('logradouro', e.target.value)}
                 placeholder="Rua das Flores, Avenida Central..."
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none mt-auto"
               />
             </div>
 
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Número
               </label>
@@ -791,11 +820,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 value={formData.numero}
                 onChange={(e) => handleChange('numero', e.target.value)}
                 placeholder="Nº ou S/N"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-medium"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none font-medium mt-auto"
               />
             </div>
 
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Complemento
               </label>
@@ -804,11 +833,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 value={formData.complemento}
                 onChange={(e) => handleChange('complemento', e.target.value)}
                 placeholder="Apto, Casa, Bloco..."
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none mt-auto"
               />
             </div>
 
-            <div className="md:col-span-4">
+            <div className="md:col-span-4 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Bairro
               </label>
@@ -817,11 +846,11 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 value={formData.bairro}
                 onChange={(e) => handleChange('bairro', e.target.value)}
                 placeholder="Bairro"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none mt-auto"
               />
             </div>
 
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Cidade
               </label>
@@ -830,22 +859,24 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
                 value={formData.cidade}
                 onChange={(e) => handleChange('cidade', e.target.value)}
                 placeholder="Apucarana"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 outline-none mt-auto"
               />
             </div>
 
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 flex flex-col">
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 UF
               </label>
-              <Select
-                value={ufSelecionada}
-                onChange={(opt) => handleChange('uf', opt ? opt.value : 'PR')}
-                options={ESTADOS_BRASIL_OPCOES}
-                styles={customSelectStylesUF}
-                placeholder="UF"
-                isSearchable
-              />
+              <div className="mt-auto">
+                <Select
+                  value={ufSelecionada}
+                  onChange={(opt) => handleChange('uf', opt ? opt.value : 'PR')}
+                  options={ESTADOS_BRASIL_OPCOES}
+                  styles={customSelectStylesUF}
+                  placeholder="UF"
+                  isSearchable
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1261,8 +1292,8 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
           <button
             type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+            onClick={handleCancelar}
+            className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
           >
             Cancelar
           </button>
@@ -1276,5 +1307,19 @@ export function ClienteModalForm({ isOpen, onClose, onSalvar, clienteParaEditar 
         </div>
       </form>
     </ModalRedimensionavel>
+
+    {/* Diálogo de Confirmação de Cancelamento na Frente do Formulário */}
+    <ModalConfirmacao
+      isOpen={confirmandoDescarte}
+      onClose={() => setConfirmandoDescarte(false)}
+      onConfirm={confirmarDescarte}
+      titulo="Descartar alterações do cliente?"
+      descricao="Os dados preenchidos deste cadastro não foram salvos e serão perdidos. Deseja realmente sair?"
+      itemDestaque={formData.nome ? `Cliente: ${formData.nome}` : ''}
+      textoConfirmar="Sim, Descartar"
+      textoCancelar="Continuar Preenchendo"
+      variante="perigo"
+    />
+  </>
   )
 }

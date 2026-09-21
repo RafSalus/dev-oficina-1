@@ -16,15 +16,15 @@ import { GestaoAcessoNegadoPage } from './pages/GestaoAcessoNegadoPage'
 
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
-import { NovaOrdemDeServicoPage } from './pages/dashboard/NovaOrdemDeServicoPage'
 import { OrcamentoOSListPage } from './pages/dashboard/orcamento/OrcamentoOSListPage'
 import { CotacaoAutoPecaPage } from './pages/CotacaoAutoPecaPage'
 import { AprovacaoOrcamentoClientePage } from './pages/AprovacaoOrcamentoClientePage'
+import { VistoriaEntradaClientePage } from './pages/VistoriaEntradaClientePage'
 import { MecanicoLayout } from './layouts/MecanicoLayout'
-import { MecanicoModulePlaceholder } from './components/mecanico/MecanicoModulePlaceholder'
+import { MecanicoDashboardPage } from './pages/mecanico/MecanicoDashboardPage'
 import { ClienteLayout } from './layouts/ClienteLayout'
 import { ClienteModulePlaceholder } from './components/cliente/ClienteModulePlaceholder'
-import { ClienteServicosPage } from './pages/cliente/ClienteServicosPage'
+import { ClienteServicosRedirect } from './pages/cliente/ClienteServicosRedirect'
 import { SecretariaLayout } from './layouts/SecretariaLayout'
 import { ServicosPage } from './pages/dashboard/suprimentos/ServicosPage'
 import { PecasPage } from './pages/dashboard/suprimentos/PecasPage'
@@ -81,6 +81,7 @@ export default function App() {
             <Route path="/aprovacao" element={<AprovacaoOrcamentoClientePage />} />
             <Route path="/orcamento/:id" element={<AprovacaoOrcamentoClientePage />} />
             <Route path="/orcamento" element={<AprovacaoOrcamentoClientePage />} />
+            <Route path="/vistoria/:id" element={<VistoriaEntradaClientePage />} />
 
             {/* Management Auth routes */}
             <Route path="/gestao/entrar" element={<GestaoEntrarPage />} />
@@ -93,7 +94,6 @@ export default function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="agenda" element={<AgendaPage />} />
               <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
-              <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
               <Route path="orcamento" element={<Navigate to="/gestao/ordem-de-servico" replace />} />
               <Route path="orcamentos" element={<Navigate to="/gestao/ordem-de-servico" replace />} />
               <Route path="pdv" element={<PDVPage />} />
@@ -123,19 +123,19 @@ export default function App() {
             {/* Post-login Mechanic Workspace with Dedicated Menus and Layout */}
             <Route path="/mecanico" element={<MecanicoLayout />}>
               <Route index element={<Navigate to="/mecanico/dashboard" replace />} />
-              <Route path="dashboard" element={<MecanicoModulePlaceholder />} />
-              <Route path="agenda" element={<MecanicoModulePlaceholder />} />
-              <Route path="ordens-servico" element={<MecanicoModulePlaceholder />} />
-              <Route path="diagnostico" element={<MecanicoModulePlaceholder />} />
-              <Route path="checklist" element={<MecanicoModulePlaceholder />} />
-              <Route path="servicos" element={<MecanicoModulePlaceholder />} />
-              <Route path="pedir-pecas" element={<MecanicoModulePlaceholder />} />
-              <Route path="estoque" element={<MecanicoModulePlaceholder />} />
-              <Route path="pecas-danificadas" element={<MecanicoModulePlaceholder />} />
-              <Route path="ferramentas" element={<MecanicoModulePlaceholder />} />
-              <Route path="clientes" element={<MecanicoModulePlaceholder />} />
-              <Route path="leva-e-traz" element={<MecanicoModulePlaceholder />} />
-              <Route path="comissoes" element={<MecanicoModulePlaceholder />} />
+              <Route path="dashboard" element={<MecanicoDashboardPage />} />
+              <Route path="agenda" element={<MecanicoDashboardPage />} />
+              <Route path="ordens-servico" element={<MecanicoDashboardPage />} />
+              <Route path="diagnostico" element={<MecanicoDashboardPage />} />
+              <Route path="checklist" element={<MecanicoDashboardPage />} />
+              <Route path="servicos" element={<MecanicoDashboardPage />} />
+              <Route path="pedir-pecas" element={<MecanicoDashboardPage />} />
+              <Route path="estoque" element={<MecanicoDashboardPage />} />
+              <Route path="pecas-danificadas" element={<MecanicoDashboardPage />} />
+              <Route path="ferramentas" element={<MecanicoDashboardPage />} />
+              <Route path="clientes" element={<MecanicoDashboardPage />} />
+              <Route path="leva-e-traz" element={<MecanicoDashboardPage />} />
+              <Route path="comissoes" element={<MecanicoDashboardPage />} />
             </Route>
 
             {/* Post-login Customer Portal with Dedicated Menus and Layout */}
@@ -144,7 +144,7 @@ export default function App() {
               <Route path="inicio" element={<Navigate to="/cliente/resumo" replace />} />
               <Route path="resumo" element={<ClienteModulePlaceholder />} />
               <Route path="veiculos" element={<ClienteModulePlaceholder />} />
-              <Route path="servicos" element={<ClienteServicosPage />} />
+              <Route path="servicos" element={<ClienteServicosRedirect />} />
               <Route path="manutencoes" element={<ClienteModulePlaceholder />} />
               <Route path="garantias" element={<ClienteModulePlaceholder />} />
               <Route path="historico" element={<ClienteModulePlaceholder />} />
@@ -158,7 +158,6 @@ export default function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="agenda" element={<AgendaPage />} />
               <Route path="ordem-de-servico" element={<OrcamentoOSListPage />} />
-              <Route path="ordem-de-servico/nova" element={<NovaOrdemDeServicoPage />} />
               <Route path="orcamento" element={<Navigate to="/secretaria/ordem-de-servico" replace />} />
               <Route path="orcamentos" element={<Navigate to="/secretaria/ordem-de-servico" replace />} />
               <Route path="pdv" element={<PDVPage />} />

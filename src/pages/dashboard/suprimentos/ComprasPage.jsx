@@ -53,6 +53,7 @@ import { customSelectStyles } from '../../../components/suprimentos/customSelect
 import { CompraModalForm } from '../../../components/suprimentos/CompraModalForm'
 import { PecaModalForm } from '../../../components/suprimentos/PecaModalForm'
 import { VisualizarCotacaoModal } from '../../../components/suprimentos/VisualizarCotacaoModal'
+import { ModalConfirmacao } from '../../../components/ModalConfirmacao'
 import { useIsMobile } from '../../../hooks/useIsMobile'
 import { MobileComprasPage } from './mobile/MobileComprasPage'
 
@@ -132,6 +133,11 @@ export function ComprasPage() {
   // Modal para catalogação rápida de peça avulsa
   const [modalCatalogarAberto, setModalCatalogarAberto] = useState(false)
   const [dadosCatalogar, setDadosCatalogar] = useState(null)
+
+  // Diálogos de Confirmação na Frente da Tela
+  const [cotacaoParaExcluir, setCotacaoParaExcluir] = useState(null)
+  const [pedidoParaReceber, setPedidoParaReceber] = useState(null)
+  const [pedidoParaExcluir, setPedidoParaExcluir] = useState(null)
 
   // Carrega e sincroniza dados em tempo real
   useEffect(() => {
@@ -522,17 +528,15 @@ export function ComprasPage() {
   }
 
   const handleExcluirCotacaoItem = (cotacao) => {
-    toast(`Excluir a cotação ${cotacao.id}?`, {
-      description: 'Esta ação removerá o registro da cotação.',
-      action: {
-        label: 'Excluir',
-        onClick: () => {
-          excluirCotacao(cotacao.id)
-          setCotacoes(carregarCotacoes())
-          toast.success(`Cotação ${cotacao.id} excluída.`)
-        },
-      },
-    })
+    setCotacaoParaExcluir(cotacao)
+  }
+
+  const confirmarExclusaoCotacaoItem = () => {
+    if (!cotacaoParaExcluir) return
+    excluirCotacao(cotacaoParaExcluir.id)
+    setCotacoes(carregarCotacoes())
+    toast.success(`Cotação ${cotacaoParaExcluir.id} excluída com sucesso.`)
+    setCotacaoParaExcluir(null)
   }
 
   // Handlers de Pedidos de Compra
@@ -555,43 +559,40 @@ export function ComprasPage() {
   }
 
   const handleReceberPedido = (pedido) => {
-    toast(`Confirmar recebimento do pedido ${pedido.numeroPedido}?`, {
-      description: 'As peças darão entrada imediata no estoque e a OS vinculada será notificada.',
-      action: {
-        label: 'Confirmar Entrada',
-        onClick: () => {
-          try {
-            receberPedidoCompra(pedido.id, {
-              documento: pedido.numeroPedido,
-              responsavel: 'Rafael Almoxarife',
-            })
-            setPedidos(carregarPedidosCompra())
-            setPecasCatalogo(carregarPecasCadastradas())
-            setDemandasOS(obterDemandasDasOSs())
+    setPedidoParaReceber(pedido)
+  }
 
-            toast.success(
-              `Pedido ${pedido.numeroPedido} recebido com sucesso! Entrada concluída no estoque.`
-            )
-          } catch (err) {
-            toast.error(err.message || 'Erro ao dar entrada no pedido.')
-          }
-        },
-      },
-    })
+  const confirmarRecebimentoPedido = () => {
+    if (!pedidoParaReceber) return
+    try {
+      receberPedidoCompra(pedidoParaReceber.id, {
+        documento: pedidoParaReceber.numeroPedido,
+        responsavel: 'Rafael Almoxarife',
+      })
+      setPedidos(carregarPedidosCompra())
+      setPecasCatalogo(carregarPecasCadastradas())
+      setDemandasOS(obterDemandasDasOSs())
+
+      toast.success(
+        `Pedido ${pedidoParaReceber.numeroPedido} recebido com sucesso! Entrada concluída no estoque.`
+      )
+    } catch (err) {
+      toast.error(err.message || 'Erro ao dar entrada no pedido.')
+    } finally {
+      setPedidoParaReceber(null)
+    }
   }
 
   const handleExcluirPedido = (pedido) => {
-    toast(`Excluir o pedido ${pedido.numeroPedido}?`, {
-      description: 'Esta operação removerá o registro de compras.',
-      action: {
-        label: 'Excluir',
-        onClick: () => {
-          excluirPedidoCompra(pedido.id)
-          setPedidos(carregarPedidosCompra())
-          toast.success(`Pedido ${pedido.numeroPedido} excluído.`)
-        },
-      },
-    })
+    setPedidoParaExcluir(pedido)
+  }
+
+  const confirmarExclusaoPedido = () => {
+    if (!pedidoParaExcluir) return
+    excluirPedidoCompra(pedidoParaExcluir.id)
+    setPedidos(carregarPedidosCompra())
+    toast.success(`Pedido ${pedidoParaExcluir.numeroPedido} excluído com sucesso.`)
+    setPedidoParaExcluir(null)
   }
 
   // Compartilhar pedido formatado via WhatsApp
@@ -1921,6 +1922,45 @@ export function ComprasPage() {
         onClose={() => setCotacaoParaVisualizar(null)}
         cotacaoId={cotacaoParaVisualizar?.id}
         cotacao={cotacaoParaVisualizar}
+      />
+
+      {/* Diálogo de Confirmação para Exclusão de Cotação */}
+      <ModalConfirmacao
+        isOpen={Boolean(cotacaoParaExcluir)}
+        onClose={() => setCotacaoParaExcluir(null)}
+        onConfirm={confirmarExclusaoCotacaoItem}
+        titulo="Excluir esta cotação?"
+        descricao="Esta ação removerá permanentemente o registro da cotação selecionada."
+        itemDestaque={cotacaoParaExcluir ? `Cotação: #${cotacaoParaExcluir.id}` : ''}
+        textoConfirmar="Sim, Excluir"
+        textoCancelar="Cancelar"
+        variante="perigo"
+      />
+
+      {/* Diálogo de Confirmação para Recebimento de Pedido */}
+      <ModalConfirmacao
+        isOpen={Boolean(pedidoParaReceber)}
+        onClose={() => setPedidoParaReceber(null)}
+        onConfirm={confirmarRecebimentoPedido}
+        titulo="Confirmar recebimento do pedido?"
+        descricao="As peças darão entrada imediata no estoque e a OS vinculada será atualizada."
+        itemDestaque={pedidoParaReceber ? `Pedido: ${pedidoParaReceber.numeroPedido}` : ''}
+        textoConfirmar="Confirmar Entrada"
+        textoCancelar="Cancelar"
+        variante="primario"
+      />
+
+      {/* Diálogo de Confirmação para Exclusão de Pedido */}
+      <ModalConfirmacao
+        isOpen={Boolean(pedidoParaExcluir)}
+        onClose={() => setPedidoParaExcluir(null)}
+        onConfirm={confirmarExclusaoPedido}
+        titulo="Excluir este pedido de compra?"
+        descricao="Esta operação removerá o registro do pedido de compras."
+        itemDestaque={pedidoParaExcluir ? `Pedido: ${pedidoParaExcluir.numeroPedido}` : ''}
+        textoConfirmar="Sim, Excluir"
+        textoCancelar="Cancelar"
+        variante="perigo"
       />
     </div>
   )

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Select from 'react-select'
 import {
   Car,
@@ -108,6 +108,7 @@ function VeiculoCard({ veiculo, onEditar, onIniciarOS, onEstacionar }) {
 
 export function MobileVeiculosPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [veiculos, setVeiculos] = useState(() => carregarTodosVeiculosDaFrota())
   const [busca, setBusca] = useState('')
   const [filtroProprietario, setFiltroProprietario] = useState('TODOS')
@@ -191,7 +192,8 @@ export function MobileVeiculosPage() {
 
   const handleIniciarOS = (veiculo) => {
     toast.info(`Iniciando Ordem de Serviço para o veículo ${veiculo.placa}...`)
-    navigate('/gestao/ordem-de-servico/nova', {
+    const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
+    navigate(`${basePath}/ordem-de-servico`, {
       state: { veiculoId: veiculo.value || veiculo.id, placa: veiculo.placa, clienteId: veiculo.clienteId, clienteNome: veiculo.clienteNome },
     })
   }

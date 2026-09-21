@@ -69,10 +69,12 @@ export function ModalEditarEstacionado({
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="modal_redimensionavel_editar_estacionado"
-      larguraPadrao={720}
-      alturaPadrao={520}
-      larguraMinima={480}
-      alturaMinima={380}
+      larguraPadrao={740}
+      alturaPadrao={560}
+      larguraMinima={560}
+      alturaMinima={440}
+      larguraMaxima={1080}
+      alturaMaxima={780}
       titulo="Editar Veículo Estacionado"
       subtitulo={`Atualização de anotações e dados do novo comprador`}
       badge="Pátio de Estacionados"

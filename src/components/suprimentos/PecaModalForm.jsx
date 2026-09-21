@@ -175,8 +175,12 @@ export function PecaModalForm({ isOpen, onClose, onSalvar, pecaParaEditar }) {
       titulo={pecaParaEditar ? 'Editar Peça ou Produto' : 'Nova Peça ou Produto'}
       subtitulo="Cadastro técnico, fiscal e controle de estoque com conformidade tributária"
       icone={Package}
-      larguraPadrao={800}
+      larguraPadrao={840}
       alturaPadrao={680}
+      larguraMinima={600}
+      alturaMinima={460}
+      larguraMaxima={1200}
+      alturaMaxima={880}
       chaveStorage="peca_modal"
       storageKey="peca_modal"
     >

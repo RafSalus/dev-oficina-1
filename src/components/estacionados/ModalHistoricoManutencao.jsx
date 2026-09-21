@@ -42,10 +42,12 @@ export function ModalHistoricoManutencao({ isOpen, onClose, veiculo }) {
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="modal_redimensionavel_historico_estacionado"
-      larguraPadrao={840}
-      alturaPadrao={640}
-      larguraMinima={520}
-      alturaMinima={420}
+      larguraPadrao={860}
+      alturaPadrao={660}
+      larguraMinima={600}
+      alturaMinima={460}
+      larguraMaxima={1200}
+      alturaMaxima={880}
       titulo="Prontuário e Histórico de Manutenções"
       subtitulo={`Veículo ${veiculo.marcaModelo || ''} - Placa ${veiculo.placa || ''}`}
       badge="Histórico Preservado"

@@ -118,8 +118,10 @@ export function ModalEstacionarVeiculo({
       chaveStorage="modal_redimensionavel_estacionar_veiculo"
       larguraPadrao={760}
       alturaPadrao={580}
-      larguraMinima={480}
-      alturaMinima={380}
+      larguraMinima={560}
+      alturaMinima={440}
+      larguraMaxima={1100}
+      alturaMaxima={820}
       titulo="Estacionar Veículo (Registrar Venda)"
       subtitulo="Desvincula o carro do cliente atual e preserva 100% do histórico de manutenções"
       badge="Pátio de Estacionados"

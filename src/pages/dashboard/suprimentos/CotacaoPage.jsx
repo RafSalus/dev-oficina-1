@@ -31,6 +31,7 @@ import {
   Eye,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { ModalConfirmacao } from '../../../components/ModalConfirmacao'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 import {
   carregarPecasCadastradas,
@@ -43,7 +44,7 @@ import {
   aprovarCotacaoEGerarPedido,
   excluirCotacao,
 } from '../../../constants/comprasData'
-import { obterOrdensAbertas } from '../../../pages/dashboard/orcamento/mockOrdensAbertas'
+import { obterOrdensAbertas, atualizarPecasAposCotacao } from '../../../pages/dashboard/orcamento/mockOrdensAbertas'
 import { CompraModalForm } from '../../../components/suprimentos/CompraModalForm'
 import { VisualizarCotacaoModal } from '../../../components/suprimentos/VisualizarCotacaoModal'
 
@@ -95,6 +96,7 @@ export function CotacaoPage() {
 
   // Modal para pré-visualização da página pública de cotação
   const [modalVisualizarAberto, setModalVisualizarAberto] = useState(false)
+  const [confirmandoExclusaoCotacao, setConfirmandoExclusaoCotacao] = useState(false)
 
   // Estado da cotação
   const [idCotacao, setIdCotacao] = useState('')
@@ -656,24 +658,37 @@ export function CotacaoPage() {
   // Ao salvar o pedido de compra a partir da cotação
   const handleConcluirPedidoCompra = (dadosPedido) => {
     setModalCompraAberto(false)
+
+    // Fecha o ciclo com a OS de origem: aplica o preço final negociado nas peças que
+    // estavam marcadas "Para Cotação" e avisa para mover a OS manualmente no Kanban —
+    // igual a toda outra transição de status no sistema, a decisão fica com a secretaria.
+    if (dadosPedido.numeroOS) {
+      const osAtualizada = atualizarPecasAposCotacao(dadosPedido.numeroOS, dadosPedido.itens, dadosPedido.fornecedorNome)
+      if (osAtualizada) {
+        toast.success(
+          `Pedido de Compra ${dadosPedido.numeroPedido} emitido! Preços atualizados na OS #${dadosPedido.numeroOS} — mova-a para "Aprovação" no Kanban quando as peças chegarem.`
+        )
+        navigate(`${basePath}/compras`)
+        return
+      }
+    }
+
     toast.success(`Pedido de Compra ${dadosPedido.numeroPedido} emitido com sucesso!`)
     navigate(`${basePath}/compras`)
   }
 
-  // Excluir cotação
+  // Excluir cotação via diálogo na frente da tela
   const handleExcluirCotacaoAtual = () => {
     if (!idCotacao) return
-    toast(`Excluir a cotação #${idCotacao}?`, {
-      description: 'Esta ação removerá permanentemente a cotação.',
-      action: {
-        label: 'Excluir',
-        onClick: () => {
-          excluirCotacao(idCotacao)
-          toast.success(`Cotação #${idCotacao} excluída.`)
-          navigate(`${basePath}/compras`)
-        },
-      },
-    })
+    setConfirmandoExclusaoCotacao(true)
+  }
+
+  const confirmarExclusaoCotacao = () => {
+    if (!idCotacao) return
+    excluirCotacao(idCotacao)
+    toast.success(`Cotação #${idCotacao} excluída com sucesso.`)
+    setConfirmandoExclusaoCotacao(false)
+    navigate(`${basePath}/compras`)
   }
 
   return (
@@ -1497,6 +1512,19 @@ export function CotacaoPage() {
         onClose={() => setModalVisualizarAberto(false)}
         cotacaoId={idCotacao}
         cotacao={montarObjetoCotacao()}
+      />
+
+      {/* Diálogo de Confirmação de Exclusão na Frente da Tela */}
+      <ModalConfirmacao
+        isOpen={confirmandoExclusaoCotacao}
+        onClose={() => setConfirmandoExclusaoCotacao(false)}
+        onConfirm={confirmarExclusaoCotacao}
+        titulo="Excluir esta cotação?"
+        descricao="Esta ação removerá permanentemente a cotação e todas as cotações vinculadas aos fornecedores."
+        itemDestaque={idCotacao ? `Cotação: #${idCotacao}` : ''}
+        textoConfirmar="Sim, Excluir"
+        textoCancelar="Cancelar"
+        variante="perigo"
       />
     </div>
   )

@@ -95,10 +95,12 @@ export function ModalFinalizarDeslocamento({
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="modal_redimensionavel_finalizar_deslocamento"
-      larguraPadrao={700}
-      alturaPadrao={540}
-      larguraMinima={480}
-      alturaMinima={380}
+      larguraPadrao={720}
+      alturaPadrao={560}
+      larguraMinima={540}
+      alturaMinima={420}
+      larguraMaxima={1000}
+      alturaMaxima={780}
       titulo="Concluir Missão e Registrar Retorno"
       subtitulo={`Atendimento ${deslocamento.codigo} - ${deslocamento.motoristaPrincipalNome || 'Motorista'}`}
       badge="Retorno de Rota"

@@ -18,10 +18,12 @@ export function ReciboVendaImpressao({ isOpen, onClose, venda }) {
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="dev_oficina_pdv_modal_recibo"
-      larguraPadrao={520}
+      larguraPadrao={540}
       alturaPadrao={720}
-      larguraMinima={420}
+      larguraMinima={460}
       alturaMinima={520}
+      larguraMaxima={800}
+      alturaMaxima={920}
       titulo={`Venda #${venda.numeroVenda} Concluída`}
       subtitulo={venda.numeroOSVinculada ? `Faturada a partir da OS #${venda.numeroOSVinculada}` : 'Venda avulsa de balcão'}
       badge={venda.tipoNota === 'nfe' ? 'NF-e Emitida' : 'NFC-e Emitida'}

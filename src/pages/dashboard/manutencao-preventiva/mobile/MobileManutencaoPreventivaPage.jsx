@@ -292,7 +292,7 @@ export function MobileManutencaoPreventivaPage() {
       }
     }
 
-    navigate(`${basePath}/ordem-de-servico/nova`, {
+    navigate(`${basePath}/ordem-de-servico`, {
       state: {
         clienteId: veiculo.clienteId,
         veiculoPlaca: veiculo.placa,

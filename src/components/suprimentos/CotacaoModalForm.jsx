@@ -29,6 +29,7 @@ import {
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { ModalRedimensionavel } from './ModalRedimensionavel'
+import { ModalConfirmacao } from '../ModalConfirmacao'
 import { customSelectStyles } from './customSelectStyles'
 import {
   carregarPecasCadastradas,
@@ -90,6 +91,7 @@ export function CotacaoModalForm({
   // Modais aninhados
   const [modalFornecedorAberto, setModalFornecedorAberto] = useState(false)
   const [modalPecaAberto, setModalPecaAberto] = useState(false)
+  const [confirmandoExclusaoCotacao, setConfirmandoExclusaoCotacao] = useState(false)
 
   // Estado do formulário
   const [idCotacao, setIdCotacao] = useState('')
@@ -643,20 +645,18 @@ export function CotacaoModalForm({
     }
   }
 
-  // Excluir cotação
+  // Excluir cotação via diálogo na frente do formulário
   const handleExcluirCotacaoAtual = () => {
     if (!cotacaoParaEditar?.id) return
-    toast(`Excluir a cotação ${cotacaoParaEditar.id}?`, {
-      description: 'Esta operação removerá o histórico da cotação.',
-      action: {
-        label: 'Excluir',
-        onClick: () => {
-          excluirCotacao(cotacaoParaEditar.id)
-          toast.success(`Cotação ${cotacaoParaEditar.id} excluída.`)
-          onClose()
-        },
-      },
-    })
+    setConfirmandoExclusaoCotacao(true)
+  }
+
+  const confirmarExclusaoCotacao = () => {
+    if (!cotacaoParaEditar?.id) return
+    excluirCotacao(cotacaoParaEditar.id)
+    toast.success(`Cotação ${cotacaoParaEditar.id} excluída com sucesso.`)
+    setConfirmandoExclusaoCotacao(false)
+    onClose()
   }
 
   return (
@@ -665,10 +665,12 @@ export function CotacaoModalForm({
         isOpen={isOpen}
         onClose={onClose}
         chaveStorage="dev_oficina_cotacao_modal_dimensoes"
-        larguraPadrao={980}
-        alturaPadrao={700}
-        larguraMinima={600}
-        alturaMinima={450}
+        larguraPadrao={1040}
+        alturaPadrao={760}
+        larguraMinima={840}
+        alturaMinima={520}
+        larguraMaxima={1440}
+        alturaMaxima={940}
         titulo={cotacaoParaEditar ? `Cotação de Peças #${idCotacao}` : 'Nova Cotação de Peças'}
         subtitulo="Lista de peças em cotação, cotação com autopeças parceiras e geração do pedido de compra"
         badge={
@@ -1381,6 +1383,19 @@ export function CotacaoModalForm({
           </div>
         </div>
       </ModalRedimensionavel>
+
+      {/* Diálogo de Confirmação de Exclusão na Frente do Formulário */}
+      <ModalConfirmacao
+        isOpen={confirmandoExclusaoCotacao}
+        onClose={() => setConfirmandoExclusaoCotacao(false)}
+        onConfirm={confirmarExclusaoCotacao}
+        titulo="Excluir esta cotação?"
+        descricao="Esta operação removerá o histórico e todas as respostas de fornecedores desta cotação."
+        itemDestaque={cotacaoParaEditar?.id ? `Cotação: #${cotacaoParaEditar.id}` : ''}
+        textoConfirmar="Sim, Excluir"
+        textoCancelar="Cancelar"
+        variante="perigo"
+      />
     </>
   )
 }

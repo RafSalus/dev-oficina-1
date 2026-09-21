@@ -15,10 +15,11 @@ import {
   X,
   CaretRight,
   CarProfile,
+  HandGrabbing,
 } from '@phosphor-icons/react'
 import { useMecanico } from '../../../context/MecanicoContext'
 import { usePwaInstall } from '../../../hooks/usePwaInstall'
-import { obterOrdensAbertas, STATUS_ORCAMENTO } from '../../../pages/dashboard/orcamento/mockOrdensAbertas'
+import { obterOrdensAbertas, STATUS_ORCAMENTO, assumirOrdemSemMecanico } from '../../../pages/dashboard/orcamento/mockOrdensAbertas'
 
 const QUICK_ACTIONS = [
   { id: 'diagnostico', label: 'Diagnóstico', path: '/mecanico/diagnostico', icon: MagnifyingGlassPlus },
@@ -50,13 +51,39 @@ export function MobileMecanicoHomeScreen() {
     return now.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
   }, [])
 
-  const minhasOS = useMemo(() => {
+  const [ordens, setOrdens] = useState(() => {
     try {
-      return obterOrdensAbertas().filter((os) => os.mecanicoNome === mecanicoAtivo.nome)
+      return obterOrdensAbertas()
     } catch {
       return []
     }
-  }, [mecanicoAtivo.nome])
+  })
+
+  const minhasOS = useMemo(
+    () => ordens.filter((os) => os.mecanicoNome === mecanicoAtivo.nome),
+    [ordens, mecanicoAtivo.nome]
+  )
+
+  // OS na Fila sem mecânico atribuído — o mecânico pode puxar uma delas direto da tela
+  // inicial, sem depender da secretária escalar previamente (D4: só funciona em OS ainda
+  // sem atribuição).
+  const ordensDisponiveis = useMemo(
+    () =>
+      ordens.filter(
+        (os) => os.status === 'fila' && !(os.mecanicoId || (os.mecanicoNome && os.mecanicoNome !== 'Não atribuído'))
+      ),
+    [ordens]
+  )
+
+  const handlePuxarOrdem = (numeroOS) => {
+    const resultado = assumirOrdemSemMecanico(numeroOS, mecanicoAtivo.value, mecanicoAtivo.nome)
+    if (resultado.erro) {
+      toast.warning(resultado.erro)
+      return
+    }
+    setOrdens(obterOrdensAbertas())
+    toast.success(`OS #${numeroOS} atribuída a você! Preencha a vistoria e o diagnóstico para avançar.`)
+  }
 
   const stats = useMemo(() => {
     const emDiagnostico = minhasOS.filter((o) => o.status === 'em_diagnostico').length
@@ -174,6 +201,34 @@ export function MobileMecanicoHomeScreen() {
           ))}
         </div>
       </div>
+
+      {/* Fila Disponível para Atendimento */}
+      {ordensDisponiveis.length > 0 && (
+        <div>
+          <h2 className="text-xs font-bold text-[#0369a1] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <HandGrabbing size={14} weight="bold" />
+            Fila Disponível para Atendimento
+          </h2>
+          <div className="bg-[#f0f9ff] rounded-2xl border border-[#bae6fd] divide-y divide-[#e0f2fe] overflow-hidden">
+            {ordensDisponiveis.slice(0, 3).map((os) => (
+              <div key={os.numeroOS} className="p-3.5 flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-[#101828] truncate">#{os.numeroOS} • {os.cliente}</p>
+                  <p className="text-[11px] text-[#667085] truncate">{os.placa} • {os.marcaModelo}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePuxarOrdem(os.numeroOS)}
+                  className="shrink-0 h-9 px-3 rounded-xl bg-[#0284c7] active:bg-[#0369a1] text-white text-xs font-bold flex items-center gap-1.5"
+                >
+                  <HandGrabbing size={14} weight="bold" />
+                  Puxar OS
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Minhas OS de Hoje */}
       <div>

@@ -26,6 +26,18 @@ export const ITENS_CHECKLIST_ENTRADA = [
   { id: 'testeDdp', label: 'Teste DDP', desc: 'Diferença de Potencial / Carga' },
 ]
 
+// Angulos obrigatorios do registro fotografico de entrada — usado na Vistoria de Entrada
+// (formulario de abertura de OS) e exibido ao cliente na pagina publica de assinatura.
+export const FOTOS_VEICULO_TIPOS = [
+  { id: 'frente', label: 'Frente' },
+  { id: 'traseira', label: 'Traseira' },
+  { id: 'lateral_esquerda', label: 'Lateral Esquerda' },
+  { id: 'lateral_direita', label: 'Lateral Direita' },
+  { id: 'painel', label: 'Painel' },
+  { id: 'motor', label: 'Motor' },
+  { id: 'porta_malas', label: 'Porta-Malas' },
+]
+
 export const ITENS_CHECKLIST_SAIDA = [
   { id: 'nivelFluidos', label: 'Nível de Fluídos', desc: 'Conferência final de todos os fluidos' },
   { id: 'apertoRodas', label: 'Aperto das Rodas', desc: 'Torque e fixação dos parafusos' },
@@ -39,4 +51,32 @@ export const ITENS_CHECKLIST_SAIDA = [
 export function checklistCompleto(checklist, itens) {
   if (!checklist) return false
   return itens.every((item) => Boolean(checklist[item.id]?.status))
+}
+
+// Assinatura digital do cliente na Vistoria de Entrada (pagina publica /vistoria/:id) —
+// guardada à parte da OS, por numeroOS, pois é preenchida pelo cliente fora do sistema
+// interno. Compartilhado entre a pagina publica (que grava) e o fluxo de Diagnostico
+// (que exige a aprovação antes de liberar a etapa seguinte).
+const STORAGE_KEY_ASSINATURA_VISTORIA = 'dev_oficina_assinaturas_checklist'
+
+export function carregarAssinaturaVistoria(numeroOS) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ASSINATURA_VISTORIA)
+    if (!raw) return null
+    const todas = JSON.parse(raw)
+    return todas[numeroOS] || null
+  } catch {
+    return null
+  }
+}
+
+export function salvarAssinaturaVistoria(numeroOS, registro) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ASSINATURA_VISTORIA)
+    const todas = raw ? JSON.parse(raw) : {}
+    todas[numeroOS] = registro
+    localStorage.setItem(STORAGE_KEY_ASSINATURA_VISTORIA, JSON.stringify(todas))
+  } catch (e) {
+    console.error('Erro ao gravar assinatura do checklist:', e)
+  }
 }

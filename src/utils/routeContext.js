@@ -3,7 +3,6 @@
 
 // Sub-rotas que não são itens de menu independentes, e sim modos/telas filhas de um item já existente.
 const SUB_ROTAS_CONHECIDAS = [
-  { corresponde: (rota) => rota.startsWith('ordem-de-servico/nova'), itemId: 'ordem-de-servico', subRotulo: 'Nova OS' },
   { corresponde: (rota) => rota.startsWith('compras/cotacao'), itemId: 'compras', subRotulo: 'Cotação de Peças' },
 ]
 

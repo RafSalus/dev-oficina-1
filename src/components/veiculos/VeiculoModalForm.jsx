@@ -353,8 +353,12 @@ export function VeiculoModalForm({
       subtitulo="Consulta técnica FIPE integrada e vínculo com o cliente proprietário"
       icone={Car}
       badge="Frota Oficial"
-      larguraPadrao={840}
-      alturaPadrao={660}
+      larguraPadrao={860}
+      alturaPadrao={680}
+      larguraMinima={600}
+      alturaMinima={460}
+      larguraMaxima={1200}
+      alturaMaxima={880}
       storageKey="veiculo_modal_dimensoes"
     >
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -417,9 +421,9 @@ export function VeiculoModalForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="grid grid-cols-1 @sm:grid-cols-12 gap-3">
             {/* Código do Veículo (Automático) */}
-            <div className="sm:col-span-3">
+            <div className="@sm:col-span-3">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Código do Veículo
               </label>
@@ -438,7 +442,7 @@ export function VeiculoModalForm({
             </div>
 
             {/* Placa com Máscara Mercosul / Antiga */}
-            <div className="sm:col-span-3">
+            <div className="@sm:col-span-3">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Placa <span className="text-rose-500">*</span>
               </label>
@@ -465,7 +469,7 @@ export function VeiculoModalForm({
             </div>
 
             {/* Chassi */}
-            <div className="sm:col-span-3">
+            <div className="@sm:col-span-3">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Chassi (Opcional)
               </label>
@@ -485,7 +489,7 @@ export function VeiculoModalForm({
             </div>
 
             {/* Renavam */}
-            <div className="sm:col-span-3">
+            <div className="@sm:col-span-3">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Renavam (Opcional)
               </label>
@@ -518,9 +522,9 @@ export function VeiculoModalForm({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <div className="grid grid-cols-1 @sm:grid-cols-12 gap-3">
             {/* Marca FIPE (Separada) */}
-            <div className="sm:col-span-4">
+            <div className="@sm:col-span-4">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Marca (Montadora) <span className="text-rose-500">*</span>
               </label>
@@ -550,7 +554,7 @@ export function VeiculoModalForm({
             </div>
 
             {/* Modelo FIPE (Separado) */}
-            <div className="sm:col-span-5">
+            <div className="@sm:col-span-5">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Modelo do Veículo <span className="text-rose-500">*</span>
               </label>
@@ -591,7 +595,7 @@ export function VeiculoModalForm({
             </div>
 
             {/* Ano / Versão FIPE */}
-            <div className="sm:col-span-3">
+            <div className="@sm:col-span-3">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Ano / Versão{' '}
                 {anosFipe.length > 0 && (
@@ -637,9 +641,9 @@ export function VeiculoModalForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+          <div className="grid grid-cols-1 @sm:grid-cols-12 gap-3 pt-1">
             {/* Cor */}
-            <div className="sm:col-span-4">
+            <div className="@sm:col-span-4">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Cor do Veículo
               </label>
@@ -658,7 +662,7 @@ export function VeiculoModalForm({
             </div>
 
             {/* Combustível */}
-            <div className="sm:col-span-4">
+            <div className="@sm:col-span-4">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Combustível
               </label>
@@ -680,7 +684,7 @@ export function VeiculoModalForm({
             </div>
 
             {/* Quilometragem Atual */}
-            <div className="sm:col-span-4">
+            <div className="@sm:col-span-4">
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Quilometragem (KM Atual)
               </label>

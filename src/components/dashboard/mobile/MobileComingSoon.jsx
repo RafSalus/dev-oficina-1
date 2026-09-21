@@ -55,9 +55,7 @@ const ICONS_MAP = {
 }
 
 // Rotas que, mesmo "em breve", já possuem uma ação principal disponível
-const ROUTE_ACTIONS = {
-  '/gestao/ordem-de-servico': { label: 'Nova Ordem de Serviço', path: '/gestao/ordem-de-servico/nova' },
-}
+const ROUTE_ACTIONS = {}
 
 export function MobileComingSoon() {
   const location = useLocation()

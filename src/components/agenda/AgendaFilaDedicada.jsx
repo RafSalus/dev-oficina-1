@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Select from 'react-select'
 import {
   Users,
@@ -13,6 +14,7 @@ import {
   WarningCircle,
   MagnifyingGlass,
   CheckCircle,
+  Receipt,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { customSelectStyles } from '../suprimentos/customSelectStyles'
@@ -29,6 +31,8 @@ export function AgendaFilaDedicada({
   onAtualizarFila,
   onAgendarClienteDaFila,
 }) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [busca, setBusca] = useState('')
   const [filtroPrioridade, setFiltroPrioridade] = useState('TODOS')
 
@@ -171,6 +175,23 @@ export function AgendaFilaDedicada({
     setPrioridade('NORMAL')
     setMecanicoPreferencialId('')
     setIsModalNovoClienteAberto(false)
+  }
+
+  // Leva o cliente que já aguarda na fila direto para a tela de Ordens de Serviço, que abre o
+  // modal de abertura de OS já preenchido (o item só sai da fila quando a OS for salva).
+  const handleAbrirOS = (item) => {
+    const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
+    navigate(`${basePath}/ordem-de-servico`, {
+      state: {
+        filaEsperaId: item.id,
+        clienteNome: item.clienteNome,
+        clienteTelefone: item.clienteTelefone,
+        veiculoPlaca: item.veiculoPlaca,
+        veiculoModelo: item.veiculoModelo,
+        motivo: item.motivo,
+        mecanicoPreferencialId: item.mecanicoPreferencialId,
+      },
+    })
   }
 
   // Remover cliente da fila
@@ -432,6 +453,15 @@ export function AgendaFilaDedicada({
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
+                            onClick={() => handleAbrirOS(item)}
+                            className="px-2.5 py-1.5 text-xs text-white bg-[#0284c7] hover:bg-sky-700 rounded-lg transition-colors flex items-center gap-1 font-semibold shadow-xs"
+                            title="Abrir Ordem de Servico com os dados deste cliente"
+                          >
+                            <Receipt size={14} weight="bold" />
+                            <span>Abrir OS</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleRemover(item.id, item.clienteNome)}
                             className="px-2.5 py-1.5 text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200 transition-colors flex items-center gap-1"
                             title="Remover da fila"
@@ -455,11 +485,13 @@ export function AgendaFilaDedicada({
         <ModalRedimensionavel
           isOpen={isModalNovoClienteAberto}
           onClose={() => setIsModalNovoClienteAberto(false)}
-          title="Inserir Cliente na Fila de Atendimento"
-          defaultWidth={620}
-          defaultHeight={540}
-          minWidth={500}
-          minHeight={450}
+          titulo="Inserir Cliente na Fila de Atendimento"
+          larguraPadrao={680}
+          alturaPadrao={560}
+          larguraMinima={520}
+          alturaMinima={440}
+          larguraMaxima={1000}
+          alturaMaxima={780}
           storageKey="modal_agenda_inserir_fila"
         >
           <div className="flex flex-col h-full bg-white text-slate-800">

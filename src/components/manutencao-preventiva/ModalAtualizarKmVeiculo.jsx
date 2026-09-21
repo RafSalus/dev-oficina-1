@@ -34,10 +34,12 @@ export function ModalAtualizarKmVeiculo({ isOpen, onClose, veiculo, onAtualizado
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="modal_redimensionavel_atualizar_km_preventiva"
-      larguraPadrao={460}
-      alturaPadrao={340}
-      larguraMinima={380}
-      alturaMinima={280}
+      larguraPadrao={500}
+      alturaPadrao={380}
+      larguraMinima={460}
+      alturaMinima={340}
+      larguraMaxima={720}
+      alturaMaxima={600}
       titulo="Atualizar Hodômetro do Veículo"
       subtitulo={`${veiculo.placa} - ${veiculo.marcaModelo || veiculo.modelo}`}
       badge="Quilometragem"

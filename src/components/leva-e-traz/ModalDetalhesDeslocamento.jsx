@@ -61,8 +61,10 @@ export function ModalDetalhesDeslocamento({ isOpen, onClose, deslocamento }) {
       chaveStorage="modal_redimensionavel_detalhes_deslocamento"
       larguraPadrao={760}
       alturaPadrao={600}
-      larguraMinima={500}
-      alturaMinima={400}
+      larguraMinima={560}
+      alturaMinima={440}
+      larguraMaxima={1100}
+      alturaMaxima={820}
       titulo="Ficha de Deslocamento e Rota"
       subtitulo={`Atendimento #${deslocamento.codigo} - ${deslocamento.data}`}
       badge="Ordem de Logística"

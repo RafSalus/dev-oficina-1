@@ -24,6 +24,7 @@ import {
 import { ServicoModalForm } from '../../../components/suprimentos/ServicoModalForm'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 import { MobileServicosPage } from './mobile/MobileServicosPage'
+import { ModalConfirmacao } from '../../../components/ModalConfirmacao'
 
 export function ServicosPage() {
   const isMobile = useIsMobile()
@@ -34,6 +35,7 @@ export function ServicosPage() {
 
   const [modalAberto, setModalAberto] = useState(false)
   const [servicoEmEdicao, setServicoEmEdicao] = useState(null)
+  const [servicoParaExcluir, setServicoParaExcluir] = useState(null)
 
   // Carrega do localStorage ao montar
   useEffect(() => {
@@ -131,22 +133,21 @@ export function ServicosPage() {
     salvarServicosCadastrados(novaLista)
   }
 
-  // Excluir serviço
+  // Excluir serviço via diálogo na frente da tela
   const handleExcluirServico = (id, nome) => {
-    toast(`Excluir o serviço "${nome}"?`, {
-      description: 'Esta operação removerá o item do catálogo.',
-      action: {
-        label: 'Confirmar',
-        onClick: () => {
-          setServicos((prev) => {
-            const novaLista = prev.filter((s) => s.id !== id)
-            salvarServicosCadastrados(novaLista)
-            return novaLista
-          })
-          toast.success(`Serviço "${nome}" excluído.`)
-        },
-      },
+    setServicoParaExcluir({ id, nome })
+  }
+
+  const confirmarExclusaoServico = () => {
+    if (!servicoParaExcluir) return
+    const { id, nome } = servicoParaExcluir
+    setServicos((prev) => {
+      const novaLista = prev.filter((s) => s.id !== id)
+      salvarServicosCadastrados(novaLista)
+      return novaLista
     })
+    setServicoParaExcluir(null)
+    toast.success(`Serviço "${nome}" excluído do catálogo com sucesso.`)
   }
 
   // Opções para os filtros react-select
@@ -411,6 +412,19 @@ export function ServicosPage() {
         onClose={() => setModalAberto(false)}
         onSalvar={handleSalvarServico}
         servicoParaEditar={servicoEmEdicao}
+      />
+
+      {/* Diálogo de Confirmação de Exclusão na Frente da Tela */}
+      <ModalConfirmacao
+        isOpen={Boolean(servicoParaExcluir)}
+        onClose={() => setServicoParaExcluir(null)}
+        onConfirm={confirmarExclusaoServico}
+        titulo="Excluir este serviço?"
+        descricao="Esta operação removerá permanentemente o item do catálogo de serviços."
+        itemDestaque={servicoParaExcluir ? `Serviço: ${servicoParaExcluir.nome}` : ''}
+        textoConfirmar="Sim, Excluir"
+        textoCancelar="Cancelar"
+        variante="perigo"
       />
     </div>
   )

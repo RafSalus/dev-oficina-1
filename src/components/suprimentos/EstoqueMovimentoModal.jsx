@@ -153,8 +153,12 @@ export function EstoqueMovimentoModal({
       subtitulo="Lançamento de entradas, saídas técnicas e ajustes de inventário físico com auditoria"
       icone={ArrowsLeftRight}
       badge="Controle Operacional"
-      larguraPadrao={760}
+      larguraPadrao={780}
       alturaPadrao={640}
+      larguraMinima={580}
+      alturaMinima={460}
+      larguraMaxima={1100}
+      alturaMaxima={860}
       chaveStorage="estoque_movimento_modal"
       storageKey="estoque_movimento_modal"
     >

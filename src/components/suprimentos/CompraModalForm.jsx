@@ -386,8 +386,12 @@ export function CompraModalForm({
         subtitulo="Integração de compras com Ordens de Serviço, fornecedores e entrada automática no estoque"
         icone={ShoppingCart}
         badge="Suprimentos e Aquisições"
-        larguraPadrao={880}
-        alturaPadrao={720}
+        larguraPadrao={920}
+        alturaPadrao={740}
+        larguraMinima={680}
+        alturaMinima={500}
+        larguraMaxima={1360}
+        alturaMaxima={940}
         chaveStorage="compra_modal_dimensoes"
         storageKey="compra_modal_dimensoes"
       >

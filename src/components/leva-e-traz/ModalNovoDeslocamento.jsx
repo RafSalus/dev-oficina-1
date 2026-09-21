@@ -251,10 +251,12 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="modal_redimensionavel_novo_deslocamento"
-      larguraPadrao={820}
-      alturaPadrao={640}
-      larguraMinima={520}
-      alturaMinima={420}
+      larguraPadrao={840}
+      alturaPadrao={660}
+      larguraMinima={600}
+      alturaMinima={460}
+      larguraMaxima={1200}
+      alturaMaxima={880}
       titulo="Agendar Serviço Leva e Traz e Deslocamento"
       subtitulo="Escala operacional de busca, entrega de veículos, peças e translado de clientes"
       badge="Logística da Oficina"

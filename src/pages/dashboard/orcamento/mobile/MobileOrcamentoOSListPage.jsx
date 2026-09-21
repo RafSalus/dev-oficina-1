@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Receipt, Archive, MagnifyingGlass, Plus, FunnelSimple, WhatsappLogo } from '@phosphor-icons/react'
 import Select from 'react-select'
 import { STATUS_ORCAMENTO, PRIORIDADE_OPTIONS } from '../mockOrdensAbertas'
@@ -96,9 +95,10 @@ export function MobileOrcamentoOSListPage({
   onExcluirOrdem,
   onCopiarLink,
   onDispararWhatsApp,
+  onAbrirNovaOS,
+  onEditarOS,
   formatMoeda,
 }) {
-  const navigate = useNavigate()
   const [ordemSelecionada, setOrdemSelecionada] = useState(null)
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
@@ -139,7 +139,7 @@ export function MobileOrcamentoOSListPage({
         </div>
         <button
           type="button"
-          onClick={() => navigate('/gestao/ordem-de-servico/nova')}
+          onClick={onAbrirNovaOS}
           aria-label="Nova Ordem de Serviço"
           className="w-11 h-11 rounded-xl bg-black active:bg-zinc-800 text-white flex items-center justify-center shrink-0"
         >
@@ -259,6 +259,7 @@ export function MobileOrcamentoOSListPage({
         onExcluir={onExcluirOrdem}
         onCopiarLink={onCopiarLink}
         onDispararWhatsApp={onDispararWhatsApp}
+        onEditarOS={onEditarOS}
         formatMoeda={formatMoeda}
       />
     </div>

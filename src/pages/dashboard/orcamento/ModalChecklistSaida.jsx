@@ -42,10 +42,12 @@ export function ModalChecklistSaida({ isOpen, onClose, os, onConfirmar }) {
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="dev_oficina_modal_checklist_saida"
-      larguraPadrao={560}
+      larguraPadrao={580}
       alturaPadrao={620}
-      larguraMinima={440}
-      alturaMinima={480}
+      larguraMinima={480}
+      alturaMinima={460}
+      larguraMaxima={880}
+      alturaMaxima={820}
       titulo="Checklist de Saída Obrigatório"
       subtitulo={`OS #${os.numeroOS} • Confira antes de entregar o veículo`}
       badge="Liberação"

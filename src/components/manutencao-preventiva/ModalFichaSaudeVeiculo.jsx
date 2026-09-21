@@ -84,10 +84,12 @@ export function ModalFichaSaudeVeiculo({
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="modal_redimensionavel_ficha_saude_veiculo"
-      larguraPadrao={960}
-      alturaPadrao={680}
-      larguraMinima={520}
-      alturaMinima={420}
+      larguraPadrao={980}
+      alturaPadrao={700}
+      larguraMinima={680}
+      alturaMinima={480}
+      larguraMaxima={1360}
+      alturaMaxima={920}
       titulo="Prontuário de Saúde Preventiva do Veículo"
       subtitulo={`${veiculo.placa} - ${veiculo.marcaModelo || veiculo.modelo} (${veiculo.ano || 'Ano N/I'})`}
       badge="Saúde da Frota"

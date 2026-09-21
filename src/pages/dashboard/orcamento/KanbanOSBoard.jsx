@@ -12,6 +12,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Package, Handshake, ArrowSquareOut } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { KANBAN_COLUNAS_OS } from './kanbanColunas'
+import { podeTransicionarPara } from './statusTransicao'
 
 function formatMoeda(val) {
   const n = parseFloat(val) || 0
@@ -179,9 +180,7 @@ export function KanbanOSBoard({ ordens, numeroOsSelecionada, onSelecionar, onMov
     const os = active.data.current?.os
     if (!os || os.status === novoStatus) return
 
-    const indiceAtual = KANBAN_COLUNAS_OS.findIndex((c) => c.status === os.status)
-    const indiceNovo = KANBAN_COLUNAS_OS.findIndex((c) => c.status === novoStatus)
-    if (Math.abs(indiceNovo - indiceAtual) !== 1) {
+    if (!podeTransicionarPara(os.status, novoStatus)) {
       toast.warning('Só é possível mover uma OS para a etapa anterior ou a etapa seguinte, sem pular colunas.')
       return
     }

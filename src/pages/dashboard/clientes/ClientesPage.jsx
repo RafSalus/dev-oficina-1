@@ -29,6 +29,7 @@ import { ClienteFrotaModal } from '../../../components/clientes/ClienteFrotaModa
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 import { useIsMobile } from '../../../hooks/useIsMobile'
 import { MobileClientesPage } from './mobile/MobileClientesPage'
+import { ModalConfirmacao } from '../../../components/ModalConfirmacao'
 
 const FILTRO_TIPO_OPCOES = [
   { value: 'TODOS', label: 'Todos os Tipos (PF e PJ)' },
@@ -59,6 +60,7 @@ export function ClientesPage() {
   const [modalAberto, setModalAberto] = useState(false)
   const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
   const [clienteFrotaModal, setClienteFrotaModal] = useState(null)
+  const [clienteParaExcluir, setClienteParaExcluir] = useState(null)
 
   // Carrega do localStorage ao montar
   useEffect(() => {
@@ -177,22 +179,21 @@ export function ClientesPage() {
     salvarClientesCadastrados(novaLista)
   }
 
-  // Excluir cliente
+  // Excluir cliente via diálogo na frente da tela
   const handleExcluirCliente = (val, nome) => {
-    toast(`Excluir o cliente "${nome}"?`, {
-      description: 'Esta operação removerá o cliente e seus veículos cadastrados.',
-      action: {
-        label: 'Confirmar',
-        onClick: () => {
-          setClientes((prev) => {
-            const novaLista = prev.filter((c) => c.value !== val && c.id !== val)
-            salvarClientesCadastrados(novaLista)
-            return novaLista
-          })
-          toast.success(`Cliente "${nome}" excluído.`)
-        },
-      },
+    setClienteParaExcluir({ val, nome })
+  }
+
+  const confirmarExclusaoCliente = () => {
+    if (!clienteParaExcluir) return
+    const { val, nome } = clienteParaExcluir
+    setClientes((prev) => {
+      const novaLista = prev.filter((c) => c.value !== val && c.id !== val)
+      salvarClientesCadastrados(novaLista)
+      return novaLista
     })
+    setClienteParaExcluir(null)
+    toast.success(`Cliente "${nome}" excluído com sucesso.`)
   }
 
   if (isMobile) {
@@ -603,6 +604,19 @@ export function ClientesPage() {
           setClienteFrotaModal(null)
           handleAbrirEditar(cli)
         }}
+      />
+
+      {/* Diálogo de Confirmação de Exclusão na Frente da Tela */}
+      <ModalConfirmacao
+        isOpen={Boolean(clienteParaExcluir)}
+        onClose={() => setClienteParaExcluir(null)}
+        onConfirm={confirmarExclusaoCliente}
+        titulo="Excluir este cliente?"
+        descricao="Esta operação removerá permanentemente o cliente e todos os vínculos cadastrados."
+        itemDestaque={clienteParaExcluir ? `Cliente: ${clienteParaExcluir.nome}` : ''}
+        textoConfirmar="Sim, Excluir"
+        textoCancelar="Cancelar"
+        variante="perigo"
       />
     </div>
   )

@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   X,
   WhatsappLogo,
@@ -17,8 +16,10 @@ import {
 import Select from 'react-select'
 import { toast } from 'sonner'
 import { STATUS_ORCAMENTO } from '../mockOrdensAbertas'
-import { DRAFT_KEY } from '../../nova-os/useOsDraft'
+import { podeTransicionarPara, motivoBloqueioTransicao } from '../statusTransicao'
+import { ITENS_CHECKLIST_ENTRADA, checklistCompleto, carregarAssinaturaVistoria } from '../../../../constants/checklistItems'
 import { mobileSelectStyles } from '../../nova-os/mobile/mobileSelectStyles'
+import { ModalConfirmacao } from '../../../../components/ModalConfirmacao'
 
 const SUB_TABS = [
   { id: 'resumo', label: 'Resumo' },
@@ -37,9 +38,9 @@ export function MobileOsDetalhesModal({
   onExcluir,
   onCopiarLink,
   onDispararWhatsApp,
+  onEditarOS,
   formatMoeda,
 }) {
-  const navigate = useNavigate()
   const [subTab, setSubTab] = useState('resumo')
   const [copiado, setCopiado] = useState(false)
   const [acaoConfirmando, setAcaoConfirmando] = useState(null) // 'excluir' | 'finalizar' | null
@@ -47,6 +48,7 @@ export function MobileOsDetalhesModal({
   if (!isOpen || !os) return null
 
   const statusAtual = STATUS_ORCAMENTO.find((s) => s.value === os.status) || STATUS_ORCAMENTO[1]
+  const assinaturaVistoria = carregarAssinaturaVistoria(os.numeroOS)
 
   const handleCopiarLink = () => {
     onCopiarLink(os)
@@ -55,14 +57,8 @@ export function MobileOsDetalhesModal({
   }
 
   const handleEditarNaNovaOS = () => {
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(os))
-      toast.info(`Carregando OS #${os.numeroOS} no formulário de edição...`)
-      onFechar()
-      navigate('/gestao/ordem-de-servico/nova')
-    } catch (e) {
-      toast.error('Erro ao preparar edição da OS.')
-    }
+    onFechar()
+    onEditarOS?.(os)
   }
 
   const confirmarAcao = () => {
@@ -137,12 +133,21 @@ export function MobileOsDetalhesModal({
                 <Select
                   value={statusAtual}
                   onChange={(opt) => {
-                    if (opt && opt.value !== os.status) {
-                      onAtualizarStatus(os.numeroOS, opt.value)
-                      toast.success(`Status da OS #${os.numeroOS} alterado para "${opt.label}"!`)
+                    if (!opt || opt.value === os.status) return
+                    if (!podeTransicionarPara(os.status, opt.value)) {
+                      toast.warning('Só é possível mover a OS para a etapa anterior ou a etapa seguinte, sem pular colunas.')
+                      return
                     }
+                    const motivo = motivoBloqueioTransicao(os, opt.value)
+                    if (motivo) {
+                      toast.warning(motivo)
+                      return
+                    }
+                    onAtualizarStatus(os.numeroOS, opt.value)
+                    toast.success(`Status da OS #${os.numeroOS} alterado para "${opt.label}"!`)
                   }}
                   options={STATUS_ORCAMENTO.filter((s) => s.value !== 'todos')}
+                  isOptionDisabled={(opt) => !podeTransicionarPara(os.status, opt.value)}
                   isSearchable={false}
                   styles={mobileSelectStyles}
                 />
@@ -396,13 +401,39 @@ export function MobileOsDetalhesModal({
                 "{os.relatoCliente || 'Nenhum relato informado na abertura.'}"
               </p>
             </div>
-            <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4">
+            <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 mb-3">
               <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#0284c7] mb-2">
                 Laudo Técnico ({os.mecanicoNome || 'Oficina'})
               </h3>
               <p className="text-xs text-[#344054] leading-relaxed whitespace-pre-line bg-[#f8fafc] p-3 rounded-xl border border-[#f2f4f7]">
                 {os.laudoTecnico || 'Aguardando laudo técnico.'}
               </p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="font-bold text-[#101828] block text-xs">Checklist de Entrada</span>
+                <span className="text-[#667085] text-[10.5px]">22 itens inspecionados</span>
+              </div>
+              {checklistCompleto(os.checklistEntrada, ITENS_CHECKLIST_ENTRADA) ? (
+                <span className="px-2.5 py-1 rounded-full bg-[#101828] text-white text-[10px] font-bold shrink-0">Concluído</span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-full bg-[#fffaeb] text-[#b54708] border border-[#fedf89] text-[10px] font-bold shrink-0">Pendente</span>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-sm p-4 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="font-bold text-[#101828] block text-xs">Aprovação da Vistoria pelo Cliente</span>
+                <span className="text-[#667085] text-[10.5px] truncate block">
+                  {assinaturaVistoria ? `Assinado por ${assinaturaVistoria.nomeAssinante}` : 'Aguardando assinatura do cliente'}
+                </span>
+              </div>
+              {assinaturaVistoria ? (
+                <span className="px-2.5 py-1 rounded-full bg-[#101828] text-white text-[10px] font-bold shrink-0">Aprovado</span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-full bg-[#fffaeb] text-[#b54708] border border-[#fedf89] text-[10px] font-bold shrink-0">Pendente</span>
+              )}
             </div>
           </>
         )}
@@ -413,55 +444,53 @@ export function MobileOsDetalhesModal({
         className="shrink-0 bg-white border-t border-[#e4e7ec] px-4 py-3"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
       >
-        {acaoConfirmando ? (
-          <div className="flex items-center gap-2">
-            <span className="flex-1 text-xs font-bold text-[#101828]">
-              {acaoConfirmando === 'excluir'
-                ? `Cancelar e excluir a OS #${os.numeroOS}?`
-                : `Finalizar e arquivar a OS #${os.numeroOS}?`}
-            </span>
+        <div className="flex items-center justify-between gap-2">
+          {isArquivada ? (
+            <span className="text-xs font-bold text-[#667085]">OS no Arquivo</span>
+          ) : (
             <button
               type="button"
-              onClick={() => setAcaoConfirmando(null)}
-              className="h-9 px-3 rounded-lg border border-[#d0d5dd] text-[#344054] text-xs font-bold"
+              onClick={handleEditarNaNovaOS}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#d0d5dd] text-[#344054] text-xs font-bold"
             >
-              Cancelar
+              <PencilSimple size={15} weight="bold" />
+              Editar OS
             </button>
-            <button
-              type="button"
-              onClick={confirmarAcao}
-              className={`h-9 px-3 rounded-lg text-white text-xs font-bold ${
-                acaoConfirmando === 'excluir' ? 'bg-[#b42318]' : 'bg-[#0284c7]'
-              }`}
-            >
-              Confirmar
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-2">
-            {isArquivada ? (
-              <span className="text-xs font-bold text-[#667085]">OS no Arquivo</span>
-            ) : (
-              <button
-                type="button"
-                onClick={handleEditarNaNovaOS}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#d0d5dd] text-[#344054] text-xs font-bold"
-              >
-                <PencilSimple size={15} weight="bold" />
-                Editar OS
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setAcaoConfirmando('excluir')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[#98a2b3] active:text-[#b42318] active:bg-[#fef3f2] text-xs font-semibold"
-            >
-              <Trash size={15} weight="bold" />
-              Excluir
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            onClick={() => setAcaoConfirmando('excluir')}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[#98a2b3] active:text-[#b42318] active:bg-[#fef3f2] text-xs font-semibold"
+          >
+            <Trash size={15} weight="bold" />
+            Excluir
+          </button>
+        </div>
       </footer>
+
+      {/* Diálogos de Confirmação na Frente do Modal */}
+      <ModalConfirmacao
+        isOpen={acaoConfirmando === 'excluir'}
+        onClose={() => setAcaoConfirmando(null)}
+        onConfirm={confirmarAcao}
+        titulo="Cancelar e excluir esta OS?"
+        descricao="Esta ação remove a ordem de serviço permanentemente do sistema e não pode ser desfeita."
+        itemDestaque={`OS #${os.numeroOS} • ${os.cliente || 'Cliente'} (${os.placa || 'Sem placa'})`}
+        textoConfirmar="Sim, Excluir Definitivamente"
+        textoCancelar="Cancelar"
+        variante="perigo"
+      />
+      <ModalConfirmacao
+        isOpen={acaoConfirmando === 'finalizar'}
+        onClose={() => setAcaoConfirmando(null)}
+        onConfirm={confirmarAcao}
+        titulo="Finalizar e arquivar esta OS?"
+        descricao="A OS será movida para os Arquivos como um atendimento concluído."
+        itemDestaque={`OS #${os.numeroOS} • ${os.cliente || 'Cliente'}`}
+        textoConfirmar="Sim, Finalizar"
+        textoCancelar="Cancelar"
+        variante="primario"
+      />
     </div>
   )
 }

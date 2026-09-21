@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Receipt,
@@ -25,6 +25,7 @@ import {
   CheckCircle,
   ListBullets,
   Kanban,
+  Handshake,
 } from '@phosphor-icons/react'
 import Select from 'react-select'
 import { toast } from 'sonner'
@@ -34,8 +35,8 @@ import {
   obterOrdensFinalizadas,
   atualizarStatusOrdem,
   atualizarChecklistSaida,
-  podeIniciarDiagnostico,
   adicionarItemNaOrdem,
+  adicionarItemAdicional,
   atualizarFotoPecaOrdem,
   excluirOrdem,
   finalizarEArquivarOrdem,
@@ -44,13 +45,14 @@ import {
   STATUS_PERMITE_FATURAMENTO,
   PRIORIDADE_OPTIONS,
 } from './mockOrdensAbertas'
+import { motivoBloqueioTransicao } from './statusTransicao'
 import { ITENS_CHECKLIST_SAIDA, checklistCompleto } from '../../../constants/checklistItems'
-import { DRAFT_KEY } from '../nova-os/useOsDraft'
 import { ModalImpressaoOS } from './ModalImpressaoOS'
 import { PainelDetalhesOS } from './PainelDetalhesOS'
 import { MobileOrcamentoOSListPage } from './mobile/MobileOrcamentoOSListPage'
 import { KanbanOSBoard } from './KanbanOSBoard'
 import { ModalChecklistSaida } from './ModalChecklistSaida'
+import { NovaOrdemServicoModal } from '../nova-os/NovaOrdemServicoModal'
 
 const STORAGE_KEY_VISUALIZACAO_OS = 'dev_oficina_os_visualizacao'
 
@@ -144,6 +146,21 @@ export function OrcamentoOSListPage() {
   const [ordensAbertas, setOrdensAbertas] = useState(() => obterOrdensAbertas())
   const [ordensFinalizadas, setOrdensFinalizadas] = useState(() => obterOrdensFinalizadas())
 
+  // Modal de Abertura/Edição de OS — mesmo padrão de formulário modal dos outros cadastros do
+  // sistema (Cliente, Veículo etc.), sem tela ou rota dedicada.
+  const [modalNovaOsAberto, setModalNovaOsAberto] = useState(false)
+  const [dadosNovaOsPreenchidos, setDadosNovaOsPreenchidos] = useState(null)
+
+  // Chegou aqui a partir do botão "Abrir OS" da Fila de Atendimento (Agenda) — abre o modal
+  // já preenchido com os dados de quem estava aguardando.
+  useEffect(() => {
+    if (location.state?.filaEsperaId || location.state?.veiculoPlaca || location.state?.clienteNome) {
+      setDadosNovaOsPreenchidos(location.state)
+      setModalNovaOsAberto(true)
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.state])
+
   // Filtros e Busca
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState(STATUS_ORCAMENTO[0]) // 'todos'
@@ -151,6 +168,9 @@ export function OrcamentoOSListPage() {
 
   // Item selecionado para inspeção no painel lateral
   const [ordemSelecionada, setOrdemSelecionada] = useState(null)
+  // Sub-aba a abrir de cara no painel lateral (usado pelo atalho "Abrir Peças/Terceiros e
+  // Cotação" do Kanban — pousa direto na aba com o lançamento rápido de itens)
+  const [subAbaAlvoPainel, setSubAbaAlvoPainel] = useState(null)
 
   // Modal de Impressão Oficial da Folha de OS
   const [modalImpressaoAberta, setModalImpressaoAberta] = useState(false)
@@ -191,6 +211,15 @@ export function OrcamentoOSListPage() {
     }
   }
 
+  // Registra um item adicional encontrado durante a Execução (peça quebrou, item de
+  // segurança) — o cliente responde pela página pública de aprovação (Fase 5).
+  const handleReportarItemAdicional = (numeroOS, item) => {
+    const atualizada = adicionarItemAdicional(numeroOS, item)
+    if (atualizada) {
+      recarregarListas()
+    }
+  }
+
   // Anexa a foto tirada na hora (câmera do celular) a uma peça recém-lançada na OS
   const handleAtualizarFotoPeca = (numeroOS, itemId, fotoUrl) => {
     const atualizada = atualizarFotoPecaOrdem(numeroOS, itemId, fotoUrl)
@@ -199,22 +228,28 @@ export function OrcamentoOSListPage() {
     }
   }
 
-  // Abre o wizard de edição já na aba pedida (usado pelos atalhos do Kanban em Cotação/Terceirizado)
+  const basePathAtual = () => (location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao')
+
+  // Atalho do Kanban na coluna Cotação — leva direto para a tela real de cotação com
+  // fornecedores (já sabe importar as peças desta OS pelo número).
+  const handleAbrirCotacao = (os) => {
+    navigate(`${basePathAtual()}/compras/cotacao?os=${os.numeroOS}`)
+  }
+
+  // Atalho do Kanban na coluna Terceirizado — abre o modal de detalhes já na aba
+  // "Terceirizado", onde fica o lançamento do parceiro externo.
   const handleAbrirEdicaoRapida = (os, aba) => {
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(os))
-      const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
-      toast.info(`Abrindo OS #${os.numeroOS} na aba de ${aba === 'pecas' ? 'Peças' : 'Terceiros'}...`)
-      navigate(`${basePath}/ordem-de-servico/nova?aba=${aba}`)
-    } catch (e) {
-      toast.error('Erro ao preparar edição da OS.')
+    if (aba === 'pecas') {
+      handleAbrirCotacao(os)
+      return
     }
+    setOrdemSelecionada(os)
+    setSubAbaAlvoPainel('terceirizado')
   }
 
   // Navega para o PDV com a OS carregada — único caminho para faturar e arquivar uma OS.
   const navegarParaPDV = (os) => {
-    const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
-    navigate(`${basePath}/pdv?os=${os.numeroOS}`)
+    navigate(`${basePathAtual()}/pdv?os=${os.numeroOS}`)
   }
 
   // Ponto único de entrada para faturar uma OS. Antes de ir ao PDV, exige que o Checklist de
@@ -242,12 +277,11 @@ export function OrcamentoOSListPage() {
   // Move uma OS entre colunas do Kanban. A coluna "Finalizar" (pronto_retirada) não arquiva
   // direto: passa pelo mesmo portão de faturamento (checklist de saída + PDV).
   const handleMoverStatusKanban = (numeroOS, novoStatus) => {
-    if (novoStatus === 'em_diagnostico') {
-      const osAtual = ordensAbertas.find((o) => String(o.numeroOS) === String(numeroOS))
-      if (!podeIniciarDiagnostico(osAtual)) {
-        toast.warning('Atribua um mecânico responsável a esta OS antes de mover para Diagnóstico.')
-        return
-      }
+    const osAtual = ordensAbertas.find((o) => String(o.numeroOS) === String(numeroOS))
+    const motivo = motivoBloqueioTransicao(osAtual, novoStatus)
+    if (motivo) {
+      toast.warning(motivo)
+      return
     }
 
     const atualizada = atualizarStatusOrdem(numeroOS, novoStatus)
@@ -365,8 +399,10 @@ export function OrcamentoOSListPage() {
   // Métricas do Topo para OS Abertas
   const metricasAbertas = useMemo(() => {
     const totalAbertas = ordensAbertas.length
+    const naFila = ordensAbertas.filter((o) => o.status === 'fila').length
     const emDiagnostico = ordensAbertas.filter((o) => o.status === 'em_diagnostico').length
     const aguardandoPecas = ordensAbertas.filter((o) => o.status === 'aguardando_pecas').length
+    const terceirizados = ordensAbertas.filter((o) => o.status === 'terceirizado').length
     const aguardandoAprovacao = ordensAbertas.filter((o) => o.status === 'aguardando_aprovacao').length
     const aprovadosExecucao = ordensAbertas.filter((o) => o.status === 'aprovado_execucao').length
     const prontoRetirada = ordensAbertas.filter((o) => o.status === 'pronto_retirada').length
@@ -374,8 +410,10 @@ export function OrcamentoOSListPage() {
 
     return {
       totalAbertas,
+      naFila,
       emDiagnostico,
       aguardandoPecas,
+      terceirizados,
       aguardandoAprovacao,
       aprovadosExecucao,
       prontoRetirada,
@@ -409,29 +447,54 @@ export function OrcamentoOSListPage() {
 
   if (isMobile) {
     return (
-      <MobileOrcamentoOSListPage
-        abaAtiva={abaAtiva}
-        setAbaAtiva={setAbaAtiva}
-        ordensAbertas={ordensAbertas}
-        ordensFinalizadas={ordensFinalizadas}
-        abertasFiltradas={abertasFiltradas}
-        finalizadasFiltradas={finalizadasFiltradas}
-        busca={busca}
-        setBusca={setBusca}
-        filtroStatus={filtroStatus}
-        setFiltroStatus={setFiltroStatus}
-        filtroPrioridade={filtroPrioridade}
-        setFiltroPrioridade={setFiltroPrioridade}
-        metricasAbertas={metricasAbertas}
-        metricasFinalizadas={metricasFinalizadas}
-        onAtualizarStatus={handleAtualizarStatus}
-        onFinalizarEArquivar={handleFinalizarEArquivar}
-        onReabrirOrdem={handleReabrirOrdem}
-        onExcluirOrdem={handleExcluirOrdem}
-        onCopiarLink={handleCopiarLink}
-        onDispararWhatsApp={handleDispararWhatsApp}
-        formatMoeda={formatMoeda}
-      />
+      <>
+        <MobileOrcamentoOSListPage
+          abaAtiva={abaAtiva}
+          setAbaAtiva={setAbaAtiva}
+          ordensAbertas={ordensAbertas}
+          ordensFinalizadas={ordensFinalizadas}
+          abertasFiltradas={abertasFiltradas}
+          finalizadasFiltradas={finalizadasFiltradas}
+          busca={busca}
+          setBusca={setBusca}
+          filtroStatus={filtroStatus}
+          setFiltroStatus={setFiltroStatus}
+          filtroPrioridade={filtroPrioridade}
+          setFiltroPrioridade={setFiltroPrioridade}
+          metricasAbertas={metricasAbertas}
+          metricasFinalizadas={metricasFinalizadas}
+          onAtualizarStatus={handleAtualizarStatus}
+          onFinalizarEArquivar={handleFinalizarEArquivar}
+          onReabrirOrdem={handleReabrirOrdem}
+          onExcluirOrdem={handleExcluirOrdem}
+          onCopiarLink={handleCopiarLink}
+          onDispararWhatsApp={handleDispararWhatsApp}
+          onAbrirNovaOS={() => {
+            try {
+              localStorage.removeItem('dev_oficina_draft_os')
+            } catch (e) {}
+            setDadosNovaOsPreenchidos(null)
+            setModalNovaOsAberto(true)
+          }}
+          onEditarOS={(os) => {
+            setDadosNovaOsPreenchidos(os)
+            setModalNovaOsAberto(true)
+          }}
+          formatMoeda={formatMoeda}
+        />
+
+        {modalNovaOsAberto && (
+          <NovaOrdemServicoModal
+            isOpen={modalNovaOsAberto}
+            dadosIniciais={dadosNovaOsPreenchidos}
+            onClose={() => {
+              setModalNovaOsAberto(false)
+              setDadosNovaOsPreenchidos(null)
+            }}
+            onSalvo={recarregarListas}
+          />
+        )}
+      </>
     )
   }
 
@@ -601,8 +664,8 @@ export function OrcamentoOSListPage() {
               try {
                 localStorage.removeItem('dev_oficina_draft_os')
               } catch (e) {}
-              const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
-              navigate(`${basePath}/ordem-de-servico/nova`)
+              setDadosNovaOsPreenchidos(null)
+              setModalNovaOsAberto(true)
             }}
             className="h-9.5 px-3.5 bg-black hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
           >
@@ -614,97 +677,243 @@ export function OrcamentoOSListPage() {
 
       {/* 2. Barra de Indicadores e Métricas Rápidas Dinâmicas */}
       {abaAtiva === 'abertas' ? (
-        <section className="shrink-0 grid grid-cols-6 gap-2">
+        <section className="shrink-0 grid grid-cols-8 gap-2">
           {/* Total em Aberto */}
-          <div className="bg-white rounded-xl border border-[#d0d5dd] p-2.5 shadow-2xs flex items-center justify-between">
+          <div
+            onClick={() => setFiltroStatus(STATUS_ORCAMENTO[0])}
+            title="Clique para ver todas as ordens abertas"
+            className="bg-white rounded-xl border border-[#d0d5dd] p-2.5 shadow-2xs flex items-center justify-between cursor-pointer hover:border-[#101828] transition-all"
+          >
             <div>
               <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider block">
                 Total em Aberto
               </span>
-              <div className="flex items-baseline gap-1.5 mt-0.5">
+              <div className="flex items-baseline gap-1 mt-0.5">
                 <span className="text-base font-black text-[#101828]">{metricasAbertas.totalAbertas}</span>
-                <span className="text-[10px] font-bold text-[#667085]">
+                <span className="text-[9.5px] font-bold text-[#667085] truncate">
                   (R$ {formatMoeda(metricasAbertas.somaValorTotal)})
                 </span>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#f2f4f7] flex items-center justify-center text-[#101828]">
-              <Receipt size={17} weight="bold" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-[#f2f4f7] flex items-center justify-center text-[#101828] shrink-0">
+              <Receipt size={16} weight="bold" />
+            </div>
+          </div>
+
+          {/* Na Fila de Espera (Triagem) */}
+          <div
+            onClick={() => {
+              const optFila = STATUS_ORCAMENTO.find((s) => s.value === 'fila') || STATUS_ORCAMENTO[0]
+              setFiltroStatus(optFila)
+              toast.info('Filtrando ordens Na Fila de Espera.')
+            }}
+            title="Clique para filtrar ordens na Fila de Espera"
+            className={`rounded-xl border p-2.5 shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+              filtroStatus.value === 'fila'
+                ? 'bg-[#101828] text-white border-[#101828]'
+                : 'bg-white text-[#101828] border-[#d0d5dd] hover:border-[#0284c7]'
+            }`}
+          >
+            <div>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                filtroStatus.value === 'fila' ? 'text-[#98a2b3]' : 'text-[#475467]'
+              }`}>
+                Na Fila
+              </span>
+              <span className="text-base font-black mt-0.5 block">
+                {metricasAbertas.naFila}
+              </span>
+            </div>
+            <div className={`w-7.5 h-7.5 rounded-lg flex items-center justify-center shrink-0 ${
+              filtroStatus.value === 'fila'
+                ? 'bg-[#0284c7] text-white'
+                : 'bg-zinc-100 text-[#101828]'
+            }`}>
+              <Clock size={16} weight="bold" />
             </div>
           </div>
 
           {/* Em Diagnóstico */}
-          <div className="bg-white rounded-xl border border-[#d0d5dd] p-2.5 shadow-2xs flex items-center justify-between">
+          <div
+            onClick={() => {
+              const optDiag = STATUS_ORCAMENTO.find((s) => s.value === 'em_diagnostico') || STATUS_ORCAMENTO[0]
+              setFiltroStatus(optDiag)
+              toast.info('Filtrando ordens Em Diagnóstico.')
+            }}
+            title="Clique para filtrar ordens em Diagnóstico"
+            className={`rounded-xl border p-2.5 shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+              filtroStatus.value === 'em_diagnostico'
+                ? 'bg-[#101828] text-white border-[#101828]'
+                : 'bg-white text-[#101828] border-[#d0d5dd] hover:border-[#0284c7]'
+            }`}
+          >
             <div>
-              <span className="text-[10px] font-bold text-[#667085] uppercase tracking-wider block">
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                filtroStatus.value === 'em_diagnostico' ? 'text-[#98a2b3]' : 'text-[#667085]'
+              }`}>
                 Em Diagnóstico
               </span>
-              <span className="text-base font-black text-[#101828] mt-0.5 block">
+              <span className="text-base font-black mt-0.5 block">
                 {metricasAbertas.emDiagnostico}
               </span>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#f2f4f7] flex items-center justify-center text-[#344054]">
-              <Wrench size={17} weight="bold" />
+            <div className={`w-7.5 h-7.5 rounded-lg flex items-center justify-center shrink-0 ${
+              filtroStatus.value === 'em_diagnostico'
+                ? 'bg-[#0284c7] text-white'
+                : 'bg-[#f2f4f7] text-[#344054]'
+            }`}>
+              <Wrench size={16} weight="bold" />
             </div>
           </div>
 
           {/* Aguardando Peças */}
-          <div className="bg-white rounded-xl border border-[#d0d5dd] p-2.5 shadow-2xs flex items-center justify-between">
+          <div
+            onClick={() => {
+              const optPecas = STATUS_ORCAMENTO.find((s) => s.value === 'aguardando_pecas') || STATUS_ORCAMENTO[0]
+              setFiltroStatus(optPecas)
+              toast.info('Filtrando ordens Aguardando Peças.')
+            }}
+            title="Clique para filtrar ordens Aguardando Peças"
+            className={`rounded-xl border p-2.5 shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+              filtroStatus.value === 'aguardando_pecas'
+                ? 'bg-[#101828] text-white border-[#101828]'
+                : 'bg-white text-[#101828] border-[#d0d5dd] hover:border-amber-400'
+            }`}
+          >
             <div>
-              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
-                Aguardando Peças
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                filtroStatus.value === 'aguardando_pecas' ? 'text-amber-300' : 'text-amber-700'
+              }`}>
+                Cotação Peças
               </span>
-              <span className="text-base font-black text-amber-900 mt-0.5 block">
+              <span className={`text-base font-black mt-0.5 block ${
+                filtroStatus.value === 'aguardando_pecas' ? 'text-white' : 'text-amber-900'
+              }`}>
                 {metricasAbertas.aguardandoPecas}
               </span>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-700">
-              <Package size={17} weight="bold" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-amber-50 flex items-center justify-center text-amber-700 shrink-0">
+              <Package size={16} weight="bold" />
+            </div>
+          </div>
+
+          {/* Terceirizado */}
+          <div
+            onClick={() => {
+              const optTerc = STATUS_ORCAMENTO.find((s) => s.value === 'terceirizado') || STATUS_ORCAMENTO[0]
+              setFiltroStatus(optTerc)
+              toast.info('Filtrando ordens Terceirizadas.')
+            }}
+            title="Clique para filtrar ordens Terceirizadas"
+            className={`rounded-xl border p-2.5 shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+              filtroStatus.value === 'terceirizado'
+                ? 'bg-[#101828] text-white border-[#101828]'
+                : 'bg-white text-[#101828] border-[#d0d5dd] hover:border-violet-400'
+            }`}
+          >
+            <div>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                filtroStatus.value === 'terceirizado' ? 'text-violet-300' : 'text-violet-700'
+              }`}>
+                Terceirizado
+              </span>
+              <span className={`text-base font-black mt-0.5 block ${
+                filtroStatus.value === 'terceirizado' ? 'text-white' : 'text-violet-900'
+              }`}>
+                {metricasAbertas.terceirizados}
+              </span>
+            </div>
+            <div className="w-7.5 h-7.5 rounded-lg bg-violet-50 flex items-center justify-center text-violet-700 shrink-0">
+              <Handshake size={16} weight="bold" />
             </div>
           </div>
 
           {/* Aguardando Aprovação */}
-          <div className="bg-white rounded-xl border border-[#d0d5dd] p-2.5 shadow-2xs flex items-center justify-between">
+          <div
+            onClick={() => {
+              const optAprov = STATUS_ORCAMENTO.find((s) => s.value === 'aguardando_aprovacao') || STATUS_ORCAMENTO[0]
+              setFiltroStatus(optAprov)
+              toast.info('Filtrando ordens Aguardando Aprovação.')
+            }}
+            title="Clique para filtrar ordens Aguardando Aprovação"
+            className={`rounded-xl border p-2.5 shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+              filtroStatus.value === 'aguardando_aprovacao'
+                ? 'bg-[#101828] text-white border-[#101828]'
+                : 'bg-white text-[#101828] border-[#d0d5dd] hover:border-[#0284c7]'
+            }`}
+          >
             <div>
-              <span className="text-[10px] font-bold text-[#0369a1] uppercase tracking-wider block">
-                Aguardando Aprovação
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                filtroStatus.value === 'aguardando_aprovacao' ? 'text-sky-300' : 'text-[#0369a1]'
+              }`}>
+                Aprovação
               </span>
-              <span className="text-base font-black text-[#0284c7] mt-0.5 block">
+              <span className={`text-base font-black mt-0.5 block ${
+                filtroStatus.value === 'aguardando_aprovacao' ? 'text-white' : 'text-[#0284c7]'
+              }`}>
                 {metricasAbertas.aguardandoAprovacao}
               </span>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#e0f2fe] flex items-center justify-center text-[#0284c7]">
-              <Clock size={17} weight="bold" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-[#e0f2fe] flex items-center justify-center text-[#0284c7] shrink-0">
+              <Clock size={16} weight="bold" />
             </div>
           </div>
 
           {/* Aprovado e Em Execução */}
-          <div className="bg-white rounded-xl border border-[#d0d5dd] p-2.5 shadow-2xs flex items-center justify-between">
+          <div
+            onClick={() => {
+              const optExec = STATUS_ORCAMENTO.find((s) => s.value === 'aprovado_execucao') || STATUS_ORCAMENTO[0]
+              setFiltroStatus(optExec)
+              toast.info('Filtrando ordens em Execução.')
+            }}
+            title="Clique para filtrar ordens em Execução"
+            className={`rounded-xl border p-2.5 shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+              filtroStatus.value === 'aprovado_execucao'
+                ? 'bg-[#101828] text-white border-[#101828]'
+                : 'bg-white text-[#101828] border-[#d0d5dd] hover:border-[#101828]'
+            }`}
+          >
             <div>
-              <span className="text-[10px] font-bold text-[#101828] uppercase tracking-wider block">
-                Aprovado / Execução
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                filtroStatus.value === 'aprovado_execucao' ? 'text-[#98a2b3]' : 'text-[#101828]'
+              }`}>
+                Em Execução
               </span>
-              <span className="text-base font-black text-[#101828] mt-0.5 block">
+              <span className="text-base font-black mt-0.5 block">
                 {metricasAbertas.aprovadosExecucao}
               </span>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#101828] flex items-center justify-center text-[#0284c7]">
-              <ShieldCheck size={17} weight="bold" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-[#101828] flex items-center justify-center text-[#0284c7] shrink-0">
+              <ShieldCheck size={16} weight="bold" />
             </div>
           </div>
 
           {/* Pronto para Retirada */}
-          <div className="bg-white rounded-xl border border-[#d0d5dd] p-2.5 shadow-2xs flex items-center justify-between">
+          <div
+            onClick={() => {
+              const optPronto = STATUS_ORCAMENTO.find((s) => s.value === 'pronto_retirada') || STATUS_ORCAMENTO[0]
+              setFiltroStatus(optPronto)
+              toast.info('Filtrando ordens Prontas para Retirada.')
+            }}
+            title="Clique para filtrar ordens Prontas para Retirada"
+            className={`rounded-xl border p-2.5 shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+              filtroStatus.value === 'pronto_retirada'
+                ? 'bg-[#0284c7] text-white border-[#0284c7]'
+                : 'bg-white text-[#101828] border-[#d0d5dd] hover:border-[#0284c7]'
+            }`}
+          >
             <div>
-              <span className="text-[10px] font-bold text-[#0369a1] uppercase tracking-wider block">
-                Pronto para Retirada
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                filtroStatus.value === 'pronto_retirada' ? 'text-white' : 'text-[#0369a1]'
+              }`}>
+                Pronto Retirada
               </span>
-              <span className="text-base font-black text-[#0369a1] mt-0.5 block">
+              <span className="text-base font-black mt-0.5 block">
                 {metricasAbertas.prontoRetirada}
               </span>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#e0f2fe] flex items-center justify-center text-[#0284c7]">
-              <Car size={17} weight="bold" />
+            <div className="w-7.5 h-7.5 rounded-lg bg-[#e0f2fe] flex items-center justify-center text-[#0284c7] shrink-0">
+              <Car size={16} weight="bold" />
             </div>
           </div>
         </section>
@@ -1187,8 +1396,12 @@ export function OrcamentoOSListPage() {
         {ordemSelecionada && (
           <PainelDetalhesOS
             os={ordemSelecionada}
+            initialSubTab={subAbaAlvoPainel}
             isArquivada={abaAtiva === 'arquivos'}
-            onClose={() => setOrdemSelecionada(null)}
+            onClose={() => {
+              setOrdemSelecionada(null)
+              setSubAbaAlvoPainel(null)
+            }}
             onAbrirImpressao={() => handleAbrirImpressao(ordemSelecionada)}
             onAtualizarStatus={handleAtualizarStatus}
             onFaturarNoPDV={handleFaturarNoPDV}
@@ -1196,6 +1409,12 @@ export function OrcamentoOSListPage() {
             onAtualizarFotoPeca={handleAtualizarFotoPeca}
             onReabrir={handleReabrirOrdem}
             onExcluir={handleExcluirOrdem}
+            onAbrirCotacao={handleAbrirCotacao}
+            onReportarItemAdicional={handleReportarItemAdicional}
+            onEditarOS={(os) => {
+              setDadosNovaOsPreenchidos(os)
+              setModalNovaOsAberto(true)
+            }}
           />
         )}
       </div>
@@ -1214,6 +1433,19 @@ export function OrcamentoOSListPage() {
         os={osParaChecklistSaida}
         onConfirmar={handleConfirmarChecklistSaida}
       />
+
+      {/* 6. Modal de Abertura/Edição de OS — formulario, igual aos demais cadastros do sistema */}
+      {modalNovaOsAberto && (
+        <NovaOrdemServicoModal
+          isOpen={modalNovaOsAberto}
+          dadosIniciais={dadosNovaOsPreenchidos}
+          onClose={() => {
+            setModalNovaOsAberto(false)
+            setDadosNovaOsPreenchidos(null)
+          }}
+          onSalvo={recarregarListas}
+        />
+      )}
     </div>
   )
 }

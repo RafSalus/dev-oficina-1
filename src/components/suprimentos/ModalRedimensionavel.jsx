@@ -13,36 +13,97 @@ export function ModalRedimensionavel({
   onClose,
   chaveStorage,
   storageKey,
-  larguraPadrao = 800,
-  alturaPadrao = 600,
-  larguraMinima = 480,
-  alturaMinima = 380,
-  titulo,
-  subtitulo,
+  larguraPadrao: larguraPadraoProp,
+  defaultWidth,
+  alturaPadrao: alturaPadraoProp,
+  defaultHeight,
+  larguraMinima: larguraMinimaProp,
+  minWidth,
+  alturaMinima: alturaMinimaProp,
+  minHeight,
+  larguraMaxima: larguraMaximaProp,
+  maxWidth,
+  alturaMaxima: alturaMaximaProp,
+  maxHeight,
+  titulo: tituloProp,
+  title,
+  subtitulo: subtituloProp,
+  subtitle,
   badge = 'Cadastro Oficial',
   icone: Icone,
   children,
   rodape,
 }) {
+  const larguraPadrao = larguraPadraoProp || defaultWidth || 800
+  const alturaPadrao = alturaPadraoProp || defaultHeight || 600
+  const larguraMinima = larguraMinimaProp || minWidth || 540
+  const alturaMinima = alturaMinimaProp || minHeight || 440
+  const larguraMaxima = larguraMaximaProp || maxWidth
+  const alturaMaxima = alturaMaximaProp || maxHeight
+  const titulo = tituloProp || title
+  const subtitulo = subtituloProp || subtitle
   const chavePersistencia = chaveStorage || storageKey || 'modal_redimensionavel_default'
+
+  const getMaxLargura = () => {
+    if (larguraMaxima) return larguraMaxima
+    if (typeof window !== 'undefined') {
+      return Math.min(1440, window.innerWidth - 24)
+    }
+    return 1440
+  }
+
+  const getMaxAltura = () => {
+    if (alturaMaxima) return alturaMaxima
+    if (typeof window !== 'undefined') {
+      return Math.min(960, window.innerHeight - 24)
+    }
+    return 960
+  }
 
   const carregarDimensoes = () => {
     if (typeof window === 'undefined') {
       return { largura: larguraPadrao, altura: alturaPadrao, posicaoX: 0, posicaoY: 0 }
     }
+    const maxW = getMaxLargura()
+    const maxH = getMaxAltura()
+    const minW = Math.min(larguraMinima, maxW)
+    const minH = Math.min(alturaMinima, maxH)
+
     try {
       const salvo = localStorage.getItem(chavePersistencia)
       if (salvo) {
         const parsed = JSON.parse(salvo)
+        const largura = Math.max(minW, Math.min(maxW, parsed.largura || larguraPadrao))
+        const altura = Math.max(minH, Math.min(maxH, parsed.altura || alturaPadrao))
+
+        const viewportH = window.innerHeight
+        const viewportW = window.innerWidth
+        const rawPosY = parsed.posicaoY || 0
+        const rawPosX = parsed.posicaoX || 0
+
+        // Clamp para garantir que o cabeçalho nunca abra fora da tela
+        const minY = 16 - (viewportH - altura) / 2
+        const maxY = (viewportH - 60) - (viewportH - altura) / 2
+        const clampedY = Math.max(minY, Math.min(maxY, rawPosY))
+
+        const minX = 80 - largura - (viewportW - largura) / 2
+        const maxX = (viewportW - 80) - (viewportW - largura) / 2
+        const clampedX = Math.max(minX, Math.min(maxX, rawPosX))
+
         return {
-          largura: Math.max(larguraMinima, Math.min(window.innerWidth - 40, parsed.largura || larguraPadrao)),
-          altura: Math.max(alturaMinima, Math.min(window.innerHeight - 40, parsed.altura || alturaPadrao)),
-          posicaoX: parsed.posicaoX || 0,
-          posicaoY: parsed.posicaoY || 0,
+          largura,
+          altura,
+          posicaoX: Math.round(clampedX),
+          posicaoY: Math.round(clampedY),
         }
       }
     } catch {}
-    return { largura: larguraPadrao, altura: alturaPadrao, posicaoX: 0, posicaoY: 0 }
+    return {
+      largura: Math.max(minW, Math.min(maxW, larguraPadrao)),
+      altura: Math.max(minH, Math.min(maxH, alturaPadrao)),
+      posicaoX: 0,
+      posicaoY: 0,
+    }
   }
 
   const [tamanho, setTamanho] = useState(carregarDimensoes)
@@ -50,8 +111,8 @@ export function ModalRedimensionavel({
   const [estaArrastando, setEstaArrastando] = useState(false)
   const [estaRedimensionando, setEstaRedimensionando] = useState(false)
 
-  const dragRef = useRef({ ativo: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0 })
-  const resizeRef = useRef({ ativo: false, direcao: null, startX: 0, startY: 0, startLargura: 0, startAltura: 0 })
+  const dragRef = useRef({ ativo: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0, largura: 0, altura: 0 })
+  const resizeRef = useRef({ ativo: false, direcao: null, startX: 0, startY: 0, startLargura: 0, startAltura: 0, startPosX: 0, startPosY: 0 })
 
   useEffect(() => {
     if (isOpen) {
@@ -65,7 +126,7 @@ export function ModalRedimensionavel({
     } catch {}
   }
 
-  // Arrasto pelo cabeçalho
+  // Arrasto pelo cabeçalho (com trava para o cabeçalho nunca sumir da tela)
   const handleMouseDownHeader = (e) => {
     if (maximizada) return
     if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return
@@ -77,6 +138,8 @@ export function ModalRedimensionavel({
       startY: e.clientY,
       startPosX: tamanho.posicaoX || 0,
       startPosY: tamanho.posicaoY || 0,
+      largura: tamanho.largura,
+      altura: tamanho.altura,
     }
     setEstaArrastando(true)
 
@@ -85,13 +148,30 @@ export function ModalRedimensionavel({
       const deltaX = moveEvent.clientX - dragRef.current.startX
       const deltaY = moveEvent.clientY - dragRef.current.startY
 
-      const novoX = dragRef.current.startPosX + deltaX
-      const novoY = dragRef.current.startPosY + deltaY
+      const rawX = dragRef.current.startPosX + deltaX
+      const rawY = dragRef.current.startPosY + deltaY
 
-      setTamanho((prev) => {
-        const atualizado = { ...prev, posicaoX: novoX, posicaoY: novoY }
-        return atualizado
-      })
+      const viewportW = window.innerWidth
+      const viewportH = window.innerHeight
+      const modalW = dragRef.current.largura
+      const modalH = dragRef.current.altura
+
+      // Trava de teto: top >= 16px (o cabeçalho nunca sobe além do topo)
+      const minY = 16 - (viewportH - modalH) / 2
+      // Trava de piso: mantém o cabeçalho sempre visível
+      const maxY = (viewportH - 60) - (viewportH - modalH) / 2
+      const clampedY = Math.max(minY, Math.min(maxY, rawY))
+
+      // Trava horizontal: cabeçalho permanece acessível
+      const minX = 80 - modalW - (viewportW - modalW) / 2
+      const maxX = (viewportW - 80) - (viewportW - modalW) / 2
+      const clampedX = Math.max(minX, Math.min(maxX, rawX))
+
+      setTamanho((prev) => ({
+        ...prev,
+        posicaoX: Math.round(clampedX),
+        posicaoY: Math.round(clampedY),
+      }))
     }
 
     const handleMouseUp = () => {
@@ -109,7 +189,7 @@ export function ModalRedimensionavel({
     window.addEventListener('mouseup', handleMouseUp)
   }
 
-  // Redimensionamento pelas bordas
+  // Redimensionamento pelas bordas com ANCORAGEM FIXA de topo e esquerda
   const handleMouseDownResize = (e, direcao) => {
     e.preventDefault()
     e.stopPropagation()
@@ -122,6 +202,8 @@ export function ModalRedimensionavel({
       startY: e.clientY,
       startLargura: tamanho.largura,
       startAltura: tamanho.altura,
+      startPosX: tamanho.posicaoX || 0,
+      startPosY: tamanho.posicaoY || 0,
     }
     setEstaRedimensionando(true)
 
@@ -130,19 +212,56 @@ export function ModalRedimensionavel({
       const deltaX = moveEvent.clientX - resizeRef.current.startX
       const deltaY = moveEvent.clientY - resizeRef.current.startY
 
-      setTamanho((prev) => {
-        let novaLargura = prev.largura
-        let novaAltura = prev.altura
+      const viewportW = window.innerWidth
+      const viewportH = window.innerHeight
+      const maxW = getMaxLargura()
+      const maxH = getMaxAltura()
 
-        if (direcao.includes('e')) {
-          novaLargura = Math.max(larguraMinima, Math.min(window.innerWidth - 30, resizeRef.current.startLargura + deltaX))
-        }
-        if (direcao.includes('s')) {
-          novaAltura = Math.max(alturaMinima, Math.min(window.innerHeight - 30, resizeRef.current.startAltura + deltaY))
-        }
+      const { startLargura, startAltura, startPosX, startPosY } = resizeRef.current
 
-        return { ...prev, largura: novaLargura, altura: novaAltura }
-      })
+      // Coordenadas visuais absolutas do topo e da esquerda no momento em que o redimensionamento começou
+      const startTop = (viewportH - startAltura) / 2 + startPosY
+      const startLeft = (viewportW - startLargura) / 2 + startPosX
+
+      let novaLargura = startLargura
+      let novaAltura = startAltura
+      let novaPosX = startPosX
+      let novaPosY = startPosY
+
+      // Redimensionamento vertical (borda inferior 's' ou canto 'se')
+      if (direcao.includes('s')) {
+        // Limita a altura para nunca ultrapassar a borda inferior da tela (margem de 16px)
+        const maxAlturaDisponivel = Math.min(maxH, Math.max(alturaMinima, viewportH - 16 - startTop))
+        const propostaAltura = startAltura + deltaY
+        novaAltura = Math.max(alturaMinima, Math.min(maxAlturaDisponivel, propostaAltura))
+
+        // Compensação de ancoragem:
+        // Como o flexbox divide a expansão nos dois sentidos (subindo delta/2 e descendo delta/2),
+        // ao somar (novaAltura - startAltura)/2 a posicaoY, anulamos o deslocamento do topo.
+        // O topo permanece EXATAMENTE no pixel startTop, e o cabeçalho não se move!
+        const deltaH = novaAltura - startAltura
+        novaPosY = startPosY + deltaH / 2
+      }
+
+      // Redimensionamento horizontal (borda direita 'e' ou canto 'se')
+      if (direcao.includes('e')) {
+        // Limita a largura para nunca ultrapassar a borda direita da tela (margem de 16px)
+        const maxLarguraDisponivel = Math.min(maxW, Math.max(larguraMinima, viewportW - 16 - startLeft))
+        const propostaLargura = startLargura + deltaX
+        novaLargura = Math.max(larguraMinima, Math.min(maxLarguraDisponivel, propostaLargura))
+
+        // Compensação de ancoragem horizontal: mantém a borda esquerda 100% ancorada
+        const deltaW = novaLargura - startLargura
+        novaPosX = startPosX + deltaW / 2
+      }
+
+      setTamanho((prev) => ({
+        ...prev,
+        largura: Math.round(novaLargura),
+        altura: Math.round(novaAltura),
+        posicaoX: Math.round(novaPosX),
+        posicaoY: Math.round(novaPosY),
+      }))
     }
 
     const handleMouseUp = () => {
@@ -185,9 +304,9 @@ export function ModalRedimensionavel({
             ? { width: '99vw', height: '98vh', transform: 'none' }
             : {
                 width: `${tamanho.largura}px`,
-                maxWidth: '98vw',
+                maxWidth: larguraMaxima ? `${larguraMaxima}px` : '98vw',
                 height: `${tamanho.altura}px`,
-                maxHeight: '96vh',
+                maxHeight: alturaMaxima ? `${alturaMaxima}px` : '96vh',
                 minWidth: `${larguraMinima}px`,
                 minHeight: `${alturaMinima}px`,
                 transform: `translate(${tamanho.posicaoX || 0}px, ${tamanho.posicaoY || 0}px)`,
@@ -275,14 +394,19 @@ export function ModalRedimensionavel({
           </div>
         </div>
 
-        {/* Corpo rolável do formulário sem barra de rolagem visual */}
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-5 sm:p-6 bg-[#f8fafc] flex flex-col">
+        {/* Corpo rolável do formulário sem barra de rolagem visual.
+            `@container` habilita variantes @sm/@md/@lg nos formulários filhos, respondendo
+            à largura real da janela redimensionável (arrastada pelo usuário) em vez da
+            largura da viewport do navegador — que é o que as variantes sm:/md:/lg: do
+            Tailwind usariam, e por isso ficavam erradas ao encolher o modal. */}
+        <div className="@container flex-1 min-h-0 overflow-y-auto no-scrollbar p-6 bg-[#f8fafc] flex flex-col">
           {children}
         </div>
 
-        {/* Rodapé se fornecido */}
+        {/* Rodapé se fornecido — tambem precisa de @container, pois e um irmao do corpo
+            rolavel, nao um descendente dele */}
         {rodape && (
-          <div className="px-5 py-3.5 border-t border-[#f2f4f7] bg-white flex items-center justify-between shrink-0">
+          <div className="@container px-5 py-3.5 border-t border-[#f2f4f7] bg-white flex items-center justify-between shrink-0">
             {rodape}
           </div>
         )}

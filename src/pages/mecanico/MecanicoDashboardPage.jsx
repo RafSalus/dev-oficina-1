@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import Select from 'react-select'
 import {
   Wrench,
   ClipboardText,
@@ -33,19 +34,28 @@ import {
   Check,
   X,
   CaretRight,
+  HandGrabbing,
 } from '@phosphor-icons/react'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import { useMecanico } from '../../context/MecanicoContext'
 import {
   obterOrdensAbertas,
   atualizarStatusOrdem,
   salvarOrdemAberta,
+  assumirOrdemSemMecanico,
+  adicionarItemAdicional,
   STATUS_ORCAMENTO,
 } from '../dashboard/orcamento/mockOrdensAbertas'
+import { SEQUENCIA_STATUS, podeTransicionarPara, motivoBloqueioTransicao } from '../dashboard/orcamento/statusTransicao'
 import { CATALOGO_PECAS_ESTOQUE, CATEGORIAS_PECAS } from '../../constants/catalogoPecasEstoque'
 import { CATALOGO_SERVICOS_TABELA } from '../../constants/catalogoPecasServicos'
 import { MOCK_CLIENTES_VEICULOS } from '../../constants/mockClientesVeiculos'
 import { CATEGORIAS_PROBLEMAS } from '../../constants/problemasDiagnostico'
-import { ITENS_CHECKLIST_ENTRADA } from '../../constants/checklistItems'
+import { ITENS_CHECKLIST_ENTRADA, checklistCompleto } from '../../constants/checklistItems'
+import { customSelectStyles } from '../../components/suprimentos/customSelectStyles'
+import { MobileMecanicoHomeScreen } from '../../components/mecanico/mobile/MobileMecanicoHomeScreen'
+import { MobileMecanicoOrdensPage } from '../../components/mecanico/mobile/MobileMecanicoOrdensPage'
+import { MobileMecanicoComingSoon } from '../../components/mecanico/mobile/MobileMecanicoComingSoon'
 import { toast } from 'sonner'
 
 export function MecanicoDashboardPage() {
@@ -61,6 +71,7 @@ export function MecanicoDashboardPage() {
 
   const location = useLocation()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   // Determina a aba ativa baseada na rota da URL
   const activeTabFromUrl = useMemo(() => {
@@ -111,6 +122,25 @@ export function MecanicoDashboardPage() {
   const ordensDoMecanico = useMemo(() => {
     return ordens.filter((o) => o.mecanicoNome === mecanicoAtivo.nome)
   }, [ordens, mecanicoAtivo.nome])
+
+  // OS na Fila sem nenhum mecânico atribuído — qualquer mecânico pode "puxar" uma delas para
+  // si e assumir o diagnóstico, sem depender da secretária escalar previamente.
+  const ordensDisponiveis = useMemo(() => {
+    return ordens.filter((o) => o.status === 'fila' && !(o.mecanicoId || (o.mecanicoNome && o.mecanicoNome !== 'Não atribuído')))
+  }, [ordens])
+
+  // Assume uma OS sem mecânico para o mecânico ativo
+  const handlePuxarOrdem = (numeroOS) => {
+    const resultado = assumirOrdemSemMecanico(numeroOS, mecanicoAtivo.value, mecanicoAtivo.nome)
+    if (resultado.erro) {
+      toast.warning(resultado.erro)
+      return
+    }
+    recarregarOrdens()
+    setOsSelecionadaId(numeroOS)
+    setActiveTab('dashboard')
+    toast.success(`OS #${numeroOS} atribuída a você! Preencha a vistoria e o diagnóstico para avançar.`)
+  }
 
   // Métricas do Mecânico
   const metricasMecanico = useMemo(() => {
@@ -279,38 +309,26 @@ export function MecanicoDashboardPage() {
   // =========================================================================
   // SUB-MÓDULO: CHECKLIST DA OS
   // =========================================================================
-  const [checklistLocal, setChecklistLocal] = useState(() => {
-    return (
-      osAtiva?.checklistEntrada || {
-        esguicho: { ok: true, obs: '' },
-        vidros: { ok: true, obs: '' },
-        oleoGeral: { ok: true, obs: '' },
-        agua: { ok: false, obs: 'Nível baixo com vazamento' },
-        bateria: { ok: true, obs: '' },
-        rodas: { ok: true, obs: '' },
-        freioMaoManopla: { ok: true, obs: '' },
-        lampadasGeral: { ok: true, obs: '' },
-      }
-    )
-  })
+  // Mesmo shape usado em toda a vistoria de entrada do sistema (OsFormularioAbertura,
+  // checklistCompleto, VistoriaEntradaClientePage): { status: 'conforme'|'nao_conforme'|'isento', obs }
+  // — sem isso, o checklist preenchido aqui pelo mecânico nunca é reconhecido como completo
+  // pelo gate de Diagnóstico (motivoImpedimentoDiagnostico).
+  const [checklistLocal, setChecklistLocal] = useState(() => osAtiva?.checklistEntrada || {})
 
   useEffect(() => {
-    if (osAtiva?.checklistEntrada) {
-      setChecklistLocal(osAtiva.checklistEntrada)
-    }
+    setChecklistLocal(osAtiva?.checklistEntrada || {})
   }, [osAtiva?.numeroOS])
 
-  const toggleChecklistItem = (chave) => {
+  const handleStatusItemChecklist = (itemId, status) => {
     setChecklistLocal((prev) => {
-      const atual = prev[chave]?.ok ?? true
-      return {
-        ...prev,
-        [chave]: {
-          ...(prev[chave] || {}),
-          ok: !atual,
-        },
-      }
+      const atual = prev[itemId] || { status: '', obs: '' }
+      const novoStatus = atual.status === status ? '' : status
+      return { ...prev, [itemId]: { ...atual, status: novoStatus } }
     })
+  }
+
+  const handleObsItemChecklist = (itemId, obs) => {
+    setChecklistLocal((prev) => ({ ...prev, [itemId]: { ...(prev[itemId] || { status: '' }), obs } }))
   }
 
   const handleSalvarChecklist = () => {
@@ -321,6 +339,42 @@ export function MecanicoDashboardPage() {
     })
     recarregarOrdens()
     toast.success('Checklist veicular atualizado na Ordem de Serviço!')
+  }
+
+  // =========================================================================
+  // SUB-MÓDULO: ITEM ADICIONAL ENCONTRADO NA EXECUÇÃO
+  // =========================================================================
+  const [itemAdicionalDescricao, setItemAdicionalDescricao] = useState('')
+  const [itemAdicionalClassificacao, setItemAdicionalClassificacao] = useState('seguranca')
+  const [itemAdicionalValor, setItemAdicionalValor] = useState('')
+
+  const handleReportarItemAdicional = () => {
+    if (!osAtiva) return
+    const descricao = itemAdicionalDescricao.trim()
+    if (!descricao) {
+      toast.error('Descreva o item encontrado durante a execução.')
+      return
+    }
+    adicionarItemAdicional(osAtiva.numeroOS, {
+      descricao,
+      categoria: 'peca',
+      classificacao: itemAdicionalClassificacao,
+      valorEstimado: parseFloat(itemAdicionalValor) || 0,
+      criadoPor: { tipo: 'mecanico', nome: mecanicoAtivo.nome },
+    })
+    recarregarOrdens()
+
+    const foneLimpo = (osAtiva.telefone || '').replace(/\D/g, '')
+    const urgencia = itemAdicionalClassificacao === 'seguranca' ? 'segurança' : 'melhoria'
+    const linkAprovacao = `${window.location.origin}/aprovacao/${osAtiva.numeroOS}`
+    const msg = `Olá, *${osAtiva.cliente}*! Aqui é da *Mecânica Gabriel*.\n\nDurante a execução da OS *#${osAtiva.numeroOS}* identificamos um item adicional de *${urgencia}*:\n"${descricao}"\n\nSua aprovação é necessária. Confira e responda pelo link:\n👉 ${linkAprovacao}`
+    if (foneLimpo) {
+      window.open(`https://api.whatsapp.com/send?phone=55${foneLimpo}&text=${encodeURIComponent(msg)}`, '_blank')
+    }
+
+    toast.success('Item adicional registrado e cliente notificado!')
+    setItemAdicionalDescricao('')
+    setItemAdicionalValor('')
   }
 
   // =========================================================================
@@ -458,6 +512,16 @@ export function MecanicoDashboardPage() {
     },
   ]
 
+  // No mobile a experiência é outra (telas dedicadas, sem esta bancada em abas) — mesma
+  // decisão de roteamento que já existia em MecanicoModulePlaceholder.jsx: a home vai para
+  // MobileMecanicoHomeScreen, as demais rotas ainda caem no "Em breve" mobile.
+  if (isMobile) {
+    const isHome = location.pathname === '/mecanico/dashboard' || location.pathname === '/mecanico'
+    if (isHome) return <MobileMecanicoHomeScreen />
+    if (location.pathname === '/mecanico/ordens-servico') return <MobileMecanicoOrdensPage />
+    return <MobileMecanicoComingSoon />
+  }
+
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden select-text">
       {/* 1. Barra de Resumo e Métricas da Bancada do Mecânico */}
@@ -576,36 +640,50 @@ export function MecanicoDashboardPage() {
           </div>
         </div>
 
-        {/* Seletor de OS Atribuída */}
+        {/* Seletor de OS Atribuída — só entre as OS já assumidas por este mecânico */}
         <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-[#475467] hidden sm:inline">Mudar OS Ativa:</label>
-          <select
-            value={osSelecionadaId}
-            onChange={(e) => setOsSelecionadaId(e.target.value)}
-            className="h-8.5 px-3 bg-[#f8fafc] border border-[#d0d5dd] rounded-xl text-xs font-bold text-[#101828] cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-[#0284c7]"
-          >
-            {ordens.map((o) => (
-              <option key={o.numeroOS} value={o.numeroOS}>
-                #{o.numeroOS} - {o.marcaModelo} ({o.placa}) - {o.cliente.split(' ')[0]}
-              </option>
-            ))}
-          </select>
+          <label className="text-xs font-bold text-[#475467] hidden sm:inline shrink-0">Mudar OS Ativa:</label>
+          <div className="w-64">
+            <Select
+              value={
+                ordensDoMecanico.find((o) => o.numeroOS === osSelecionadaId)
+                  ? {
+                      value: osSelecionadaId,
+                      label: `#${osAtiva?.numeroOS} - ${osAtiva?.marcaModelo} (${osAtiva?.placa})`,
+                    }
+                  : null
+              }
+              onChange={(opt) => opt && setOsSelecionadaId(opt.value)}
+              options={ordensDoMecanico.map((o) => ({
+                value: o.numeroOS,
+                label: `#${o.numeroOS} - ${o.marcaModelo} (${o.placa}) - ${o.cliente.split(' ')[0]}`,
+              }))}
+              placeholder="Nenhuma OS atribuída a você"
+              isSearchable={false}
+              styles={customSelectStyles}
+            />
+          </div>
 
-          {/* Botão para atualizar status rápido */}
+          {/* Botão para atualizar status rápido, respeitando a mesma sequência e os mesmos
+              gates de bloqueio usados no Kanban de OS (secretaria/gestão) */}
           <button
             type="button"
             onClick={() => {
-              const proximoStatus =
-                osAtiva?.status === 'em_diagnostico'
-                  ? 'aguardando_pecas'
-                  : osAtiva?.status === 'aguardando_pecas'
-                  ? 'aprovado_execucao'
-                  : osAtiva?.status === 'aprovado_execucao'
-                  ? 'pronto_retirada'
-                  : 'em_diagnostico'
-              handleAtualizarStatus(osAtiva?.numeroOS, proximoStatus)
+              if (!osAtiva) return
+              const indiceAtual = SEQUENCIA_STATUS.indexOf(osAtiva.status)
+              const proximoStatus = SEQUENCIA_STATUS[indiceAtual + 1]
+              if (!proximoStatus) {
+                toast.info('Esta OS já está na última etapa do fluxo.')
+                return
+              }
+              const motivo = motivoBloqueioTransicao(osAtiva, proximoStatus)
+              if (motivo) {
+                toast.warning(motivo)
+                return
+              }
+              handleAtualizarStatus(osAtiva.numeroOS, proximoStatus)
             }}
-            className="h-8.5 px-3 bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
+            className="h-8.5 px-3 bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all shrink-0"
             title="Avançar status da OS para a próxima etapa"
           >
             <CheckCircle size={15} weight="bold" />
@@ -718,6 +796,63 @@ export function MecanicoDashboardPage() {
                       {osAtiva?.laudoTecnico || 'Aguardando preenchimento do laudo na bancada.'}
                     </p>
                   </div>
+
+                  {/* Item Adicional Encontrado na Execução — só faz sentido com a OS já em
+                      execução (aprovado_execucao); itens de segurança bloqueiam o avanço da
+                      OS até o cliente responder (motivoImpedimentoAvancoPorItemAdicional) */}
+                  {osAtiva?.status === 'aprovado_execucao' && (
+                    <div className="bg-white border border-[#d0d5dd] rounded-xl p-3 text-xs mt-3 space-y-2">
+                      <span className="text-[#667085] font-bold uppercase text-[10px] flex items-center gap-1.5">
+                        <Warning size={13} weight="bold" className="text-[#0284c7]" />
+                        Encontrou algo novo na execução?
+                      </span>
+                      <input
+                        type="text"
+                        value={itemAdicionalDescricao}
+                        onChange={(e) => setItemAdicionalDescricao(e.target.value)}
+                        placeholder="Ex: Coxim do motor trincado durante a desmontagem"
+                        className="w-full h-9 px-2.5 rounded-lg border border-[#d0d5dd] text-xs font-semibold text-[#101828] bg-[#f8fafc] focus:outline-hidden focus:ring-2 focus:ring-[#0284c7]"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={itemAdicionalValor}
+                          onChange={(e) => setItemAdicionalValor(e.target.value)}
+                          placeholder="Valor estimado R$"
+                          className="h-8.5 px-2.5 rounded-lg border border-[#d0d5dd] text-xs font-bold text-[#101828] bg-[#f8fafc] focus:outline-hidden focus:ring-2 focus:ring-[#0284c7]"
+                        />
+                        <div className="grid grid-cols-2 gap-0.5 bg-[#f8fafc] p-0.5 rounded-lg border border-[#d0d5dd]">
+                          <button
+                            type="button"
+                            onClick={() => setItemAdicionalClassificacao('seguranca')}
+                            className={`h-7.5 rounded text-[10px] font-bold cursor-pointer ${
+                              itemAdicionalClassificacao === 'seguranca' ? 'bg-rose-600 text-white' : 'text-[#667085]'
+                            }`}
+                          >
+                            Segurança
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setItemAdicionalClassificacao('opcional')}
+                            className={`h-7.5 rounded text-[10px] font-bold cursor-pointer ${
+                              itemAdicionalClassificacao === 'opcional' ? 'bg-[#101828] text-white' : 'text-[#667085]'
+                            }`}
+                          >
+                            Opcional
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleReportarItemAdicional}
+                        className="w-full h-9 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold cursor-pointer active:scale-95 transition-all"
+                      >
+                        Reportar e Notificar Cliente
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Peças e Serviços da OS */}
@@ -907,6 +1042,49 @@ export function MecanicoDashboardPage() {
           {/* ========================================================================= */}
           {activeTab === 'ordens-servico' && (
             <div className="space-y-4">
+              {/* Fila Disponível para Atendimento — OS sem mecânico atribuído que qualquer
+                  mecânico pode puxar para si (D4: só funciona em OS ainda sem atribuição) */}
+              {ordensDisponiveis.length > 0 && (
+                <div className="border border-[#bae6fd] rounded-2xl overflow-hidden divide-y divide-[#e0f2fe] bg-[#f0f9ff]">
+                  <div className="px-4 py-2.5 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#0369a1] flex items-center gap-1.5">
+                        <HandGrabbing size={15} weight="bold" />
+                        Fila Disponível para Atendimento
+                      </h3>
+                      <p className="text-xs text-[#0369a1]/80">
+                        OS na Fila sem mecânico escalado — puxe uma delas para começar a vistoria e o diagnóstico.
+                      </p>
+                    </div>
+                  </div>
+                  {ordensDisponiveis.map((os) => (
+                    <div key={os.numeroOS} className="px-4 py-3 flex items-center justify-between gap-3 bg-white text-xs">
+                      <div className="min-w-0 flex-1 grid grid-cols-3 gap-3">
+                        <div className="min-w-0">
+                          <span className="font-mono font-black text-sm text-[#101828] block">#{os.numeroOS}</span>
+                          <span className="font-mono text-[11px] text-[#0284c7] font-bold">{os.placa}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-bold text-[#101828] block truncate">{os.marcaModelo}</span>
+                          <span className="text-[11px] text-[#667085] block truncate">{os.cliente}</span>
+                        </div>
+                        <p className="text-[11px] text-[#475467] truncate" title={os.relatoCliente}>
+                          {os.relatoCliente || 'Sem relato'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handlePuxarOrdem(os.numeroOS)}
+                        className="px-3 py-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold rounded-xl shadow-2xs cursor-pointer flex items-center gap-1.5 shrink-0"
+                      >
+                        <HandGrabbing size={14} weight="bold" />
+                        Puxar OS
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <h3 className="text-sm font-extrabold text-[#101828]">
@@ -956,17 +1134,26 @@ export function MecanicoDashboardPage() {
                         </p>
                       </div>
                       <div className="col-span-2">
-                        <select
-                          value={os.status}
-                          onChange={(e) => handleAtualizarStatus(os.numeroOS, e.target.value)}
-                          className="w-full h-8 px-2 bg-white border border-[#d0d5dd] rounded-lg text-xs font-bold text-[#101828] cursor-pointer focus:ring-1 focus:ring-[#0284c7]"
-                        >
-                          {STATUS_ORCAMENTO.filter((s) => s.value !== 'todos').map((s) => (
-                            <option key={s.value} value={s.value}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
+                        <Select
+                          value={STATUS_ORCAMENTO.find((s) => s.value === os.status) || null}
+                          onChange={(opt) => {
+                            if (!opt || opt.value === os.status) return
+                            if (!podeTransicionarPara(os.status, opt.value)) {
+                              toast.warning('Só é possível mover a OS para a etapa anterior ou a etapa seguinte, sem pular colunas.')
+                              return
+                            }
+                            const motivo = motivoBloqueioTransicao(os, opt.value)
+                            if (motivo) {
+                              toast.warning(motivo)
+                              return
+                            }
+                            handleAtualizarStatus(os.numeroOS, opt.value)
+                          }}
+                          options={SEQUENCIA_STATUS.map((s) => STATUS_ORCAMENTO.find((opt) => opt.value === s)).filter(Boolean)}
+                          isOptionDisabled={(opt) => !podeTransicionarPara(os.status, opt.value)}
+                          isSearchable={false}
+                          styles={customSelectStyles}
+                        />
                       </div>
                       <div className="col-span-2 flex items-center justify-end gap-2">
                         <button
@@ -1119,13 +1306,18 @@ export function MecanicoDashboardPage() {
           {/* ========================================================================= */}
           {activeTab === 'checklist' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h3 className="text-sm font-extrabold text-[#101828]">
+                  <h3 className="text-sm font-extrabold text-[#101828] flex items-center gap-2">
                     Checklist de Entrada e Inspeção Visual - OS #{osAtiva?.numeroOS}
+                    {checklistCompleto(checklistLocal, ITENS_CHECKLIST_ENTRADA) ? (
+                      <span className="px-2 py-0.5 rounded-full bg-[#101828] text-white text-[9.5px] font-bold">Concluído</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-[#fffaeb] text-[#b54708] border border-[#fedf89] text-[9.5px] font-bold">Pendente</span>
+                    )}
                   </h3>
                   <p className="text-xs text-[#667085]">
-                    Clique em cada item para alternar entre Conforme (OK) e Avariado / Necessita Reparo.
+                    Pode ser preenchido pela secretaria na abertura da OS ou por você aqui, a qualquer momento antes do Diagnóstico.
                   </p>
                 </div>
                 <button
@@ -1138,30 +1330,66 @@ export function MecanicoDashboardPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {ITENS_CHECKLIST_ENTRADA.map((item) => {
-                  const isOk = checklistLocal[item.id]?.ok ?? true
+                  const itemState = checklistLocal[item.id] || { status: '', obs: '' }
+                  const isConforme = itemState.status === 'conforme'
+                  const isNaoConforme = itemState.status === 'nao_conforme'
+                  const isIsento = itemState.status === 'isento'
                   return (
                     <div
                       key={item.id}
-                      onClick={() => toggleChecklistItem(item.id)}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between select-none ${
-                        isOk
-                          ? 'bg-[#f8fafc] border-[#e4e7ec] hover:border-gray-400'
-                          : 'bg-rose-50 border-rose-300 text-rose-900'
+                      className={`p-2.5 rounded-xl border transition-all ${
+                        isConforme
+                          ? 'bg-[#f0f9ff]/60 border-[#bae6fd]'
+                          : isNaoConforme
+                          ? 'bg-rose-50/60 border-rose-200'
+                          : isIsento
+                          ? 'bg-[#f8fafc] border-[#e4e7ec]'
+                          : 'bg-white border-[#e4e7ec] hover:border-[#d0d5dd]'
                       }`}
                     >
-                      <div className="min-w-0 pr-2">
-                        <span className="font-bold text-xs block">{item.label}</span>
-                        <span className="text-[10px] opacity-75">{item.desc}</span>
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-[11px] font-bold text-[#101828] truncate" title={item.desc}>
+                          {item.label}
+                        </p>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleStatusItemChecklist(item.id, 'conforme')}
+                            className={`h-6 px-1.5 rounded text-[9.5px] font-bold cursor-pointer ${
+                              isConforme ? 'bg-[#0284c7] text-white' : 'bg-white text-[#475467] border border-[#d0d5dd] hover:bg-[#f0f9ff]'
+                            }`}
+                          >
+                            OK
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStatusItemChecklist(item.id, 'nao_conforme')}
+                            className={`h-6 px-1.5 rounded text-[9.5px] font-bold cursor-pointer ${
+                              isNaoConforme ? 'bg-rose-600 text-white' : 'bg-white text-[#475467] border border-[#d0d5dd] hover:bg-rose-50'
+                            }`}
+                          >
+                            Não
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStatusItemChecklist(item.id, 'isento')}
+                            className={`h-6 px-1 rounded text-[9.5px] font-bold cursor-pointer ${
+                              isIsento ? 'bg-[#101828] text-white' : 'bg-white text-[#667085] border border-[#d0d5dd] hover:bg-[#f2f4f7]'
+                            }`}
+                          >
+                            N/A
+                          </button>
+                        </div>
                       </div>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-black uppercase shrink-0 ${
-                          isOk ? 'bg-[#101828] text-white' : 'bg-rose-600 text-white'
-                        }`}
-                      >
-                        {isOk ? 'OK' : 'REPARO'}
-                      </span>
+                      <input
+                        type="text"
+                        value={itemState.obs || ''}
+                        onChange={(e) => handleObsItemChecklist(item.id, e.target.value)}
+                        placeholder="Observação (opcional)..."
+                        className="mt-1 w-full h-6 px-1.5 text-[10px] rounded border border-[#e4e7ec] bg-white focus:outline-none focus:ring-1 focus:ring-[#0284c7] font-medium text-[#344054]"
+                      />
                     </div>
                   )
                 })}

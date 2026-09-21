@@ -101,7 +101,11 @@ export function ServicoModalForm({ isOpen, onClose, onSalvar, servicoParaEditar 
       onClose={onClose}
       chaveStorage="dev_oficina_modal_servico_dims"
       larguraPadrao={840}
-      alturaPadrao={620}
+      alturaPadrao={640}
+      larguraMinima={580}
+      alturaMinima={460}
+      larguraMaxima={1200}
+      alturaMaxima={880}
       titulo={servicoParaEditar ? 'Editar Serviço de Mão de Obra' : 'Novo Serviço de Mão de Obra'}
       subtitulo="Cadastro técnico de serviços da oficina com parametrização fiscal para NFS-e"
       icone={Wrench}

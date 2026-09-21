@@ -117,10 +117,12 @@ export function ModalFechamentoPagamento({
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="dev_oficina_pdv_modal_pagamento"
-      larguraPadrao={620}
+      larguraPadrao={640}
       alturaPadrao={640}
-      larguraMinima={480}
-      alturaMinima={480}
+      larguraMinima={520}
+      alturaMinima={460}
+      larguraMaxima={960}
+      alturaMaxima={820}
       titulo="Fechamento da Venda"
       subtitulo={numeroOSVinculada ? `Vinculada à OS #${numeroOSVinculada}` : 'Venda avulsa de balcão'}
       badge="PDV"

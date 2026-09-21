@@ -173,10 +173,12 @@ export function ModalRegistrarPreventiva({
       isOpen={isOpen}
       onClose={onClose}
       chaveStorage="modal_redimensionavel_registrar_preventiva"
-      larguraPadrao={680}
-      alturaPadrao={580}
-      larguraMinima={500}
-      alturaMinima={420}
+      larguraPadrao={740}
+      alturaPadrao={600}
+      larguraMinima={560}
+      alturaMinima={440}
+      larguraMaxima={1100}
+      alturaMaxima={820}
       titulo="Registrar Manutenção Preventiva e Revisão"
       subtitulo="Lançamento técnico de substituição, troca periódica e garantia"
       badge="Saúde do Veículo"

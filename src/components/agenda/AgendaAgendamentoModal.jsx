@@ -290,11 +290,13 @@ export function AgendaAgendamentoModal({
     <ModalRedimensionavel
       isOpen={isOpen}
       onClose={onClose}
-      title={agendamentoParaEditar ? 'Editar Agendamento de Atendimento' : 'Novo Agendamento de Atendimento'}
-      defaultWidth={720}
-      defaultHeight={640}
-      minWidth={550}
-      minHeight={500}
+      titulo={agendamentoParaEditar ? 'Editar Agendamento de Atendimento' : 'Novo Agendamento de Atendimento'}
+      larguraPadrao={840}
+      alturaPadrao={680}
+      larguraMinima={600}
+      alturaMinima={480}
+      larguraMaxima={1200}
+      alturaMaxima={880}
       storageKey="modal_agenda_agendamento_cliente"
     >
       <div className="flex flex-col h-full bg-white text-slate-800">

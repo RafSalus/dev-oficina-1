@@ -6,10 +6,6 @@ import {
   SignOut,
   GearSix,
   CheckCircle,
-  Plus,
-  ArrowLeft,
-  FloppyDisk,
-  X,
   PushPin,
   PushPinSlash,
   CaretRight,
@@ -33,7 +29,6 @@ export function DashboardHeader({ isPinned = false, onTogglePin }) {
   const headerRef = useRef(null)
   const leaveTimeoutRef = useRef(null)
 
-  const isOsNovaPage = location.pathname === '/gestao/ordem-de-servico/nova'
   const contextoTela = useMemo(
     () => obterContextoDeTela(location.pathname, MENU_CATEGORIES, '/gestao'),
     [location.pathname]
@@ -172,37 +167,8 @@ export function DashboardHeader({ isPinned = false, onTogglePin }) {
         )}
       </div>
 
-      {/* Lado Direito: Ações Contextuais Dinâmicas + Notificações e Perfil */}
+      {/* Lado Direito: Notificações e Perfil */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Botões Contextuais Dinâmicos: Voltar e Salvar OS (na tela de abertura) */}
-        {isOsNovaPage && (
-          <div className="flex items-center gap-2 sm:gap-2.5 animate-in fade-in duration-200">
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  localStorage.removeItem('dev_oficina_draft_os')
-                } catch (e) {}
-                toast.info('Abertura de Ordem de Serviço cancelada.')
-                navigate('/gestao/ordem-de-servico')
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white hover:bg-[#fef3f2] text-[#475467] hover:text-[#b42318] border border-[#d0d5dd] hover:border-[#fecdca] text-xs font-semibold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
-            >
-              <X size={14} weight="bold" />
-              <span>Cancelar</span>
-            </button>
-            <button
-              type="submit"
-              form="form-nova-os"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-black hover:bg-zinc-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all duration-150 active:scale-95 cursor-pointer"
-            >
-              <FloppyDisk size={14} weight="bold" />
-              <span>Salvar OS</span>
-            </button>
-            <div className="h-5 w-px bg-[#e4e7ec]" />
-          </div>
-        )}
-
         {/* Botão de Fixar / Desafixar Cabeçalho e Link para Portal do Mecânico */}
         <div className="flex items-center gap-2">
           {onTogglePin && (

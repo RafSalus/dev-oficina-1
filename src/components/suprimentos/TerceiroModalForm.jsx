@@ -219,8 +219,12 @@ export function TerceiroModalForm({ isOpen, onClose, onSalvar, terceiroParaEdita
       titulo={terceiroParaEditar ? 'Editar Fornecedor' : 'Novo Fornecedor'}
       subtitulo="Cadastro de empresas fornecedoras de autopeças, componentes e parceiros de serviços externos homologados"
       icone={Buildings}
-      larguraPadrao={840}
+      larguraPadrao={860}
       alturaPadrao={720}
+      larguraMinima={600}
+      alturaMinima={480}
+      larguraMaxima={1200}
+      alturaMaxima={880}
       storageKey="fornecedor_modal"
     >
       <form onSubmit={handleSubmit} className="space-y-6">

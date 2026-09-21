@@ -28,6 +28,7 @@ import { TerceiroModalForm } from '../../../components/suprimentos/TerceiroModal
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 import { useIsMobile } from '../../../hooks/useIsMobile'
 import { MobileTerceirosPage } from './mobile/MobileTerceirosPage'
+import { ModalConfirmacao } from '../../../components/ModalConfirmacao'
 
 export function TerceirosPage() {
   const isMobile = useIsMobile()
@@ -39,6 +40,7 @@ export function TerceirosPage() {
 
   const [modalAberto, setModalAberto] = useState(false)
   const [fornecedorEmEdicao, setFornecedorEmEdicao] = useState(null)
+  const [fornecedorParaExcluir, setFornecedorParaExcluir] = useState(null)
 
   // Carrega do localStorage ao montar
   useEffect(() => {
@@ -165,22 +167,21 @@ export function TerceirosPage() {
     salvarTerceirosCadastrados(novaLista)
   }
 
-  // Excluir fornecedor
+  // Excluir fornecedor via diálogo na frente da tela
   const handleExcluirFornecedor = (id, nome) => {
-    toast(`Excluir o fornecedor "${nome}"?`, {
-      description: 'Esta operação removerá o fornecedor homologado do cadastro.',
-      action: {
-        label: 'Confirmar',
-        onClick: () => {
-          setFornecedores((prev) => {
-            const novaLista = prev.filter((t) => t.id !== id)
-            salvarTerceirosCadastrados(novaLista)
-            return novaLista
-          })
-          toast.success(`Fornecedor "${nome}" excluído.`)
-        },
-      },
+    setFornecedorParaExcluir({ id, nome })
+  }
+
+  const confirmarExclusaoFornecedor = () => {
+    if (!fornecedorParaExcluir) return
+    const { id, nome } = fornecedorParaExcluir
+    setFornecedores((prev) => {
+      const novaLista = prev.filter((t) => t.id !== id)
+      salvarTerceirosCadastrados(novaLista)
+      return novaLista
     })
+    setFornecedorParaExcluir(null)
+    toast.success(`Fornecedor "${nome}" excluído com sucesso.`)
   }
 
   const opcoesFiltroCategoria = [
@@ -526,6 +527,19 @@ export function TerceirosPage() {
         onClose={() => setModalAberto(false)}
         onSalvar={handleSalvarFornecedor}
         terceiroParaEditar={fornecedorEmEdicao}
+      />
+
+      {/* Diálogo de Confirmação de Exclusão na Frente da Tela */}
+      <ModalConfirmacao
+        isOpen={Boolean(fornecedorParaExcluir)}
+        onClose={() => setFornecedorParaExcluir(null)}
+        onConfirm={confirmarExclusaoFornecedor}
+        titulo="Excluir este fornecedor?"
+        descricao="Esta operação removerá permanentemente o fornecedor ou terceiro homologado do cadastro."
+        itemDestaque={fornecedorParaExcluir ? `Fornecedor: ${fornecedorParaExcluir.nome}` : ''}
+        textoConfirmar="Sim, Excluir"
+        textoCancelar="Cancelar"
+        variante="perigo"
       />
     </div>
   )

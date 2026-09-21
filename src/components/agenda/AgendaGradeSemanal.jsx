@@ -477,11 +477,13 @@ export function AgendaGradeSemanal({
         <ModalRedimensionavel
           isOpen={!!modalConfirmacaoAlocacao}
           onClose={() => setModalConfirmacaoAlocacao(null)}
-          title="Confirmar Envio e Preenchimento Automático"
-          defaultWidth={520}
-          defaultHeight={380}
-          minWidth={440}
-          minHeight={340}
+          titulo="Confirmar Envio e Preenchimento Automático"
+          larguraPadrao={540}
+          alturaPadrao={420}
+          larguraMinima={460}
+          alturaMinima={360}
+          larguraMaxima={800}
+          alturaMaxima={600}
           storageKey="modal_confirmar_alocacao_fila"
         >
           <div className="flex flex-col h-full bg-white text-slate-800 p-5 justify-between">

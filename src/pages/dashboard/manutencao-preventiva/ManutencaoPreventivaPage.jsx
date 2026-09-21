@@ -165,7 +165,7 @@ export function ManutencaoPreventivaPage() {
       }
     }
 
-    navigate(`${basePath}/ordem-de-servico/nova`, {
+    navigate(`${basePath}/ordem-de-servico`, {
       state: {
         clienteId: veiculo.clienteId,
         veiculoPlaca: veiculo.placa,

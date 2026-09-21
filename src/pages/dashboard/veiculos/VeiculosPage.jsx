@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Select from 'react-select'
 import {
   Car,
@@ -32,6 +32,7 @@ import { ModalEstacionarVeiculo } from '../../../components/estacionados/ModalEs
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 import { useIsMobile } from '../../../hooks/useIsMobile'
 import { MobileVeiculosPage } from './mobile/MobileVeiculosPage'
+import { ModalConfirmacao } from '../../../components/ModalConfirmacao'
 
 const FILTRO_PROPRIETARIO_OPCOES = [
   { value: 'TODOS', label: 'Todos os Proprietários' },
@@ -58,6 +59,7 @@ const FILTRO_STATUS_OPCOES = [
 export function VeiculosPage() {
   const isMobile = useIsMobile()
   const navigate = useNavigate()
+  const location = useLocation()
   const [veiculos, setVeiculos] = useState([])
   const [busca, setBusca] = useState('')
   const [filtroProprietario, setFiltroProprietario] = useState('TODOS')
@@ -69,6 +71,7 @@ export function VeiculosPage() {
   const [veiculoEmEdicao, setVeiculoEmEdicao] = useState(null)
   const [modalEstacionarAberto, setModalEstacionarAberto] = useState(false)
   const [veiculoParaEstacionar, setVeiculoParaEstacionar] = useState(null)
+  const [veiculoParaExcluir, setVeiculoParaExcluir] = useState(null)
 
   // Carrega veículos da frota do localStorage
   const recarregarFrota = () => {
@@ -214,25 +217,26 @@ export function VeiculosPage() {
   }
 
   const handleExcluirVeiculo = (veiculo) => {
-    toast(`Deseja realmente remover o veículo ${veiculo.placa} da frota?`, {
-      action: {
-        label: 'Confirmar Exclusão',
-        onClick: () => {
-          try {
-            excluirVeiculoDaFrota(veiculo.placa || veiculo.id || veiculo.value)
-            recarregarFrota()
-            toast.success(`Veículo ${veiculo.placa} removido da frota com sucesso.`)
-          } catch {
-            toast.error('Erro ao excluir veículo.')
-          }
-        },
-      },
-    })
+    setVeiculoParaExcluir(veiculo)
+  }
+
+  const confirmarExclusaoVeiculo = () => {
+    if (!veiculoParaExcluir) return
+    try {
+      excluirVeiculoDaFrota(veiculoParaExcluir.placa || veiculoParaExcluir.id || veiculoParaExcluir.value)
+      recarregarFrota()
+      toast.success(`Veículo ${veiculoParaExcluir.placa} removido da frota com sucesso.`)
+    } catch {
+      toast.error('Erro ao excluir veículo.')
+    } finally {
+      setVeiculoParaExcluir(null)
+    }
   }
 
   const handleIniciarOS = (veiculo) => {
     toast.info(`Iniciando Ordem de Serviço para o veículo ${veiculo.placa}...`)
-    navigate('/gestao/ordem-de-servico/nova', {
+    const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
+    navigate(`${basePath}/ordem-de-servico`, {
       state: {
         veiculoId: veiculo.value || veiculo.id,
         placa: veiculo.placa,
@@ -660,6 +664,23 @@ export function VeiculosPage() {
         onClose={() => setModalEstacionarAberto(false)}
         veiculoInicial={veiculoParaEstacionar}
         onEstacionadoConcluido={recarregarFrota}
+      />
+
+      {/* Diálogo de Confirmação de Exclusão na Frente da Tela */}
+      <ModalConfirmacao
+        isOpen={Boolean(veiculoParaExcluir)}
+        onClose={() => setVeiculoParaExcluir(null)}
+        onConfirm={confirmarExclusaoVeiculo}
+        titulo="Remover este veículo da frota?"
+        descricao="Esta operação removerá o veículo da listagem da frota cadastrada."
+        itemDestaque={
+          veiculoParaExcluir
+            ? `Placa: ${veiculoParaExcluir.placa} ${veiculoParaExcluir.marcaModelo ? `(${veiculoParaExcluir.marcaModelo})` : ''}`
+            : ''
+        }
+        textoConfirmar="Sim, Remover"
+        textoCancelar="Cancelar"
+        variante="perigo"
       />
     </div>
   )

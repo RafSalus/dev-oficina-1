@@ -139,8 +139,10 @@ export function ModalVincularCliente({ isOpen, onClose, veiculo, onVinculoConclu
       chaveStorage="modal_redimensionavel_vincular_cliente"
       larguraPadrao={760}
       alturaPadrao={580}
-      larguraMinima={480}
-      alturaMinima={380}
+      larguraMinima={560}
+      alturaMinima={440}
+      larguraMaxima={1100}
+      alturaMaxima={820}
       titulo="Vincular Veículo a Proprietário"
       subtitulo={`Transferência de propriedade com manutenção integral do histórico`}
       badge="Atendimento e Frota"

@@ -1,13 +1,13 @@
 export const MOCK_MECANICOS = [
   {
     value: '',
-    label: 'Sem atribuição imediata (Definir na triagem)',
+    label: 'Não atribuído (Definir na triagem)',
     nome: 'Não atribuído',
     especialidade: 'Aguardando atribuição de bancada',
   },
   {
     value: 'mec-carlos',
-    label: 'Carlos Eduardo (Chefe de Oficina / Injeção e Motor)',
+    label: 'Carlos Eduardo',
     nome: 'Carlos Eduardo',
     cargo: 'Chefe de Oficina',
     especialidade: 'Injeção Eletrônica e Motor',
@@ -18,7 +18,7 @@ export const MOCK_MECANICOS = [
   },
   {
     value: 'mec-gabriel',
-    label: 'Gabriel Amaral (Mecânico Especialista / Suspensão)',
+    label: 'Gabriel Amaral',
     nome: 'Gabriel Amaral',
     cargo: 'Mecânico Especialista',
     especialidade: 'Suspensão, Freios e Geometria 3D',
@@ -29,7 +29,7 @@ export const MOCK_MECANICOS = [
   },
   {
     value: 'mec-rafael',
-    label: 'Rafael Salustiano (Mecânico Pleno / Transmissão)',
+    label: 'Rafael Salustiano',
     nome: 'Rafael Salustiano',
     cargo: 'Mecânico Pleno',
     especialidade: 'Transmissão, Câmbio e Embreagem',
@@ -40,7 +40,7 @@ export const MOCK_MECANICOS = [
   },
   {
     value: 'mec-rodrigo',
-    label: 'Rodrigo Alencar (Mecânico Especialista)',
+    label: 'Rodrigo Alencar',
     nome: 'Rodrigo Alencar',
     cargo: 'Mecânico Especialista',
     especialidade: 'Suspensão e Freios Pesados',
@@ -51,7 +51,7 @@ export const MOCK_MECANICOS = [
   },
   {
     value: 'mec-danilo',
-    label: 'Danilo Silva (Eletricista Automotivo)',
+    label: 'Danilo Silva',
     nome: 'Danilo Silva',
     cargo: 'Eletricista Automotivo',
     especialidade: 'Elétrica, Baterias e Ar Condicionado',
@@ -62,7 +62,7 @@ export const MOCK_MECANICOS = [
   },
   {
     value: 'mec-lucas',
-    label: 'Lucas Nogueira (Assistente Técnico / Vistoria)',
+    label: 'Lucas Nogueira',
     nome: 'Lucas Nogueira',
     cargo: 'Assistente Técnico',
     especialidade: 'Manutenção Preventiva e Lubrificantes',

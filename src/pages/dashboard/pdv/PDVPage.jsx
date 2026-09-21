@@ -18,6 +18,7 @@ import {
   IdentificationCard,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { ModalConfirmacao } from '../../../components/ModalConfirmacao'
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 import {
   carregarPecasCadastradas,
@@ -80,6 +81,7 @@ export function PDVPage() {
   const [processandoPagamento, setProcessandoPagamento] = useState(false)
   const [reciboAberto, setReciboAberto] = useState(false)
   const [vendaFinalizada, setVendaFinalizada] = useState(null)
+  const [confirmandoNovaVenda, setConfirmandoNovaVenda] = useState(false)
 
   // Carrega catálogo de peças e serviços e mantém sincronizado com o Almoxarifado
   useEffect(() => {
@@ -179,21 +181,18 @@ export function PDVPage() {
       toast.info('O carrinho já está vazio.')
       return
     }
-    toast('Iniciar uma nova venda e limpar o carrinho atual?', {
-      description: 'Todos os itens não finalizados serão descartados.',
-      action: {
-        label: 'Confirmar',
-        onClick: () => {
-          setItensCarrinho([])
-          setOsVinculada(null)
-          setClienteSelecionado(null)
-          setVeiculoSelecionado(null)
-          setDescontoGeral(0)
-          setTipoDescontoGeral('valor')
-          toast.success('Nova venda iniciada.')
-        },
-      },
-    })
+    setConfirmandoNovaVenda(true)
+  }
+
+  const confirmarNovaVenda = () => {
+    setItensCarrinho([])
+    setOsVinculada(null)
+    setClienteSelecionado(null)
+    setVeiculoSelecionado(null)
+    setDescontoGeral(0)
+    setTipoDescontoGeral('valor')
+    setConfirmandoNovaVenda(false)
+    toast.success('Nova venda iniciada com carrinho limpo.')
   }
 
   // Catálogo filtrado
@@ -788,6 +787,19 @@ export function PDVPage() {
         isOpen={reciboAberto}
         onClose={() => setReciboAberto(false)}
         venda={vendaFinalizada}
+      />
+
+      {/* Diálogo de Confirmação para Iniciar Nova Venda na Frente da Tela */}
+      <ModalConfirmacao
+        isOpen={confirmandoNovaVenda}
+        onClose={() => setConfirmandoNovaVenda(false)}
+        onConfirm={confirmarNovaVenda}
+        titulo="Iniciar nova venda e limpar carrinho?"
+        descricao="Todos os itens adicionados e dados não concluídos serão descartados do PDV."
+        itemDestaque={`Itens no carrinho: ${itensCarrinho.length} item(ns)`}
+        textoConfirmar="Sim, Limpar e Iniciar"
+        textoCancelar="Cancelar"
+        variante="aviso"
       />
     </div>
   )

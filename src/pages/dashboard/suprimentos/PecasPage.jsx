@@ -26,6 +26,7 @@ import { EstoqueMovimentoModal } from '../../../components/suprimentos/EstoqueMo
 import { customSelectStyles } from '../../../components/suprimentos/customSelectStyles'
 import { useIsMobile } from '../../../hooks/useIsMobile'
 import { MobilePecasPage } from './mobile/MobilePecasPage'
+import { ModalConfirmacao } from '../../../components/ModalConfirmacao'
 
 export function PecasPage() {
   const isMobile = useIsMobile()
@@ -40,6 +41,7 @@ export function PecasPage() {
 
   const [modalMovimentoAberto, setModalMovimentoAberto] = useState(false)
   const [pecaParaMovimento, setPecaParaMovimento] = useState(null)
+  const [pecaParaExcluir, setPecaParaExcluir] = useState(null)
 
   // Carrega do localStorage ao montar e sincroniza em tempo real
   useEffect(() => {
@@ -168,22 +170,21 @@ export function PecasPage() {
     salvarPecasCadastradas(novaLista)
   }
 
-  // Excluir peça
+  // Excluir peça via diálogo na frente da tela
   const handleExcluirPeca = (id, nome) => {
-    toast(`Excluir a peça "${nome}"?`, {
-      description: 'Esta operação removerá o item do almoxarifado.',
-      action: {
-        label: 'Confirmar',
-        onClick: () => {
-          setPecas((prev) => {
-            const novaLista = prev.filter((p) => p.id !== id)
-            salvarPecasCadastradas(novaLista)
-            return novaLista
-          })
-          toast.success(`Peça "${nome}" excluída.`)
-        },
-      },
+    setPecaParaExcluir({ id, nome })
+  }
+
+  const confirmarExclusaoPeca = () => {
+    if (!pecaParaExcluir) return
+    const { id, nome } = pecaParaExcluir
+    setPecas((prev) => {
+      const novaLista = prev.filter((p) => p.id !== id)
+      salvarPecasCadastradas(novaLista)
+      return novaLista
     })
+    setPecaParaExcluir(null)
+    toast.success(`Peça "${nome}" excluída do almoxarifado com sucesso.`)
   }
 
   const opcoesFiltroCategoria = [
@@ -532,6 +533,19 @@ export function PecasPage() {
         onSucesso={() => {
           setPecas(carregarPecasCadastradas())
         }}
+      />
+
+      {/* Diálogo de Confirmação de Exclusão na Frente da Tela */}
+      <ModalConfirmacao
+        isOpen={Boolean(pecaParaExcluir)}
+        onClose={() => setPecaParaExcluir(null)}
+        onConfirm={confirmarExclusaoPeca}
+        titulo="Excluir esta peça?"
+        descricao="Esta operação removerá permanentemente o item do catálogo do almoxarifado."
+        itemDestaque={pecaParaExcluir ? `Peça: ${pecaParaExcluir.nome}` : ''}
+        textoConfirmar="Sim, Excluir"
+        textoCancelar="Cancelar"
+        variante="perigo"
       />
     </div>
   )

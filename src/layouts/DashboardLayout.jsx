@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { DashboardHeader } from '../components/dashboard/DashboardHeader'
 import { DashboardSidebar } from '../components/dashboard/DashboardSidebar'
 import { DashboardFooter } from '../components/dashboard/DashboardFooter'
@@ -7,12 +7,8 @@ import { MobileDashboardHeader } from '../components/dashboard/mobile/MobileDash
 import { MobileBottomNav } from '../components/dashboard/mobile/MobileBottomNav'
 import { useIsMobile } from '../hooks/useIsMobile'
 
-// Rotas mobile que assumem a tela inteira (fluxo dedicado, sem header/tab bar padrão)
-const MOBILE_FULLSCREEN_ROUTES = ['/gestao/ordem-de-servico/nova']
-
 export function DashboardLayout() {
   const isMobile = useIsMobile()
-  const location = useLocation()
 
   // Estado do cabeçalho fixado vs auto-ocultação ao afastar o mouse
   const [isHeaderPinned, setIsHeaderPinned] = useState(() => {
@@ -31,14 +27,6 @@ export function DashboardLayout() {
       } catch {}
       return next
     })
-  }
-
-  if (isMobile && MOBILE_FULLSCREEN_ROUTES.includes(location.pathname)) {
-    return (
-      <div className="min-h-[100dvh] w-full bg-[#eaecf0] text-zinc-900 font-sans">
-        <Outlet />
-      </div>
-    )
   }
 
   if (isMobile) {

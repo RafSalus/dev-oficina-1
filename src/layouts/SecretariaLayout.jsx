@@ -65,8 +65,6 @@ const MOBILE_NAV_ITEMS = [
   { id: 'clientes', label: 'Clientes', path: '/secretaria/clientes', icon: Users },
 ]
 
-const MOBILE_FULLSCREEN_ROUTES = ['/secretaria/ordem-de-servico/nova']
-
 export function SecretariaLayout() {
   const isMobile = useIsMobile()
   const location = useLocation()
@@ -94,14 +92,6 @@ export function SecretariaLayout() {
   const handleSignOut = async () => {
     await signOut()
     navigate('/gestao/entrar')
-  }
-
-  if (isMobile && MOBILE_FULLSCREEN_ROUTES.includes(location.pathname)) {
-    return (
-      <div className="min-h-[100dvh] w-full bg-[#eaecf0] text-zinc-900 font-sans">
-        <Outlet />
-      </div>
-    )
   }
 
   if (isMobile) {

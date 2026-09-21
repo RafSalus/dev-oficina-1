@@ -176,11 +176,13 @@ export function AgendaTratarAtrasoModal({
     <ModalRedimensionavel
       isOpen={isOpen}
       onClose={onClose}
-      title="Tratamento de Atraso no Atendimento"
-      defaultWidth={660}
-      defaultHeight={540}
-      minWidth={500}
-      minHeight={450}
+      titulo="Tratamento de Atraso no Atendimento"
+      larguraPadrao={680}
+      alturaPadrao={540}
+      larguraMinima={520}
+      alturaMinima={420}
+      larguraMaxima={980}
+      alturaMaxima={760}
       storageKey="modal_agenda_tratar_atraso"
     >
       <div className="flex flex-col h-full bg-white text-slate-800">

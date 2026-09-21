@@ -1,20 +1,51 @@
 import { useState } from 'react'
 import { gerarProximoNumeroOS, obterOrdensAbertas } from '../orcamento/mockOrdensAbertas'
 
-export const OS_TABS = [
-  { id: 'cliente-veiculo', label: 'Cliente e Veiculo' },
-  { id: 'checklist', label: 'Checklist' },
-  { id: 'diagnostico', label: 'Diagnostico' },
-  { id: 'servicos', label: 'Serviços' },
-  { id: 'pecas', label: 'Peças' },
-  { id: 'terceiros', label: 'Terceiros' },
-  { id: 'orcamento', label: 'Orçamento' },
-  { id: 'finalizar', label: 'Finalizar' },
-]
-
 export const DRAFT_KEY = 'dev_oficina_draft_os'
 
+export const ITENS_CHECKLIST_PADRAO = {
+  esguicho: { status: '', obs: '' },
+  vidros: { status: '', obs: '' },
+  pecas: { status: '', obs: '' },
+  bancos: { status: '', obs: '' },
+  painel: { status: '', obs: '' },
+  oleoGeral: { status: '', obs: '' },
+  sensorRe: { status: '', obs: '' },
+  freioMaoManopla: { status: '', obs: '' },
+  cintoSeguranca: { status: '', obs: '' },
+  quebraSolPqp: { status: '', obs: '' },
+  retrovisores: { status: '', obs: '' },
+  lampadasGeral: { status: '', obs: '' },
+  palhetas: { status: '', obs: '' },
+  portas: { status: '', obs: '' },
+  agua: { status: '', obs: '' },
+  vazamentos: { status: '', obs: '' },
+  rodas: { status: '', obs: '' },
+  alinhamento: { status: '', obs: '' },
+  buzina: { status: '', obs: '' },
+  portinholaTanque: { status: '', obs: '' },
+  bateria: { status: '', obs: '' },
+  testeDdp: { status: '', obs: '' },
+}
+
 export const INITIAL_FORM_DATA = {
+  // Identificação e Fluxo
+  numeroOS: '',
+  status: 'fila', // 'fila' | 'em_diagnostico' | 'aguardando_pecas' | 'aguardando_aprovacao'
+  prioridade: 'normal', // 'normal' | 'alta' | 'urgente' | 'retorno'
+  tipoAtendimento: 'orcamento', // 'orcamento' | 'preventiva' | 'corretiva' | 'garantia' | 'sinistro'
+  canalEntrada: 'presencial', // 'presencial' | 'whatsapp' | 'telefone' | 'leva_traz' | 'agendamento'
+  dataEntrada: '',
+  horaEntrada: '',
+  previsaoEntregaData: '',
+  previsaoEntregaHora: '18:00',
+  consultorResponsavel: 'BIANCA',
+
+  // Referência ao item de origem na Fila de Espera da Agenda (constants/agendaData.js).
+  // Quando preenchido, a OS foi aberta "atendendo" alguém que aguardava na recepção — o item
+  // correspondente é removido da fila assim que a OS é salva (ver handleRemoverDaFilaDeEspera).
+  filaEsperaId: '',
+
   // Cliente
   clienteId: '',
   cliente: '',
@@ -22,78 +53,49 @@ export const INITIAL_FORM_DATA = {
   documento: '',
   email: '',
   endereco: '',
-
-  // Diagnóstico
-  mecanicoId: '',
-  mecanicoNome: '',
-  pecasDiagnostico: [],
-  servicosDiagnostico: [],
-  problemasDetectados: [],
-  laudoTecnico: '',
-
-  // Serviços da OS
-  servicosOS: [],
-
-  // Peças e Cotações da OS
-  pecasOS: [],
-  cotacoesEnviadas: [],
-
-  // Serviços de Terceiros e Cotações
-  terceirosOS: [],
-  cotacoesTerceirosEnviadas: [],
-
-  // Orçamento Oficial e Fechamento
-  numeroOS: '',
-  descontoGeralOS: '0.00',
-  condicaoPagamentoOS: 'À vista com 5% de desconto no PIX ou até 10x no cartão',
-  previsaoEntregaData: '',
-  previsaoEntregaHora: '18:00',
-  consultorResponsavel: 'BIANCA',
+  cidade: '',
+  uf: '',
 
   // Veículo
   veiculoId: '',
   placa: '',
+  marca: '',
+  modelo: '',
   marcaModelo: '',
   ano: '',
   cor: '',
+  combustivel: 'FLEX',
   km: '',
-  nivelCombustivel: '1/2',
+  kmAnterior: '',
+  nivelCombustivel: '1/2', // 'reserva' | '1/4' | '1/2' | '3/4' | 'cheio'
 
-  // Relato do Cliente e Atendimento
-  tipoAtendimento: 'orcamento',
-  prioridade: 'normal',
+  // Relato do Cliente e Vistoria
   relatoCliente: '',
+  objetosVeiculo: '',
+  avariasVisual: '',
 
-  // KM de Saída
-  kmSaida: '',
+  // Atribuição Técnica
+  mecanicoId: '',
+  mecanicoNome: '',
+  laudoTecnico: '',
 
-  // Checklist Oficial de Entrada e Saída — cada item começa sem status (não verificado ainda);
-  // o preenchimento (conforme / não conforme / isento) é feito em TabChecklist.jsx.
-  checklistEntrada: {
-    esguicho: { status: '', obs: '' },
-    vidros: { status: '', obs: '' },
-    pecas: { status: '', obs: '' },
-    bancos: { status: '', obs: '' },
-    painel: { status: '', obs: '' },
-    oleoGeral: { status: '', obs: '' },
-    sensorRe: { status: '', obs: '' },
-    freioMaoManopla: { status: '', obs: '' },
-    cintoSeguranca: { status: '', obs: '' },
-    quebraSolPqp: { status: '', obs: '' },
-    retrovisores: { status: '', obs: '' },
-    lampadasGeral: { status: '', obs: '' },
-    palhetas: { status: '', obs: '' },
-    portas: { status: '', obs: '' },
-    agua: { status: '', obs: '' },
-    vazamentos: { status: '', obs: '' },
-    rodas: { status: '', obs: '' },
-    alinhamento: { status: '', obs: '' },
-    buzina: { status: '', obs: '' },
-    portinholaTanque: { status: '', obs: '' },
-    bateria: { status: '', obs: '' },
-    testeDdp: { status: '', obs: '' },
-  },
+  // Itens da OS (Serviços e Peças)
+  servicosOS: [],
+  pecasOS: [],
+  terceirosOS: [],
+  descontoGeralOS: '0.00',
+  condicaoPagamentoOS: 'À vista com 5% de desconto no PIX ou até 10x no cartão',
+
+  // Checklist Oficial de Entrada (22 itens)
+  checklistEntrada: { ...ITENS_CHECKLIST_PADRAO },
   checklistEntradaObs: '',
+
+  // Fotos do Veiculo na Entrada (dataURL por angulo — frente, traseira, laterais, painel,
+  // motor, porta-malas). Fazem parte da Vistoria de Entrada e ficam visiveis ao cliente na
+  // pagina publica de assinatura do checklist.
+  fotosVeiculoEntrada: {},
+
+  // Checklist de Saída (Realizado na Entrega / PDV)
   checklistSaida: {
     nivelFluidos: { status: '', obs: '' },
     apertoRodas: { status: '', obs: '' },
@@ -102,6 +104,31 @@ export const INITIAL_FORM_DATA = {
     etiquetaOleo: { status: '', obs: '' },
   },
   checklistSaidaObs: '',
+  kmSaida: '',
+}
+
+function getDataAtualFormatada() {
+  const agora = new Date()
+  const d = String(agora.getDate()).padStart(2, '0')
+  const m = String(agora.getMonth() + 1).padStart(2, '0')
+  const y = agora.getFullYear()
+  return `${d}/${m}/${y}`
+}
+
+function getHoraAtualFormatada() {
+  const agora = new Date()
+  const h = String(agora.getHours()).padStart(2, '0')
+  const min = String(agora.getMinutes()).padStart(2, '0')
+  return `${h}:${min}`
+}
+
+function getDataAmanhaFormatada(dias = 1) {
+  const data = new Date()
+  data.setDate(data.getDate() + dias)
+  const d = String(data.getDate()).padStart(2, '0')
+  const m = String(data.getMonth() + 1).padStart(2, '0')
+  const y = data.getFullYear()
+  return `${d}/${m}/${y}`
 }
 
 export function useOsDraft() {
@@ -112,7 +139,6 @@ export function useOsDraft() {
         const parsed = JSON.parse(saved)
         let numOS = parsed.numeroOS
 
-        // Se o rascunho tem '002908' mas não é de uma OS real sendo editada com esse cliente, gera o próximo
         if (numOS === '002908') {
           const abertas = obterOrdensAbertas()
           const ehEdicao = abertas.some(
@@ -127,17 +153,19 @@ export function useOsDraft() {
           numOS = gerarProximoNumeroOS()
         }
 
-        // Se o rascunho salvo continha a simulação de 30 itens, limpa os itens simulados
-        if (
-          parsed.terceirosOS?.some((t) => t.id === 'terc-sim-1' || t.id === 'terc-sim-2') ||
-          (parsed.pecasOS?.length === 30 && parsed.pecasOS[29]?.codigo === '017291')
-        ) {
-          parsed.pecasOS = []
-          parsed.servicosOS = []
-          parsed.terceirosOS = []
+        const mesclado = {
+          ...INITIAL_FORM_DATA,
+          dataEntrada: parsed.dataEntrada || getDataAtualFormatada(),
+          horaEntrada: parsed.horaEntrada || getHoraAtualFormatada(),
+          previsaoEntregaData: parsed.previsaoEntregaData || getDataAmanhaFormatada(1),
+          ...parsed,
+          numeroOS: numOS,
+          checklistEntrada: {
+            ...ITENS_CHECKLIST_PADRAO,
+            ...(parsed.checklistEntrada || {}),
+          },
         }
 
-        const mesclado = { ...INITIAL_FORM_DATA, ...parsed, numeroOS: numOS }
         try {
           localStorage.setItem(DRAFT_KEY, JSON.stringify(mesclado))
         } catch (e) {}
@@ -151,7 +179,11 @@ export function useOsDraft() {
     const inicial = {
       ...INITIAL_FORM_DATA,
       numeroOS: novoNum,
+      dataEntrada: getDataAtualFormatada(),
+      horaEntrada: getHoraAtualFormatada(),
+      previsaoEntregaData: getDataAmanhaFormatada(1),
     }
+
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(inicial))
     } catch (e) {}
@@ -174,5 +206,22 @@ export function useOsDraft() {
     } catch (e) {}
   }
 
-  return { formData, updateFormData, clearDraft }
+  // Reinicia o formulario em branco sem recarregar a pagina (o modal permanece aberto) —
+  // usado pelo botao "Limpar" dentro do modal de abertura de OS.
+  const resetDraft = () => {
+    const novoNum = gerarProximoNumeroOS()
+    const inicial = {
+      ...INITIAL_FORM_DATA,
+      numeroOS: novoNum,
+      dataEntrada: getDataAtualFormatada(),
+      horaEntrada: getHoraAtualFormatada(),
+      previsaoEntregaData: getDataAmanhaFormatada(1),
+    }
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(inicial))
+    } catch (e) {}
+    setFormData(inicial)
+  }
+
+  return { formData, updateFormData, clearDraft, resetDraft }
 }

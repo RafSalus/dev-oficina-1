@@ -23,7 +23,105 @@ import {
 } from '@phosphor-icons/react'
 import { FolhaOrdemServicoImpressao } from '../components/dashboard/FolhaOrdemServicoImpressao'
 import { toast } from 'sonner'
-import { obterOrdensAbertas, obterOrdensFinalizadas, atualizarStatusOrdem } from './dashboard/orcamento/mockOrdensAbertas'
+import {
+  obterOrdensAbertas,
+  obterOrdensFinalizadas,
+  atualizarStatusOrdem,
+  registrarAprovacaoItens,
+  responderItemAdicional,
+} from './dashboard/orcamento/mockOrdensAbertas'
+import { Lock, ShieldWarning } from '@phosphor-icons/react'
+
+// Lista de itens do orçamento com o modelo de aprovação por item: essenciais aparecem
+// travados (o cliente não pode desmarcá-los), opcionais têm um botão para incluir/excluir do
+// total. Reaproveitada pelas três categorias (peças, serviços, terceiros) e, na Fase 5, pela
+// seção de itens adicionais encontrados durante a execução.
+function ListaItensAprovacao({ titulo, itens, respostasLocais, estaAprovado, onToggleItem, onVerFoto }) {
+  if (itens.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs overflow-hidden">
+      <div className="px-4 py-3 bg-[#f8fafc] border-b border-[#d0d5dd] flex items-center justify-between">
+        <span className="text-xs font-extrabold text-[#101828] uppercase tracking-wider">{titulo}</span>
+        <span className="text-[11px] font-bold text-[#667085]">{itens.length} itens</span>
+      </div>
+
+      <div className="divide-y divide-[#eaecf0]">
+        {itens.map((item) => {
+          const isEssencial = item.classificacao === 'essencial'
+          const isRecusado = respostasLocais[item.itemId] === 'recusado'
+          return (
+            <div
+              key={item.itemId}
+              className={`p-3.5 flex items-center justify-between gap-3 hover:bg-[#fcfcfd] ${isRecusado ? 'opacity-50' : ''}`}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-bold text-[#101828] line-clamp-1 ${isRecusado ? 'line-through' : ''}`}>
+                    {item.nome}
+                  </span>
+                  {isEssencial ? (
+                    <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold">
+                      <Lock size={9} weight="bold" />
+                      Obrigatório
+                    </span>
+                  ) : (
+                    <span className="shrink-0 px-1.5 py-0.2 rounded-full bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd] text-[9px] font-bold">
+                      Opcional
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-[#667085] flex items-center gap-2 mt-0.5">
+                  <span className="font-mono font-semibold">{item.codigo || item.itemId}</span>
+                  <span>•</span>
+                  <span>Qtd: {item.quantidade}</span>
+                  {item.parceiroNome && (
+                    <>
+                      <span>•</span>
+                      <span>Parceiro: {item.parceiroNome}</span>
+                    </>
+                  )}
+                </div>
+                {item.motivo && (
+                  <p className="text-[10.5px] text-[#475467] italic mt-1 leading-relaxed">{item.motivo}</p>
+                )}
+              </div>
+
+              <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
+                <span className={`text-xs font-extrabold ${isRecusado ? 'text-[#98a2b3] line-through' : 'text-[#101828]'}`}>
+                  R$ {item.subtotal.toFixed(2)}
+                </span>
+                {item.foto && (
+                  <button
+                    type="button"
+                    onClick={() => onVerFoto(item.foto)}
+                    className="text-[10px] text-[#0284c7] font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                  >
+                    <Camera size={11} weight="bold" />
+                    <span>Ver Foto</span>
+                  </button>
+                )}
+                {!isEssencial && !estaAprovado && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleItem(item.itemId, item.classificacao)}
+                    className={`h-6 px-2 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                      isRecusado
+                        ? 'bg-white border border-[#d0d5dd] text-[#667085]'
+                        : 'bg-[#101828] text-white'
+                    }`}
+                  >
+                    {isRecusado ? 'Incluir' : 'Incluído'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 export function AprovacaoOrcamentoClientePage() {
   const { id } = useParams()
@@ -203,39 +301,90 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
     }
   }, [numeroOS])
 
-  // Calculos financeiros
+  // Modelo unificado de aprovação por item (essencial trava, opcional o cliente decide) — o
+  // mesmo shape (itensAprovacaoOS) também é usado pelos itens adicionais reportados durante a
+  // execução. Item sem metadata em itensAprovacaoOS (OS antigas, sem essa classificação) é
+  // tratado como essencial/travado, preservando o comportamento anterior de "tudo obrigatório".
+  const metadataPorItem = useMemo(() => {
+    const mapa = new Map()
+    ;(dadosOS.itensAprovacaoOS || []).forEach((it) => mapa.set(it.itemId, it))
+    return mapa
+  }, [dadosOS.itensAprovacaoOS])
+
+  const itensAprovaveis = useMemo(() => {
+    const montar = (lista, categoria, precoField) =>
+      (lista || []).map((item, idx) => {
+        const itemId = item.id || item.codigo || `${categoria}-${idx}`
+        const meta = metadataPorItem.get(itemId)
+        const preco = parseFloat(item[precoField] ?? item.precoUnitario) || 0
+        const qtd = parseFloat(item.quantidade) || 1
+        const desconto = parseFloat(item.desconto) || 0
+        return {
+          itemId,
+          categoria,
+          nome: item.nome,
+          codigo: item.codigo,
+          quantidade: qtd,
+          precoUnitario: preco,
+          subtotal: Math.max(0, preco * qtd - desconto),
+          foto: item.fotoUrl || item.foto || null,
+          motivo: meta?.motivo || item.motivoSeguranca || item.motivoOpcional || item.observacaoFoto || '',
+          classificacao: meta?.classificacao || 'essencial',
+          parceiroNome: item.parceiroNome,
+        }
+      })
+
+    const terceirosNormalizados = (dadosOS.terceirosOS || []).map((t) => ({
+      ...t,
+      precoUnitario: t.valorVenda ?? t.precoFinal ?? t.precoUnitario,
+    }))
+
+    return [
+      ...montar(dadosOS.pecasOS, 'peca', 'precoUnitario'),
+      ...montar(dadosOS.servicosOS, 'servico', 'valorUnitario'),
+      ...montar(terceirosNormalizados, 'terceiro', 'precoUnitario'),
+    ]
+  }, [dadosOS, metadataPorItem])
+
+  // Resposta do cliente por item nesta sessão — 'aprovado' por padrão (inclusive opcionais,
+  // que ele pode desmarcar), a menos que já exista uma resposta 'recusado' salva antes.
+  const [respostasLocais, setRespostasLocais] = useState({})
+
+  useEffect(() => {
+    const inicial = {}
+    itensAprovaveis.forEach((item) => {
+      const metaExistente = metadataPorItem.get(item.itemId)
+      inicial[item.itemId] = metaExistente?.respostaCliente === 'recusado' ? 'recusado' : 'aprovado'
+    })
+    setRespostasLocais(inicial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dadosOS.numeroOS])
+
+  const handleToggleItemAprovacao = (itemId, classificacao) => {
+    if (estaAprovado) {
+      toast.info('Este orçamento já foi aprovado e está em execução.')
+      return
+    }
+    if (classificacao === 'essencial') {
+      toast.warning('Itens essenciais de segurança não podem ser removidos do orçamento.')
+      return
+    }
+    setRespostasLocais((prev) => ({
+      ...prev,
+      [itemId]: prev[itemId] === 'recusado' ? 'aprovado' : 'recusado',
+    }))
+  }
+
+  // Calculos financeiros — soma só os itens que seguem aprovados nesta sessão
   const totais = useMemo(() => {
-    let totalPecas = 0
-    let descPecas = 0
-    ;(dadosOS.pecasOS || []).forEach((p) => {
-      const qtd = parseFloat(p.quantidade) || 1
-      const pr = parseFloat(p.precoUnitario) || 0
-      const desc = parseFloat(p.desconto) || 0
-      totalPecas += pr * qtd
-      descPecas += desc
-    })
-    const subTotalPecas = Math.max(0, totalPecas - descPecas)
+    const somaPorCategoria = (categoria) =>
+      itensAprovaveis
+        .filter((it) => it.categoria === categoria && respostasLocais[it.itemId] !== 'recusado')
+        .reduce((acc, it) => acc + it.subtotal, 0)
 
-    let totalServicos = 0
-    let descServicos = 0
-    ;(dadosOS.servicosOS || []).forEach((s) => {
-      const qtd = parseFloat(s.quantidade) || 1
-      const pr = parseFloat(s.valorUnitario ?? s.precoUnitario) || 0
-      const desc = parseFloat(s.desconto) || 0
-      totalServicos += pr * qtd
-      descServicos += desc
-    })
-    const subTotalServicos = Math.max(0, totalServicos - descServicos)
-
-    let totalTerceiros = 0
-    let descTerceiros = 0
-    ;(dadosOS.terceirosOS || []).forEach((t) => {
-      const pr = parseFloat(t.valorVenda) || 0
-      const desc = parseFloat(t.desconto) || 0
-      totalTerceiros += pr
-      descTerceiros += desc
-    })
-    const subTotalTerceiros = Math.max(0, totalTerceiros - descTerceiros)
+    const subTotalPecas = somaPorCategoria('peca')
+    const subTotalServicos = somaPorCategoria('servico')
+    const subTotalTerceiros = somaPorCategoria('terceiro')
 
     const descGeral = parseFloat(dadosOS.descontoGeralOS) || 0
     const totalGeral = Math.max(0, subTotalPecas + subTotalServicos + subTotalTerceiros - descGeral)
@@ -252,7 +401,7 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
       valorPixComDesconto,
       valorParcelado10x,
     }
-  }, [dadosOS])
+  }, [itensAprovaveis, respostasLocais, dadosOS.descontoGeralOS])
 
   // Coleta todas as pecas e itens que possuem fotos anexadas (orçamento e diagnóstico técnico)
   const fotosDasPecas = useMemo(() => {
@@ -318,6 +467,17 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
       console.error('Erro ao gravar aprovacao:', err)
     }
 
+    // Grava a resposta do cliente item a item na OS real (itens opcionais recusados saem do
+    // total, mas continuam registrados) e recalcula o valorTotal com base só no que segue aprovado.
+    const itensAprovacaoFinal = itensAprovaveis.map((item) => ({
+      itemId: item.itemId,
+      categoria: item.categoria,
+      classificacao: item.classificacao,
+      motivo: item.motivo,
+      respostaCliente: respostasLocais[item.itemId] === 'recusado' ? 'recusado' : 'aprovado',
+    }))
+    registrarAprovacaoItens(numeroOS, itensAprovacaoFinal)
+
     // Reflete a aprovação na OS real da oficina, para que ela avance sozinha no Kanban/lista
     // sem depender de um aviso manual do cliente por WhatsApp.
     if (dadosOS.status === 'aguardando_aprovacao') {
@@ -329,6 +489,21 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
     setModalAprovacaoAberto(false)
 
     toast.success('Orçamento aprovado com sucesso! A oficina já foi notificada.')
+  }
+
+  // Resposta do cliente a um item encontrado durante a execução (peça quebrou, item de
+  // segurança) — aprovado materializa o item no orçamento real da OS; recusado só marca o
+  // status. Em ambos os casos a OS deixa de estar bloqueada (motivoImpedimentoAvancoPorItemAdicional).
+  const handleResponderItemAdicional = (itemAdicionalId, resposta) => {
+    const atualizada = responderItemAdicional(numeroOS, itemAdicionalId, resposta)
+    if (atualizada) {
+      setDadosOS(atualizada)
+      toast.success(
+        resposta === 'aprovado'
+          ? 'Item aprovado! A oficina já foi notificada e vai incluí-lo no serviço.'
+          : 'Item recusado. A oficina foi notificada.'
+      )
+    }
   }
 
   // Notificar aprovacao diretamente no WhatsApp da oficina
@@ -602,141 +777,90 @@ A substituição imediata dos componentes evita queima da junta do cabeçote e t
               </div>
             </div>
 
+            {/* Itens Identificados Durante a Execução (Fase 5 — aditivos) */}
+            {(dadosOS.itensAdicionaisOS || []).length > 0 && (
+              <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs overflow-hidden">
+                <div className="px-4 py-3 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
+                  <ShieldWarning size={16} weight="bold" className="text-amber-700" />
+                  <span className="text-xs font-extrabold text-amber-900 uppercase tracking-wider">
+                    Itens Identificados Durante a Execução
+                  </span>
+                </div>
+                <div className="divide-y divide-[#eaecf0]">
+                  {dadosOS.itensAdicionaisOS.map((item) => {
+                    const isPendente = item.status === 'pendente_cliente'
+                    return (
+                      <div key={item.id} className="p-3.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-[#101828] line-clamp-1">{item.descricao}</span>
+                            {item.classificacao === 'seguranca' && (
+                              <span className="shrink-0 px-1.5 py-0.2 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold">
+                                Segurança
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-[#667085]">R$ {Number(item.valorEstimado || 0).toFixed(2)}</span>
+                        </div>
+                        {isPendente ? (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleResponderItemAdicional(item.id, 'recusado')}
+                              className="h-8 px-2.5 rounded-lg border border-[#d0d5dd] text-[#475467] text-[11px] font-bold cursor-pointer hover:bg-[#f2f4f7]"
+                            >
+                              Recusar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResponderItemAdicional(item.id, 'aprovado')}
+                              className="h-8 px-2.5 rounded-lg bg-[#101828] hover:bg-black text-white text-[11px] font-bold cursor-pointer"
+                            >
+                              Aprovar
+                            </button>
+                          </div>
+                        ) : item.status === 'aprovado' ? (
+                          <span className="px-2 py-0.5 rounded-full bg-[#101828] text-white text-[10px] font-bold shrink-0">Aprovado</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-[#f2f4f7] text-[#667085] text-[10px] font-bold shrink-0">Recusado</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Detalhamento das Peças */}
-            <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs overflow-hidden">
-              <div className="px-4 py-3 bg-[#f8fafc] border-b border-[#d0d5dd] flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#101828] uppercase tracking-wider">
-                  Peças e Componentes de Reposição
-                </span>
-                <span className="text-[11px] font-bold text-[#667085]">
-                  {(dadosOS.pecasOS || []).length} itens
-                </span>
-              </div>
-
-              <div className="divide-y divide-[#eaecf0]">
-                {(dadosOS.pecasOS || []).map((peca, idx) => (
-                  <div key={idx} className="p-3.5 flex items-center justify-between gap-3 hover:bg-[#fcfcfd]">
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-[#101828] line-clamp-1">
-                        {peca.nome}
-                      </div>
-                      <div className="text-[11px] text-[#667085] flex items-center gap-2 mt-0.5">
-                        <span className="font-mono font-semibold">{peca.codigo || `PEC-${idx + 1}`}</span>
-                        <span>•</span>
-                        <span>Qtd: {peca.quantidade || 1}</span>
-                        <span>•</span>
-                        <span>Unit: R$ {parseFloat(peca.precoUnitario || 0).toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-extrabold text-[#101828]">
-                        R$ {(
-                          (parseFloat(peca.precoUnitario) || 0) * (parseFloat(peca.quantidade) || 1) -
-                          (parseFloat(peca.desconto) || 0)
-                        ).toFixed(2)}
-                      </span>
-                      {peca.fotoUrl && (
-                        <button
-                          type="button"
-                          onClick={() => setFotoZoomUrl(peca.fotoUrl)}
-                          className="text-[10px] text-[#0284c7] font-bold flex items-center gap-1 justify-end mt-0.5 hover:underline cursor-pointer"
-                        >
-                          <Camera size={11} weight="bold" />
-                          <span>Ver Foto</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ListaItensAprovacao
+              titulo="Peças e Componentes de Reposição"
+              itens={itensAprovaveis.filter((it) => it.categoria === 'peca')}
+              respostasLocais={respostasLocais}
+              estaAprovado={estaAprovado}
+              onToggleItem={handleToggleItemAprovacao}
+              onVerFoto={setFotoZoomUrl}
+            />
 
             {/* Detalhamento dos Serviços de Oficina */}
-            <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs overflow-hidden">
-              <div className="px-4 py-3 bg-[#f8fafc] border-b border-[#d0d5dd] flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#101828] uppercase tracking-wider">
-                  Serviços Mecânicos e Mão de Obra
-                </span>
-                <span className="text-[11px] font-bold text-[#667085]">
-                  {(dadosOS.servicosOS || []).length} itens
-                </span>
-              </div>
-
-              <div className="divide-y divide-[#eaecf0]">
-                {(dadosOS.servicosOS || []).map((servico, idx) => (
-                  <div key={idx} className="p-3.5 flex items-center justify-between gap-3 hover:bg-[#fcfcfd]">
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-[#101828] line-clamp-1">
-                        {servico.nome}
-                      </div>
-                      <div className="text-[11px] text-[#667085] flex items-center gap-2 mt-0.5">
-                        <span className="font-mono font-semibold">{servico.codigo || `SRV-${idx + 1}`}</span>
-                        {servico.tempoEstimado && (
-                          <>
-                            <span>•</span>
-                            <span>Tempo: {servico.tempoEstimado}h</span>
-                          </>
-                        )}
-                        {servico.observacoes && (
-                          <>
-                            <span>•</span>
-                            <span className="truncate max-w-xs">{servico.observacoes}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-extrabold text-[#101828]">
-                        R$ {(
-                          (parseFloat(servico.valorUnitario ?? servico.precoUnitario) || 0) * (parseFloat(servico.quantidade) || 1) -
-                          (parseFloat(servico.desconto) || 0)
-                        ).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ListaItensAprovacao
+              titulo="Serviços Mecânicos e Mão de Obra"
+              itens={itensAprovaveis.filter((it) => it.categoria === 'servico')}
+              respostasLocais={respostasLocais}
+              estaAprovado={estaAprovado}
+              onToggleItem={handleToggleItemAprovacao}
+              onVerFoto={setFotoZoomUrl}
+            />
 
             {/* Detalhamento de Terceiros (se houver) */}
-            {(dadosOS.terceirosOS || []).length > 0 && (
-              <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs overflow-hidden">
-                <div className="px-4 py-3 bg-[#f8fafc] border-b border-[#d0d5dd] flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-[#101828] uppercase tracking-wider">
-                    Serviços Especializados de Terceiros
-                  </span>
-                  <span className="text-[11px] font-bold text-[#667085]">
-                    {dadosOS.terceirosOS.length} itens
-                  </span>
-                </div>
-
-                <div className="divide-y divide-[#eaecf0]">
-                  {dadosOS.terceirosOS.map((terceiro, idx) => (
-                    <div key={idx} className="p-3.5 flex items-center justify-between gap-3 hover:bg-[#fcfcfd]">
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-[#101828] line-clamp-1">
-                          {terceiro.nome}
-                        </div>
-                        <div className="text-[11px] text-[#667085] flex items-center gap-2 mt-0.5">
-                          <span>Prestador: {terceiro.parceiroNome || 'Especializado'}</span>
-                          <span>•</span>
-                          <span>Prazo: {terceiro.prazoEstimado || '1 dia'}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-extrabold text-[#101828]">
-                          R$ {(
-                            (parseFloat(terceiro.valorVenda) || 0) - (parseFloat(terceiro.desconto) || 0)
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {itensAprovaveis.some((it) => it.categoria === 'terceiro') && (
+              <ListaItensAprovacao
+                titulo="Serviços Especializados de Terceiros"
+                itens={itensAprovaveis.filter((it) => it.categoria === 'terceiro')}
+                respostasLocais={respostasLocais}
+                estaAprovado={estaAprovado}
+                onToggleItem={handleToggleItemAprovacao}
+                onVerFoto={setFotoZoomUrl}
+              />
             )}
           </div>
         )}

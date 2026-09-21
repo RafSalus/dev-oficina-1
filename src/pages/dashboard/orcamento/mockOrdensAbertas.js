@@ -1,3 +1,9 @@
+import {
+  ITENS_CHECKLIST_ENTRADA,
+  checklistCompleto,
+  carregarAssinaturaVistoria,
+} from '../../../constants/checklistItems'
+
 export const STORAGE_KEY_ORDENS = 'dev_oficina_ordens_servico'
 export const STORAGE_KEY_ORCAMENTOS = 'dev_oficina_orcamentos'
 
@@ -20,10 +26,25 @@ export const STATUS_ORCAMENTO = [
 // nunca checar isso como "status !== aguardando_aprovacao", pois libera etapas anteriores demais.
 export const STATUS_PERMITE_FATURAMENTO = ['aprovado_execucao', 'pronto_retirada']
 
-// A secretária pode colocar uma OS na Fila sem mecânico atribuído, mas para avançar para
-// Diagnóstico é obrigatório ter um mecânico responsável definido.
+// A secretária pode colocar uma OS na Fila sem a Vistoria de Entrada preenchida (ela pode
+// ficar pendente até esse ponto), mas para avançar para Diagnóstico ela precisa estar
+// completa e aprovada (assinada digitalmente) pelo cliente — além de ter mecânico atribuído.
+// Retorna o motivo do bloqueio (para exibir ao usuário) ou null quando pode avançar.
+export function motivoImpedimentoDiagnostico(dados) {
+  if (!(dados?.mecanicoId || dados?.mecanicoNome)) {
+    return 'Atribua um mecânico responsável a esta OS antes de mover para Diagnóstico.'
+  }
+  if (!checklistCompleto(dados?.checklistEntrada, ITENS_CHECKLIST_ENTRADA)) {
+    return 'Finalize todos os itens da Vistoria de Entrada antes de mover para Diagnóstico.'
+  }
+  if (!carregarAssinaturaVistoria(dados?.numeroOS)) {
+    return 'A Vistoria de Entrada ainda não foi aprovada (assinada) pelo cliente.'
+  }
+  return null
+}
+
 export function podeIniciarDiagnostico(dados) {
-  return Boolean(dados?.mecanicoId || dados?.mecanicoNome)
+  return motivoImpedimentoDiagnostico(dados) === null
 }
 
 export const PRIORIDADE_OPTIONS = [
@@ -377,6 +398,25 @@ export function salvarOrdensAbertas(lista) {
   }
 }
 
+// Autoatribuição do mecânico ("Puxar OS"): só funciona em uma OS que ainda não tem mecânico
+// nenhum atribuído — reatribuir uma OS que já está com outro mecânico continua sendo uma ação
+// exclusiva da secretária/gestão (seletor de mecânico em OsFormularioAbertura.jsx). É o único
+// caminho do sistema em que o próprio mecânico grava mecanicoId/mecanicoNome numa OS.
+export function assumirOrdemSemMecanico(numeroOS, mecanicoId, mecanicoNome) {
+  const lista = obterOrdensAbertas()
+  const index = lista.findIndex((o) => String(o.numeroOS) === String(numeroOS))
+  if (index === -1) return { erro: 'OS não encontrada.' }
+
+  const os = lista[index]
+  if (os.mecanicoId || (os.mecanicoNome && os.mecanicoNome !== 'Não atribuído')) {
+    return { erro: `Esta OS já está atribuída a ${os.mecanicoNome}.` }
+  }
+
+  lista[index] = { ...os, mecanicoId, mecanicoNome }
+  salvarOrdensAbertas(lista)
+  return { os: lista[index] }
+}
+
 export function atualizarStatusOrdem(numeroOS, novoStatus) {
   const lista = obterOrdensAbertas()
   const index = lista.findIndex((item) => String(item.numeroOS) === String(numeroOS))
@@ -415,7 +455,7 @@ export function adicionarItemNaOrdem(numeroOS, tipo, item) {
   if (index === -1) return null
 
   const os = lista[index]
-  const chave = tipo === 'servico' ? 'servicosOS' : tipo === 'peca' ? 'pecasOS' : null
+  const chave = tipo === 'servico' ? 'servicosOS' : tipo === 'peca' ? 'pecasOS' : tipo === 'terceiro' ? 'terceirosOS' : null
   if (!chave) return null
 
   const listaAtualizada = [...(os[chave] || []), item]
@@ -428,7 +468,10 @@ export function adicionarItemNaOrdem(numeroOS, tipo, item) {
     (acc, s) => acc + ((parseFloat(s.precoUnitario ?? s.valorUnitario) || 0) * (parseFloat(s.quantidade) || 1) - (parseFloat(s.desconto) || 0)),
     0
   )
-  const totalTerceiros = Number(os.totalTerceiros) || 0
+  const totalTerceiros = (tipo === 'terceiro' ? listaAtualizada : os.terceirosOS || []).reduce(
+    (acc, t) => acc + ((parseFloat(t.valorVenda ?? t.precoFinal ?? t.precoUnitario) || 0) * (parseFloat(t.quantidade) || 1) - (parseFloat(t.desconto) || 0)),
+    0
+  )
   const descontoTotal = parseFloat(os.descontoGeralOS ?? os.descontoTotal) || 0
   const valorTotal = Math.max(0, totalPecas + totalServicos + totalTerceiros - descontoTotal)
 
@@ -437,10 +480,161 @@ export function adicionarItemNaOrdem(numeroOS, tipo, item) {
     [chave]: listaAtualizada,
     totalPecas,
     totalServicos,
+    totalTerceiros,
     valorTotal,
   }
   salvarOrdensAbertas(lista)
   return lista[index]
+}
+
+// Fecha o ciclo Cotação → OS: aplica o preço final negociado com o fornecedor vencedor nas
+// peças da OS que estavam marcadas "Para Cotação". A CotacaoPage regenera o `id` dos itens a
+// cada etapa do fluxo (importação → cotação → pedido de compra), então o casamento com as
+// peças da OS é feito por `codigo`, não por `id`. Chamada ao concluir o pedido de compra.
+export function atualizarPecasAposCotacao(numeroOS, itensCotados, fornecedorNome) {
+  const lista = obterOrdensAbertas()
+  const index = lista.findIndex((o) => String(o.numeroOS) === String(numeroOS))
+  if (index === -1) return null
+
+  const os = lista[index]
+  const porCodigo = new Map((itensCotados || []).map((it) => [String(it.codigo || '').toUpperCase(), it]))
+
+  const pecasAtualizadas = (os.pecasOS || []).map((p) => {
+    const cotado = porCodigo.get(String(p.codigo || '').toUpperCase())
+    if (!cotado) return p
+    return {
+      ...p,
+      precoUnitario: Number(cotado.precoCusto ?? cotado.valorTotal ?? p.precoUnitario) || p.precoUnitario,
+      statusEstoque: 'cotado',
+      fornecedorNome: fornecedorNome || cotado.fornecedorNome || p.fornecedorNome,
+    }
+  })
+
+  const totalPecas = pecasAtualizadas.reduce(
+    (acc, p) => acc + ((parseFloat(p.precoUnitario) || 0) * (parseFloat(p.quantidade) || 1) - (parseFloat(p.desconto) || 0)),
+    0
+  )
+  const descontoTotal = parseFloat(os.descontoGeralOS ?? os.descontoTotal) || 0
+  const valorTotal = Math.max(0, totalPecas + (Number(os.totalServicos) || 0) + (Number(os.totalTerceiros) || 0) - descontoTotal)
+
+  lista[index] = { ...os, pecasOS: pecasAtualizadas, totalPecas, valorTotal }
+  salvarOrdensAbertas(lista)
+  return lista[index]
+}
+
+// Grava a resposta do cliente por item do orçamento (modelo essencial/opcional — ver
+// AprovacaoOrcamentoClientePage.jsx) e recalcula o valorTotal considerando só os itens ainda
+// aprovados. Itens opcionais recusados não são removidos de pecasOS/servicosOS/terceirosOS —
+// continuam registrados (o que foi oferecido/recusado fica no histórico), só saem do total.
+// `itensAprovacaoOS` é `[{ itemId, categoria: 'peca'|'servico'|'terceiro', classificacao, motivo, respostaCliente }]`.
+export function registrarAprovacaoItens(numeroOS, itensAprovacaoOS) {
+  const lista = obterOrdensAbertas()
+  const index = lista.findIndex((o) => String(o.numeroOS) === String(numeroOS))
+  if (index === -1) return null
+
+  const os = lista[index]
+  const porItem = new Map((itensAprovacaoOS || []).map((it) => [it.itemId, it]))
+
+  const somaCategoria = (itens, categoria, precoField) =>
+    (itens || []).reduce((acc, item, idx) => {
+      const itemId = item.id || item.codigo || `${categoria}-${idx}`
+      const resposta = porItem.get(itemId)
+      if (resposta && resposta.respostaCliente === 'recusado') return acc
+      const preco = parseFloat(item[precoField] ?? item.precoUnitario) || 0
+      const qtd = parseFloat(item.quantidade) || 1
+      const desconto = parseFloat(item.desconto) || 0
+      return acc + Math.max(0, preco * qtd - desconto)
+    }, 0)
+
+  const totalPecas = somaCategoria(os.pecasOS, 'peca', 'precoUnitario')
+  const totalServicos = somaCategoria(os.servicosOS, 'servico', 'valorUnitario')
+  const totalTerceiros = (os.terceirosOS || []).reduce((acc, item, idx) => {
+    const itemId = item.id || item.codigo || `terceiro-${idx}`
+    const resposta = porItem.get(itemId)
+    if (resposta && resposta.respostaCliente === 'recusado') return acc
+    const preco = parseFloat(item.valorVenda ?? item.precoFinal ?? item.precoUnitario) || 0
+    const qtd = parseFloat(item.quantidade) || 1
+    const desconto = parseFloat(item.desconto) || 0
+    return acc + Math.max(0, preco * qtd - desconto)
+  }, 0)
+
+  const descontoTotal = parseFloat(os.descontoGeralOS ?? os.descontoTotal) || 0
+  const valorTotal = Math.max(0, totalPecas + totalServicos + totalTerceiros - descontoTotal)
+
+  lista[index] = { ...os, itensAprovacaoOS, totalPecas, totalServicos, totalTerceiros, valorTotal }
+  salvarOrdensAbertas(lista)
+  return lista[index]
+}
+
+// Item novo encontrado durante a Execução (peça quebrou, item de segurança precisa trocar
+// para continuar com segurança) — modelo separado do orçamento original (itensAprovacaoOS),
+// pois representa uma negociação em aberto, não o que já foi fechado com o cliente. Reportado
+// pelo mecânico (ou secretaria/gestão), aparece para o cliente na mesma página de aprovação.
+export function adicionarItemAdicional(numeroOS, item) {
+  const lista = obterOrdensAbertas()
+  const index = lista.findIndex((o) => String(o.numeroOS) === String(numeroOS))
+  if (index === -1) return null
+
+  const os = lista[index]
+  const novoItem = {
+    id: `adit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    criadoEm: new Date().toISOString(),
+    status: 'pendente_cliente', // 'pendente_cliente' | 'aprovado' | 'recusado'
+    resolvidoEm: null,
+    ...item,
+  }
+
+  lista[index] = { ...os, itensAdicionaisOS: [...(os.itensAdicionaisOS || []), novoItem] }
+  salvarOrdensAbertas(lista)
+  return lista[index]
+}
+
+// Resposta do cliente a um item adicional: 'aprovado' materializa o item nos arrays
+// financeiros reais da OS (via adicionarItemNaOrdem, já preparada para peça/serviço/terceiro);
+// 'recusado' só marca o status, sem tocar em pecasOS/servicosOS/terceirosOS.
+export function responderItemAdicional(numeroOS, itemAdicionalId, resposta) {
+  const lista = obterOrdensAbertas()
+  const index = lista.findIndex((o) => String(o.numeroOS) === String(numeroOS))
+  if (index === -1) return null
+
+  const os = lista[index]
+  const itemAdicional = (os.itensAdicionaisOS || []).find((it) => it.id === itemAdicionalId)
+  if (!itemAdicional) return null
+
+  const itensAtualizados = (os.itensAdicionaisOS || []).map((it) =>
+    it.id === itemAdicionalId ? { ...it, status: resposta, resolvidoEm: new Date().toISOString() } : it
+  )
+  lista[index] = { ...os, itensAdicionaisOS: itensAtualizados }
+  salvarOrdensAbertas(lista)
+
+  if (resposta === 'aprovado') {
+    return adicionarItemNaOrdem(numeroOS, itemAdicional.categoria, {
+      id: `${itemAdicional.categoria}-${Date.now()}`,
+      codigo: 'ADITIVO',
+      nome: itemAdicional.descricao,
+      unidade: itemAdicional.categoria === 'servico' ? 'MO' : 'UN',
+      quantidade: 1,
+      precoUnitario: Number(itemAdicional.valorEstimado) || 0,
+      valorVenda: Number(itemAdicional.valorEstimado) || 0,
+      desconto: 0,
+      parceiroNome: itemAdicional.categoria === 'terceiro' ? itemAdicional.parceiroNome || 'A definir' : undefined,
+    })
+  }
+
+  return lista[index]
+}
+
+// Gate de bloqueio ortogonal ao status (não é uma etapa nova do Kanban, é uma trava condicional
+// sobre "Aprovado e Em Execução"): item de segurança ainda sem resposta do cliente impede a OS
+// de avançar. Itens opcionais pendentes nunca bloqueiam — ficam só como aviso.
+export function motivoImpedimentoAvancoPorItemAdicional(dados) {
+  const pendenteSeguranca = (dados?.itensAdicionaisOS || []).find(
+    (it) => it.classificacao === 'seguranca' && it.status === 'pendente_cliente'
+  )
+  if (pendenteSeguranca) {
+    return `Existe um item de segurança ("${pendenteSeguranca.descricao}") aguardando aprovação do cliente antes de continuar.`
+  }
+  return null
 }
 
 // Anexa a foto (tirada na hora pela câmera) a uma peça específica já lançada na OS
