@@ -1,0 +1,131 @@
+schema: 1
+story: '2.0'
+story_title: 'Saneamento Arquitetural, Eliminação de Código Fantasma e Decomposição de Monólitos'
+gate: FAIL
+status_reason: >-
+  A decomposição de Compras, Cotação, OS, Painel, Estoque e Cliente preserva o comportamento e está bem feita,
+  mas a rota /cliente/servicos regrediu (estado vazio virou "Em breve", a versão mobile foi abandonada e o layout
+  público foi embutido no portal), o que viola o AC7 (comportamento idêntico) e o AC5/NFR18 (casca mobile sobre o mesmo hook).
+reviewer: 'Quinn (@qa)'
+reviewed_revision: 'commit:1e6e72f (base 54aad58; commits ef761e6, 5fef218, 658c47d, 1e6e72f)'
+updated: '2026-09-24T21:10:00-03:00'
+
+evidence:
+  environment: >-
+    Snapshot isolado de HEAD via `git archive HEAD` em /tmp/qa20 (node_modules e .env do projeto linkados/copiados),
+    para não misturar com as alterações não commitadas de outras stories (MFA, Garantias, 2.1).
+    Nenhum arquivo da Story 2.0 tem alteração pendente no working tree.
+  commands:
+    - cmd: 'npx vitest run (HEAD isolado)'
+      result: '15 arquivos / 124 testes: 123 passam, 1 falha'
+      detail: >-
+        Falha em tests/unit/repositories.test.js:193 (authUserId do admin semeado). É PRÉ-EXISTENTE: falha igual na base 54aad58
+        (7 arquivos / 71 testes, 1 falha) e só é corrigida pelas alterações NÃO commitadas de outra story
+        (src/repositories/funcionariosRepository.js e tests/unit/repositories.test.js). Não é regressão da 2.0.
+    - cmd: 'npx vitest run (working tree atual, referência)'
+      result: '18 arquivos / 149 testes, todos passam'
+      detail: 'Os números do Dev Agent Record (18/149) vêm do working tree sujo, e não dos commits da story.'
+    - cmd: 'npx eslint . (HEAD isolado)'
+      result: '0 erros, 212 warnings (base 54aad58: 0 erros e 18 warnings, porque o lint não cobria .jsx)'
+    - cmd: 'npx vite build (HEAD isolado)'
+      result: 'OK, 5022 módulos, built in 7.12s'
+      detail: 'Aviso pré-existente: chunk index de 1,9 MB (> 1000 kB).'
+    - cmd: 'grep CotacaoModalForm em src/ e tests/'
+      result: 'Nenhuma referência. A remoção é segura, e o build confirma.'
+
+acceptance_criteria:
+  AC1: {status: PARTIAL, note: 'Hook com 189L e containers com 134L e 149L, todos os subcomponentes existem e ficam abaixo de 250L. Mas o container do portal mudou de comportamento (ver REQ-001).'}
+  AC2: {status: PASS, note: 'ComprasPage 100L, CotacaoPage 110L, hooks com 327L e 348L; CotacaoModalForm removido sem referências.'}
+  AC3: {status: PASS, note: 'OrcamentoOSListPage 133L, PainelDetalhesOS 249L e abas com até 223L. As abas reais são Resumo/Itens/Vistoria/Cotação/Terceirizado/Aprovação/Execução; o Dev justificou o desvio do texto do AC.'}
+  AC4: {status: PASS, note: 'ClienteModalForm 90L, EstoquePage 51L, todos os módulos com até 350L.'}
+  AC5: {status: PARTIAL, note: 'Limite de linhas ok nos arquivos novos. NFR18 não é atendido no portal do cliente (mobile abandonado) nem em Compras e Estoque mobile (não usam os hooks). Arquivos tocados continuam acima de 400L (débito registrado pelo Dev).'}
+  AC6: {status: PASS, note: 'Todos os hooks e componentes novos têm JSDoc. Faltam JSDoc só em constantes exportadas e em telas legadas pouco tocadas (low).'}
+  AC7: {status: FAIL, note: 'Lint 0 erros e build ok. Testes 100% só no working tree (no HEAD, 1 falha pré-existente). A rota /cliente/servicos não mantém o comportamento (REQ-001).'}
+
+zero_regression_review:
+  verified_equivalent:
+    - 'useComprasWorkflow/useComprasDados + cotacaoFabrica/cotacaoHelpers: toasts, campos persistidos das cotações (demanda, agrupada, reposição unitária e completa), fornecedores iniciais (autopeças, até 3, nomes padrão), vencedor direto, recebimento, exclusão, textos de WhatsApp, eventos de sincronização e navegação com state.'
+    - 'useCotacaoWorkflow/useCotacaoFornecedores + cotacaoPedido: carga por state, id ou ?os=/&item=/&nome=, chave de storage, status derivado, vencedor (manual > menor proposta > primeiro), pedido gerado, fechamento do ciclo com a OS, exclusão e voltar.'
+    - 'useOrdensServicoLista: filtros, métricas, persistência da visualização, abertura via Fila (location.state), portão checklist → PDV, Kanban, arquivar/reabrir/excluir, link e WhatsApp. Classes dos cards de métricas conferidas uma a uma.'
+    - 'usePainelDetalhesOS/useLancamentosRapidosOS + osItensRapidos: aba por etapa, transição de status, peça (estoque x cotação), serviço (preço do catálogo), terceiro, pedido ao parceiro, item adicional, foto da peça e Escape.'
+    - 'useEstoqueWorkflow + estoqueCalculos: métricas, filtros e ordenação, Kardex, reposição (sugestaoCompra), lista copiada, cotações de reposição (mesmos campos e quantidades do original).'
+    - 'useClienteForm/useVeiculoFipe + clienteFormulario: carga para edição, troca PF/PJ zerando o documento, ordem das validações e tipos de toast, payload, veículo, cascata FIPE, CEP e descarte.'
+  divergences: 'Ver top_issues (REQ-001, REL-001, REQ-002).'
+
+top_issues:
+  - id: 'REQ-001'
+    severity: high
+    finding: >-
+      A rota /cliente/servicos (portal autenticado) mudou de comportamento e de UI.
+      (a) src/pages/cliente/ClienteServicosPage.jsx:47-48: sem OS, a tela antes mostrava o card "Nenhuma ordem de serviço em andamento"
+      e agora mostra <ClienteModulePlaceholder/>, que exibe "Em breve" no desktop e MobileClienteComingSoon no mobile.
+      (b) O container deixou de renderizar MobileClienteServicosPage no mobile (o original fazia `if (isMobile) return <MobileClienteServicosPage .../>`).
+      Com isso MobileClienteServicosPage.jsx (393L, refatorado nesta story), MobileSecaoItens.jsx (criado nesta story),
+      MobileAprovacaoModal.jsx e MobileFotoZoomModal.jsx ficaram sem nenhum import: é código fantasma criado pela própria story.
+      (c) Com OS, o portal passa a renderizar o layout da página pública dentro do ClienteLayout: header sticky próprio,
+      AprovacaoFooter `fixed bottom-0 left-0 right-0` (AprovacaoFooter.jsx:20) sobre a sidebar, e o botão "Fechar"
+      (AprovacaoHeader.jsx:30-51), cujo fallback faz window.close()/history.back() ou redireciona o CLIENTE para /gestao/ordem-de-servico (linha 47).
+    suggested_action: >-
+      Restaurar a paridade: no ClienteServicosPage, estado vazio igual ao original; no mobile, renderizar MobileClienteServicosPage
+      alimentado pelo useAprovacaoOrcamento (NFR18: mesma regra, outra casca), adaptando as props ao shape do hook, ou remover
+      conscientemente as telas mobile órfãs com decisão do PO; no portal, não renderizar o botão "Fechar" (passar onFecharAba
+      ou uma prop para ocultá-lo) e usar um rodapé que não seja fixed sobre a sidebar. Adicionar teste de container para
+      ClienteServicosPage (sem OS, com OS, mobile).
+  - id: 'TEST-001'
+    severity: medium
+    finding: >-
+      Nenhum teste renderiza os containers ClienteServicosPage e AprovacaoOrcamentoClientePage, nem o caminho mobile (useIsMobile = true)
+      de nenhuma das telas decompostas. Foi assim que as regressões da Task 1 (build quebrado) e a REQ-001 passaram.
+      Os testes novos caracterizam o código novo, mas não comparam com o comportamento original.
+    suggested_action: 'Adicionar testes de container para as duas páginas de aprovação e ao menos um teste com useIsMobile mockado em true para Compras, Estoque, OS e Portal.'
+  - id: 'DOC-001'
+    severity: medium
+    finding: >-
+      A evidência do Dev Agent Record ("18 suites, 149 testes verdes") foi gerada no working tree com alterações não commitadas
+      de outras stories. Nos commits da 2.0 são 15 arquivos e 124 testes, com 1 falha pré-existente
+      (tests/unit/repositories.test.js:193, corrigida só pelo trabalho não commitado de outra story). O AC7 ("100% passando") não se sustenta nos commits isolados.
+    suggested_action: 'Registrar na story os números medidos em HEAD limpo e apontar a falha pré-existente, com a story que a corrige. Coordenar a ordem de push com @devops.'
+  - id: 'ARCH-001'
+    severity: medium
+    finding: >-
+      NFR18 parcial: MobileComprasPage.jsx (943L) e MobileEstoquePage.jsx (687L) só trocaram os helpers de telefone e autopeças.
+      Continuam com regra própria (métricas, montagem de cotação etc.) e não usam useComprasWorkflow nem useEstoqueWorkflow.
+      Os arquivos tocados PDVPage (805L) e MobileNovaOrdemDeServicoPage (487L) seguem acima de 400L.
+    suggested_action: 'Aceitável como débito se o PO registrar a story 2.0b sugerida pelo Dev. Deixar isso explícito na story.'
+  - id: 'REL-001'
+    severity: low
+    finding: >-
+      Diferenças de comportamento na página pública /aprovacao/:id, onde o hook unificado seguiu o portal:
+      (1) useAprovacaoOrcamento.js:94-95: alternar item opcional agora dispara toast ("Item complementar incluído/removido"), o que não acontecia antes;
+      (2) useAprovacaoOrcamento.js:139: a mensagem de sucesso mudou ("... notificada para iniciar os serviços.");
+      (3) AprovacaoOrcamentoClientePage.jsx:118: o campo de nome no modal agora vem preenchido com o nome do cliente (antes ficava vazio, com placeholder);
+      (4) useAprovacaoOrcamento.js:79: o efeito de respostasLocais passou a depender de itensAprovaveis/metadataPorItem e é reinicializado após responderItemAdicionalOS (antes dependia só de numeroOS).
+    suggested_action: 'Decidir com o PO se essas mudanças são desejadas; se não forem, parametrizar o hook (ex.: notificarToggle) e restaurar o texto e as dependências originais.'
+  - id: 'REQ-002'
+    severity: low
+    finding: >-
+      aprovacaoStorage.js:39-46: em /aprovacao e /orcamento sem id, o original renderizava a tela com dados vazios.
+      Agora aparece "Orçamento não localizado" ou, se houver clienteAtivo no ClienteContext do mesmo navegador, a OS desse cliente.
+    suggested_action: 'Confirmar com o PO. A mudança parece melhoria, mas não estava no escopo.'
+  - id: 'DOC-002'
+    severity: low
+    finding: 'MobileClienteServicosPage (refatorado) e constantes exportadas (clienteFormulario.js:7/17/39, estoqueCalculos.js:13/21/29, painelOSConfig.js:8/12/48/56, clienteSelectStyles.js:34-35) não têm JSDoc.'
+    suggested_action: 'Adicionar um JSDoc de uma linha. O AC6 exige JSDoc só para componentes e hooks, então isso não bloqueia.'
+
+strengths:
+  - 'Decomposição limpa no padrão ADR-003: regras puras em utils/{dominio}, hooks de workflow e presenters finos; todos os arquivos novos com no máximo 350L.'
+  - 'Paridade minuciosa em Compras, Cotação, OS, Painel, Estoque e Cliente: toasts, campos persistidos, ordem de validações e classes visuais conferidos sem divergência.'
+  - 'Bugs reais corrigidos: ReferenceError em ações de cotação do ComprasPage, useEffect sem import no mobile de Nova OS e lint que ignorava .jsx.'
+  - 'Remoção do CotacaoModalForm segura (sem referências, build ok).'
+
+waiver: {active: false}
+
+auto_decisions:
+  - '[AUTO-DECISION] Rodar os gates em HEAD limpo ou no working tree? → HEAD isolado via git archive, e o working tree só como referência (razão: o working tree tem trabalho não commitado de outras stories e o gate avalia os commits da 2.0).'
+  - '[AUTO-DECISION] A falha em repositories.test.js bloqueia? → Não conta como regressão da 2.0 (é pré-existente na base), mas é registrada como DOC-001 porque o AC7 foi declarado a partir do working tree sujo.'
+  - '[AUTO-DECISION] Transição de status da story (qa-gate.md manda InReview → InProgress no FAIL)? → Não aplicada (razão: a instrução do solicitante limita a edição à seção QA Results, e o status atual é "Ready for Review", não "InReview"). Fica para @po/@dev.'
+
+next_action:
+  agent: '@dev'
+  command: '*apply-qa-fixes 2.0'
+  scope: 'REQ-001 (obrigatório), TEST-001 (obrigatório para /cliente/servicos) e DOC-001; ARCH-001, REL-001, REQ-002 e DOC-002 conforme decisão do PO.'
