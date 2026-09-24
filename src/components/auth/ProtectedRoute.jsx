@@ -61,13 +61,14 @@ export function ProtectedRoute({ children, portal = 'gestao', allowedRoles }) {
   }
 
   // 3. Portais Administrativos e Operacionais (Gestão, Secretaria, Mecânico)
-  // Se Supabase está desconfigurado (modo desenvolvimento / offline), permite acesso com aviso
-  if (status === 'unconfigured') {
+  // Supabase sem configuração: libera apenas no servidor de desenvolvimento local.
+  // Em build de produção a rota falha fechada e exige login.
+  if (status === 'unconfigured' && import.meta.env.DEV) {
     return children
   }
 
-  // Se deslogado, redireciona para a tela de login preservando a rota pretendida (AC2 e AC5)
-  if (status === 'unauthenticated' || status === 'error') {
+  // Sem sessão válida, redireciona para o login preservando a rota pretendida (AC2 e AC5)
+  if (status !== 'aal2' && status !== 'mfa_setup_required' && status !== 'mfa_verify_required') {
     return <Navigate to={`/gestao/entrar?returnUrl=${returnUrl}`} replace />
   }
 
@@ -120,14 +121,7 @@ export function ProtectedRoute({ children, portal = 'gestao', allowedRoles }) {
   if (portal === 'mecanico') {
     // Mecânico e Admin podem acessar o portal do mecânico
     if (!isMecanico && !isAdmin) {
-      // Verifica se há identificação local de mecânico no pátio
-      let mecSalvo = null
-      try {
-        mecSalvo = localStorage.getItem('dev_oficina_mecanico_ativo')
-      } catch {}
-      if (!mecSalvo) {
-        return <Navigate to={`/gestao/entrar?returnUrl=${returnUrl}`} replace />
-      }
+      return <Navigate to="/gestao/acesso-negado" replace />
     }
 
     // Se não for admin, aplica restrição de horário e dispositivo no pátio (AC9 e AC10)

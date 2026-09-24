@@ -6,6 +6,19 @@ const AdminAuthContext = createContext(null)
 
 export const ADMIN_SESSION_STORAGE_KEY = 'dev_oficina_admin_session'
 
+const PAPEIS_VALIDOS = ['admin', 'secretaria', 'mecanico']
+
+/**
+ * Papel do usuário no sistema. Lido de app_metadata, que só o servidor (service role) grava;
+ * user_metadata é editável pelo próprio usuário e nunca deve ser usado para autorização.
+ * @param {object|null} user - Usuário do Supabase Auth
+ * @returns {'admin'|'secretaria'|'mecanico'|null}
+ */
+export function obterPapelDoUsuario(user) {
+  const papel = user?.app_metadata?.role
+  return PAPEIS_VALIDOS.includes(papel) ? papel : null
+}
+
 export function AdminAuthProvider({ children }) {
   const [status, setStatus] = useState(() => (isSupabaseConfigured ? 'unauthenticated' : 'unconfigured'))
   const [isLoading, setIsLoading] = useState(() => Boolean(isSupabaseConfigured))
@@ -13,27 +26,18 @@ export function AdminAuthProvider({ children }) {
   const [role, setRole] = useState(null)
   const mfaPendingRef = useRef(null)
 
+  const limparSessao = useCallback((proximoStatus) => {
+    setUser(null)
+    setRole(null)
+    setStatus(proximoStatus)
+  }, [])
+
+  // A única fonte de verdade da sessão é o Supabase Auth. Nada gravado no localStorage pelo
+  // app concede acesso: falha, ausência de sessão ou erro na checagem de MFA negam o acesso.
   const refreshSession = useCallback(async () => {
     const client = getSupabaseAdminClient()
     if (!client) {
-      // Fallback para sessão administrativa persistida localmente se houver
-      let localSession = null
-      try {
-        const raw = localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)
-        if (raw) localSession = JSON.parse(raw)
-      } catch {}
-
-      if (localSession?.user && localSession?.role) {
-        setUser(localSession.user)
-        setRole(localSession.role)
-        setStatus(localSession.status || 'aal2')
-        setIsLoading(false)
-        return
-      }
-
-      setUser(null)
-      setRole(null)
-      setStatus('unconfigured')
+      limparSessao('unconfigured')
       setIsLoading(false)
       return
     }
@@ -47,55 +51,33 @@ export function AdminAuthProvider({ children }) {
     try {
       const { data, error } = await client.auth.getSession()
       if (error || !data?.session) {
-        // Verificar se existe sessão local ativa (ex: Rafael Amaral Salustiano ou colaboradores)
-        let localSession = null
-        try {
-          const raw = localStorage.getItem(ADMIN_SESSION_STORAGE_KEY)
-          if (raw) localSession = JSON.parse(raw)
-        } catch {}
-
-        if (localSession?.user && localSession?.role) {
-          setUser(localSession.user)
-          setRole(localSession.role)
-          setStatus(localSession.status || 'aal2')
-          setIsLoading(false)
-          return
-        }
-
-        setUser(null)
-        setRole(null)
-        setStatus('unauthenticated')
+        limparSessao('unauthenticated')
         return
       }
 
       const currentUser = data.session.user
       setUser(currentUser)
-      setRole(currentUser.user_metadata?.role || currentUser.role || 'admin')
+      setRole(obterPapelDoUsuario(currentUser))
 
-      // Verificar nível de autenticação e fatores MFA
-      try {
-        const { data: aalData } = await client.auth.mfa.getAuthenticatorAssuranceLevel()
-        if (aalData?.currentLevel === 'aal2') {
-          setStatus('aal2')
-        } else {
-          const { data: factorsData } = await client.auth.mfa.listFactors()
-          const totpFactors = factorsData?.totp || []
-          const hasVerifiedTotp = totpFactors.some((f) => f.status === 'verified')
-          if (hasVerifiedTotp) {
-            setStatus('mfa_verify_required')
-          } else {
-            setStatus('mfa_setup_required')
-          }
-        }
-      } catch {
+      const { data: aalData, error: aalError } = await client.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (aalError) throw aalError
+
+      if (aalData?.currentLevel === 'aal2') {
         setStatus('aal2')
+        return
       }
-    } catch {
-      setStatus(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error')
+
+      const { data: factorsData, error: factorsError } = await client.auth.mfa.listFactors()
+      if (factorsError) throw factorsError
+      const hasVerifiedTotp = (factorsData?.totp || []).some((f) => f.status === 'verified')
+      setStatus(hasVerifiedTotp ? 'mfa_verify_required' : 'mfa_setup_required')
+    } catch (error) {
+      console.error('Erro ao validar sessão administrativa:', error)
+      limparSessao(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'error')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [limparSessao])
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -127,17 +109,6 @@ export function AdminAuthProvider({ children }) {
       try {
         const { data, error } = await client.auth.signInWithPassword({ email: normalizedEmail, password })
         if (!error && data?.session) {
-          try {
-            localStorage.setItem(
-              ADMIN_SESSION_STORAGE_KEY,
-              JSON.stringify({
-                user: data.user,
-                role: data.user.user_metadata?.role || data.user.role || 'admin',
-                status: 'aal2',
-                timestamp: Date.now(),
-              })
-            )
-          } catch {}
           await refreshSession()
           return { ok: true, user: data.user }
         }
@@ -157,6 +128,7 @@ export function AdminAuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     try {
+      // Remove a sessão local de versões anteriores, que não é mais usada para autorização
       localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY)
     } catch {}
     const client = getSupabaseAdminClient()
@@ -200,15 +172,7 @@ export function AdminAuthProvider({ children }) {
   const enrollMfa = useCallback(async () => {
     const client = getSupabaseAdminClient()
     if (!client) {
-      // Simulação para ambiente local / offline
-      return {
-        ok: true,
-        factorId: 'mock-totp-factor-1',
-        qrCode:
-          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><rect width="160" height="160" fill="%23f8fafc"/><rect x="20" y="20" width="40" height="40" fill="%23101828"/><rect x="100" y="20" width="40" height="40" fill="%23101828"/><rect x="20" y="100" width="40" height="40" fill="%23101828"/><rect x="70" y="70" width="20" height="20" fill="%230284c7"/><rect x="30" y="30" width="20" height="20" fill="%23ffffff"/><rect x="110" y="30" width="20" height="20" fill="%23ffffff"/><rect x="30" y="110" width="20" height="20" fill="%23ffffff"/></svg>',
-        secret: 'MGABRIEL2026OFICINAADM',
-        uri: 'otpauth://totp/Mecanica%20Gabriel:admin?secret=MGABRIEL2026OFICINAADM&issuer=MecanicaGabriel',
-      }
+      return { ok: false, message: MESSAGES.serviceUnavailable }
     }
 
     try {
@@ -240,9 +204,7 @@ export function AdminAuthProvider({ children }) {
 
       const client = getSupabaseAdminClient()
       if (!client) {
-        // Ambiente offline / local: aceita o código e eleva para AAL2
-        setStatus('aal2')
-        return { ok: true }
+        return { ok: false, message: MESSAGES.serviceUnavailable }
       }
 
       try {
@@ -275,8 +237,7 @@ export function AdminAuthProvider({ children }) {
     async (factorId) => {
       const client = getSupabaseAdminClient()
       if (!client) {
-        setStatus('mfa_setup_required')
-        return { ok: true }
+        return { ok: false, message: MESSAGES.serviceUnavailable }
       }
 
       try {

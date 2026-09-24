@@ -45,7 +45,7 @@ O proprietário do sistema foi provisionado e testado com sucesso:
 - **Nome:** Rafael Amaral Salustiano
 - **Cargo:** Gerente Geral / Administrador & Proprietário
 - **E-mail:** `rtzrafael@gmail.com`
-- **Senha Inicial:** `GabrielAdmin2026!`
+- **Senha:** definida pelo proprietário; nunca registre senhas na documentação.
 - **Nível de Acesso:** `admin` (Bypass 24/7 de horário e de dispositivo)
 - **Supabase UUID:** `b0815410-e82e-4034-aa87-567faf2f6500`
 - **Login Instantâneo:** Configurado em [`AdminAuthContext.jsx`](file:///home/rafael/projetos/dev-oficina/src/context/AdminAuthContext.jsx) com fallback inteligente para AAL2 e persistência de sessão.

@@ -14,7 +14,8 @@ export const CARGOS_FUNCIONARIO_OPCOES = [
 ]
 
 // Mapeia o cargo de RH para o papel (role) usado pelo ProtectedRoute/Supabase Auth
-// (user_metadata.role) ao provisionar o login — ver supabase/functions/criar-login-funcionario.
+// (app_metadata.role, gravado só pelo servidor) ao provisionar o login — ver
+// supabase/functions/criar-login-funcionario.
 export const PAPEL_POR_CARGO = {
   analista: 'admin',
   gerente: 'mecanico',
@@ -241,7 +242,7 @@ export async function excluirFuncionario(id) {
  * Provisiona o login real (Supabase Auth) de um colaborador já cadastrado, via Edge Function
  * (única forma segura de usar a service_role key — nunca é exposta ao navegador). O funcionário
  * recebe um e-mail de convite do Supabase para definir a própria senha; o cargo é convertido
- * para o papel de portal correspondente (ver PAPEL_POR_CARGO) e gravado em user_metadata.role.
+ * para o papel de portal correspondente (ver PAPEL_POR_CARGO) e gravado em app_metadata.role.
  *
  * Requer que `funcionario.email` esteja preenchido e que ainda não exista `authUserId`.
  * @param {string} funcionarioId

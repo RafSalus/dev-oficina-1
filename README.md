@@ -61,7 +61,7 @@ O Administrador Geral já está provisionado no Supabase Auth e configurado na a
 
 - **URL de Acesso:** `/gestao/entrar`
 - **E-mail:** `rtzrafael@gmail.com`
-- **Senha Inicial:** `GabrielAdmin2026!`
+- **Senha:** definida pelo proprietário; nunca registre senhas na documentação.
 - **Papel:** `admin` (Acesso 24/7 com bypass de horário e de rede)
 - **UUID Supabase:** `b0815410-e82e-4034-aa87-567faf2f6500`
 
