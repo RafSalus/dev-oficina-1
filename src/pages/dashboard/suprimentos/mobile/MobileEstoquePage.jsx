@@ -30,30 +30,11 @@ import { gerarProximoNumeroCotacao, salvarCotacao } from '../../../../constants/
 import { mobileSelectStyles, inputBaseClass } from '../../nova-os/mobile/mobileSelectStyles'
 import { MobilePecaFormModal } from './MobilePecaFormModal'
 import { MobileEstoqueMovimentoModal } from './MobileEstoqueMovimentoModal'
-
-const extrairTelefoneLimpo = (t) => {
-  if (!t) return '43998544106'
-  const tel = t.whatsapp || t.contatoTelefone || t.telefone || t.contato?.telefone || ''
-  const limpo = String(tel).replace(/\D/g, '')
-  return limpo.length >= 8 ? limpo : '43998544106'
-}
-
-const extrairTelefoneExibicao = (t) => {
-  if (!t) return ''
-  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '')
-}
-
-const filtrarFornecedoresAutoPecas = (terceiros) => {
-  if (!Array.isArray(terceiros)) return []
-  return terceiros.filter((t) => {
-    const cat = String(t.categoria || t.categoriaFornecedor || '').toLowerCase()
-    const ramo = String(t.ramoAtividade || t.tipoServico || '').toLowerCase()
-    return (
-      cat.includes('auto') || cat.includes('peça') || cat.includes('peca') || cat.includes('distribuidora') ||
-      ramo.includes('auto') || ramo.includes('peça') || ramo.includes('peca') || ramo.includes('distribuidora')
-    )
-  })
-}
+import {
+  extrairTelefoneLimpo,
+  extrairTelefoneExibicao,
+  filtrarFornecedoresAutoPecas,
+} from '../../../../utils/compras/cotacaoHelpers'
 
 function StatChip({ label, value, dark, warn, danger }) {
   return (
