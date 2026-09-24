@@ -10,6 +10,7 @@ const contem = (valor, termo) => valor?.toLowerCase().includes(termo)
 const saldo = (p) => Number(p.estoqueAtual) || 0
 const minimo = (p) => Number(p.estoqueMinimo) || 0
 
+/** Opções do filtro de nível de estoque (react-select). */
 export const OPCOES_STATUS_ESTOQUE = [
   { value: 'TODOS', label: 'Todos os Níveis' },
   { value: 'ADEQUADO', label: 'Estoque Adequado' },
@@ -18,6 +19,7 @@ export const OPCOES_STATUS_ESTOQUE = [
   { value: 'ZERADO', label: 'Esgotados / Zerados' },
 ]
 
+/** Opções de ordenação da posição do almoxarifado. */
 export const OPCOES_ORDENACAO_ESTOQUE = [
   { value: 'NOME_ASC', label: 'Nome (A - Z)' },
   { value: 'NOME_DESC', label: 'Nome (Z - A)' },
@@ -26,6 +28,7 @@ export const OPCOES_ORDENACAO_ESTOQUE = [
   { value: 'MAIOR_VALOR', label: 'Maior Valor em Estoque' },
 ]
 
+/** Opções do filtro de tipo de movimentação do Kardex. */
 export const OPCOES_TIPO_MOVIMENTO = [
   { value: 'TODOS', label: 'Todos os Tipos' },
   { value: 'ENTRADA', label: 'Entradas (+)' },

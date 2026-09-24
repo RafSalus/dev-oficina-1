@@ -4,6 +4,23 @@
  */
 import { gerarLaudoTecnico } from '../../constants/catalogoPecasServicos'
 
+/**
+ * Diferenças de comportamento entre a página pública (/aprovacao/:id) e o Portal do Cliente
+ * (/cliente/servicos), preservadas da implementação original de cada tela.
+ */
+export const COMPORTAMENTO_POR_ORIGEM = {
+  publica: {
+    usarOSDoClienteLogado: false,
+    avisarAlteracaoItem: false,
+    mensagemAprovado: 'Orçamento aprovado com sucesso! A oficina já foi notificada.',
+  },
+  portal: {
+    usarOSDoClienteLogado: true,
+    avisarAlteracaoItem: true,
+    mensagemAprovado: 'Orçamento aprovado com sucesso! A oficina já foi notificada para iniciar os serviços.',
+  },
+}
+
 /** WhatsApp da oficina que recebe confirmações e dúvidas do cliente. */
 export const WHATSAPP_OFICINA = '5543998544106'
 

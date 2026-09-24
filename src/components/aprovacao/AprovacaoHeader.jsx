@@ -18,6 +18,8 @@ import {
  * @param {() => void} props.onAbrirFolhaImpressao - Callback para abrir a folha oficial de impressão
  * @param {() => void} props.onTirarDuvidasWhatsApp - Callback para abrir atendimento WhatsApp
  * @param {() => void} [props.onFecharAba] - Callback para fechar a visualização
+ * @param {boolean} [props.mostrarFechar=true] - Exibe o botão "Fechar" (oculto quando a tela
+ *   está embutida no Portal do Cliente, onde não há aba para fechar)
  */
 export function AprovacaoHeader({
   dadosOS,
@@ -26,6 +28,7 @@ export function AprovacaoHeader({
   onAbrirFolhaImpressao,
   onTirarDuvidasWhatsApp,
   onFecharAba,
+  mostrarFechar = true,
 }) {
   const handleFechar = () => {
     if (onFecharAba) {
@@ -96,15 +99,17 @@ export function AprovacaoHeader({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={handleFechar}
-              className="h-8 px-3 rounded-xl bg-[#101828] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-              title="Fechar esta aba e voltar para a tela anterior"
-            >
-              <X size={14} weight="bold" />
-              <span>Fechar</span>
-            </button>
+            {mostrarFechar && (
+              <button
+                type="button"
+                onClick={handleFechar}
+                className="h-8 px-3 rounded-xl bg-[#101828] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                title="Fechar esta aba e voltar para a tela anterior"
+              >
+                <X size={14} weight="bold" />
+                <span>Fechar</span>
+              </button>
+            )}
           </div>
         </div>
       </header>

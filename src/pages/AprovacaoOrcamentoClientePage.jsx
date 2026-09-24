@@ -35,7 +35,7 @@ export function AprovacaoOrcamentoClientePage() {
     responderItemAdicionalOS,
     enviarConfirmacaoWhatsApp,
     tirarDuvidasWhatsApp,
-  } = useAprovacaoOrcamento(id)
+  } = useAprovacaoOrcamento(id, { origem: 'publica' })
 
   const [activeTab, setActiveTab] = useState('orcamento')
   const [modalAprovacaoAberto, setModalAprovacaoAberto] = useState(false)
@@ -115,7 +115,8 @@ export function AprovacaoOrcamentoClientePage() {
         totais={totais}
         estaAprovado={estaAprovado}
         onAbrirModalAprovacao={() => {
-          setNomeResponsavel(nomeResponsavelAprovacao || dadosOS.cliente || '')
+          // Página pública: o nome só vem preenchido se já houver aprovação registrada
+          setNomeResponsavel(nomeResponsavelAprovacao || '')
           setFormaPagamento(formaPagamentoEscolhida || 'pix')
           setModalAprovacaoAberto(true)
         }}

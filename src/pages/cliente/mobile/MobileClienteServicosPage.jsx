@@ -26,6 +26,12 @@ const TABS = [
   { id: 'fotos', label: 'Fotos', icon: Camera },
 ]
 
+/**
+ * Versão mobile do Portal do Cliente (/cliente/servicos): orçamento por categoria, laudo,
+ * fotos das peças e barra fixa de aprovação. Recebe os dados já adaptados do
+ * `useAprovacaoOrcamento` por `ClienteServicosMobile` (NFR18).
+ * @param {object} props - `servico`, `itensMarcados`, `totais` e handlers de aprovação.
+ */
 export function MobileClienteServicosPage({
   servico = {},
   clienteAtivo,
@@ -255,7 +261,7 @@ export function MobileClienteServicosPage({
 
         {abaAtiva === 'fotos' && (
           <div className="space-y-3">
-            {(servico.pecas || []).map((peca) => {
+            {(servico.pecas || []).filter((peca) => peca.foto).map((peca) => {
               const isSelected = itensMarcados.has(peca.id)
               const isEssencial = peca.tipo === 'essencial'
               return (

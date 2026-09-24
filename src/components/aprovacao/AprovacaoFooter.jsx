@@ -9,15 +9,20 @@ import { CheckCircle, WhatsappLogo } from '@phosphor-icons/react'
  * @param {boolean} props.estaAprovado - Se o orçamento já foi aprovado
  * @param {() => void} props.onAbrirModalAprovacao - Callback para abrir modal de aprovação
  * @param {() => void} props.onEnviarWhatsApp - Callback para reenviar confirmação no WhatsApp
+ * @param {boolean} [props.fixo=true] - Barra fixa na janela (página pública); quando false, fica
+ *   presa ao fim do container rolável (Portal do Cliente), sem cobrir a barra lateral
  */
 export function AprovacaoFooter({
   totais,
   estaAprovado,
   onAbrirModalAprovacao,
   onEnviarWhatsApp,
+  fixo = true,
 }) {
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-[#d0d5dd] shadow-lg p-3 sm:py-3.5">
+    <footer
+      className={`${fixo ? 'fixed left-0 right-0' : 'sticky'} bottom-0 z-30 bg-white border-t border-[#d0d5dd] shadow-lg p-3 sm:py-3.5`}
+    >
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
         <div>
           <span className="text-[10px] font-bold text-[#667085] uppercase block leading-none">

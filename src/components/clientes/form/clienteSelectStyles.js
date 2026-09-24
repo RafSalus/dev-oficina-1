@@ -31,5 +31,7 @@ function estiloComAltura(altura, fontSize) {
   }
 }
 
+/** Selects de 36px dos campos do veículo (FIPE e combustível). */
 export const selectStylesCompacto = estiloComAltura('36px', '12px')
+/** Select de 38px da UF do endereço. */
 export const selectStylesUF = estiloComAltura('38px', '13px')

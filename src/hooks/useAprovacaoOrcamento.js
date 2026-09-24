@@ -29,18 +29,23 @@ import {
   montarLaudoOficial,
   linkConfirmacaoAprovacao,
   linkDuvidasOrcamento,
+  COMPORTAMENTO_POR_ORIGEM,
 } from '../utils/aprovacao/aprovacaoCalculos'
 
 /**
  * @param {string} [numeroOSParam] - Número da OS vindo dos parâmetros de rota (/aprovacao/:id)
+ * @param {{origem?: 'publica'|'portal'}} [opcoes] - Na origem 'portal' (padrão sem número de OS),
+ *   a OS vem do cliente logado e a inclusão/remoção de opcional gera aviso; na 'publica', só a OS
+ *   da rota é usada.
  * @returns {Object} Estado e métodos do fluxo de aprovação
  */
-export function useAprovacaoOrcamento(numeroOSParam) {
+export function useAprovacaoOrcamento(numeroOSParam, { origem = numeroOSParam ? 'publica' : 'portal' } = {}) {
   const { clienteAtivo } = useCliente()
+  const comportamento = COMPORTAMENTO_POR_ORIGEM[origem] || COMPORTAMENTO_POR_ORIGEM.publica
 
   const numeroOSAlvo = useMemo(
-    () => resolverNumeroOSAlvo(numeroOSParam, clienteAtivo?.value),
-    [numeroOSParam, clienteAtivo?.value]
+    () => resolverNumeroOSAlvo(numeroOSParam, comportamento.usarOSDoClienteLogado ? clienteAtivo?.value : null),
+    [numeroOSParam, clienteAtivo?.value, comportamento.usarOSDoClienteLogado]
   )
 
   const [dadosOS, setDadosOS] = useState(() => carregarDadosOS(numeroOSAlvo))
@@ -72,11 +77,12 @@ export function useAprovacaoOrcamento(numeroOSParam) {
   const metadataPorItem = useMemo(() => mapearMetadataPorItem(dadosOS.itensAprovacaoOS), [dadosOS.itensAprovacaoOS])
   const itensAprovaveis = useMemo(() => normalizarItensAprovaveis(dadosOS, metadataPorItem), [dadosOS, metadataPorItem])
 
-  // Resposta local do cliente por item ('aprovado' ou 'recusado')
+  // Resposta local do cliente por item ('aprovado' ou 'recusado'). Só reinicia quando a OS muda:
+  // responder a um item adicional recarrega a OS e não pode apagar as escolhas já feitas.
   const [respostasLocais, setRespostasLocais] = useState({})
   useEffect(() => {
     setRespostasLocais(respostasIniciais(itensAprovaveis, metadataPorItem))
-  }, [dadosOS.numeroOS, itensAprovaveis, metadataPorItem])
+  }, [dadosOS.numeroOS])
 
   // Alterna inclusão de item opcional; essenciais ficam travados
   const handleToggleItem = useCallback(
@@ -91,12 +97,14 @@ export function useAprovacaoOrcamento(numeroOSParam) {
       }
       setRespostasLocais((prev) => {
         const novoStatus = prev[itemId] === 'recusado' ? 'aprovado' : 'recusado'
-        if (novoStatus === 'aprovado') toast.success('Item complementar incluído no seu orçamento.')
-        else toast.info('Item complementar removido do seu orçamento.')
+        if (comportamento.avisarAlteracaoItem) {
+          if (novoStatus === 'aprovado') toast.success('Item complementar incluído no seu orçamento.')
+          else toast.info('Item complementar removido do seu orçamento.')
+        }
         return { ...prev, [itemId]: novoStatus }
       })
     },
-    [aprovacao.estaAprovado]
+    [aprovacao.estaAprovado, comportamento.avisarAlteracaoItem]
   )
 
   const totais = useMemo(
@@ -136,9 +144,9 @@ export function useAprovacaoOrcamento(numeroOSParam) {
       }
 
       setAprovacao({ estaAprovado: true, dataHora, responsavel: nomeFinal, formaPagamento })
-      toast.success('Orçamento aprovado com sucesso! A oficina já foi notificada para iniciar os serviços.')
+      toast.success(comportamento.mensagemAprovado)
     },
-    [dadosOS, itensAprovaveis, respostasLocais, totais.totalGeral]
+    [dadosOS, itensAprovaveis, respostasLocais, totais.totalGeral, comportamento.mensagemAprovado]
   )
 
   // Resposta a item adicional reportado durante a execução

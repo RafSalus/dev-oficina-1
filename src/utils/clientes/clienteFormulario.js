@@ -4,6 +4,7 @@
  */
 import { validarCPF, validarCNPJ, formatarCEP, formatarTelefone } from '../fiscalValidators'
 
+/** Tipos de combustível aceitos no cadastro de veículo. */
 export const COMBUSTIVEL_OPCOES = [
   { value: 'FLEX', label: 'Flex (Álcool e Gasolina)' },
   { value: 'GASOLINA', label: 'Gasolina' },
@@ -14,6 +15,7 @@ export const COMBUSTIVEL_OPCOES = [
   { value: 'GNV', label: 'GNV (Gás Natural Veicular)' },
 ]
 
+/** Estado inicial do formulário de cliente novo. */
 export const FORM_CLIENTE_INICIAL = {
   codigoCliente: '',
   tipoPessoa: 'F', // 'F' para Física (CPF) ou 'J' para Jurídica (CNPJ)
@@ -36,6 +38,7 @@ export const FORM_CLIENTE_INICIAL = {
   veiculos: [],
 }
 
+/** Estado inicial do veículo em inclusão. */
 export const NOVO_VEICULO_INICIAL = {
   codigoVeiculo: '',
   placa: '',

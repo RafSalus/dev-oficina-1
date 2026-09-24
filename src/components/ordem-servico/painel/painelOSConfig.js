@@ -5,10 +5,12 @@
 import { STATUS_ORCAMENTO } from '../../../pages/dashboard/orcamento/mockOrdensAbertas'
 import { SEQUENCIA_STATUS } from '../../../pages/dashboard/orcamento/statusTransicao'
 
+/** Status do seletor do painel na ordem real do fluxo (mesma do Kanban). */
 export const OPCOES_STATUS_ORDENADAS = SEQUENCIA_STATUS.map((status) =>
   STATUS_ORCAMENTO.find((s) => s.value === status)
 ).filter(Boolean)
 
+/** Estilos do react-select de status do painel (opções bloqueadas em cinza). */
 export const selectStatusStyles = {
   control: (base, state) => ({
     ...base,
@@ -43,8 +45,10 @@ export const selectStatusStyles = {
   }),
 }
 
-// Além de Resumo, Itens e Vistoria/Diagnóstico (sempre visíveis), uma aba extra aparece de
-// acordo com o status atual da OS — o painel fica focado no que importa na etapa atual.
+/**
+ * Aba extra exibida para cada status da OS. Além de Resumo, Itens e Vistoria/Diagnóstico
+ * (sempre visíveis), o painel fica focado no que importa na etapa atual.
+ */
 export const ABA_ESTAGIO_POR_STATUS = {
   aguardando_pecas: 'cotacao',
   terceirizado: 'terceirizado',
@@ -53,6 +57,7 @@ export const ABA_ESTAGIO_POR_STATUS = {
   pronto_retirada: 'execucao',
 }
 
+/** Rótulo de cada aba de estágio. */
 export const LABEL_ABA_ESTAGIO = {
   cotacao: 'Cotação',
   terceirizado: 'Terceirizado',
