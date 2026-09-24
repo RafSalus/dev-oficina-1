@@ -33,47 +33,7 @@ const PRAZO_ENTREGA_OPCOES = [
 ]
 
 // Dados padrao de demonstracao
-const MOCK_COTACAO = {
-  id: 'COT-2026-9041',
-  cliente: 'Marcos Vinícius Silveira',
-  placa: 'BRA-2E19',
-  marcaModelo: 'Chevrolet Onix Plus 1.0 Turbo LTZ',
-  ano: '2022 / 2023',
-  cor: 'Prata Metálico',
-  km: '48.350 km',
-  combustivel: 'Flex',
-  mecanicoNome: 'Carlos Eduardo',
-  fornecedorNome: 'Auto Peças Central',
-  itens: [
-    {
-      id: 'item-1',
-      codigo: 'PEC-002',
-      nome: 'Discos de Freio Ventilados Dianteiros (Par)',
-      quantidade: '1',
-      marcaSugerida: 'Fremax / Hipper Freios',
-      fotoUrl: 'https://images.unsplash.com/photo-1600790142055-619df03207e6?w=600',
-      observacoes: 'Desgaste abaixo da espessura mínima com rebarba cortante',
-    },
-    {
-      id: 'item-2',
-      codigo: 'PEC-001',
-      nome: 'Jogo de Pastilhas de Freio Dianteiras',
-      quantidade: '1',
-      marcaSugerida: 'Fras-le / Bosch',
-      fotoUrl: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600',
-      observacoes: 'Material de atrito no limite do sensor metálico',
-    },
-    {
-      id: 'item-3',
-      codigo: 'PEC-003',
-      nome: 'Amortecedores Dianteiros Pressurizados (Par)',
-      quantidade: '2',
-      marcaSugerida: 'Cofap / Monroe',
-      fotoUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=600',
-      observacoes: 'Haste com vazamento de fluido hidráulico',
-    },
-  ],
-}
+const MOCK_COTACAO = null
 
 export function CotacaoAutoPecaPage() {
   const { id } = useParams()
@@ -85,7 +45,7 @@ export function CotacaoAutoPecaPage() {
   const [respostas, setRespostas] = useState({})
 
   // Identificacao da auto peca: loja ja preenchida pelo sistema
-  const [autoPecaNome, setAutoPecaNome] = useState('Auto Peças Central')
+  const [autoPecaNome, setAutoPecaNome] = useState('')
   const [vendedorNome, setVendedorNome] = useState('')
   const [vendedorTelefone, setVendedorTelefone] = useState('')
   const [prazoEntrega, setPrazoEntrega] = useState('Pronta Entrega (Imediato)')
@@ -150,10 +110,12 @@ export function CotacaoAutoPecaPage() {
       console.error(e)
     }
 
-    const demo = { ...MOCK_COTACAO, id: id || MOCK_COTACAO.id }
-    setCotacao(demo)
-    setAutoPecaNome(fornecedorParam || demo.fornecedorNome)
-    iniciarRespostas(demo)
+    const demo = MOCK_COTACAO ? { ...MOCK_COTACAO, id: id || MOCK_COTACAO.id } : null
+    if (demo) {
+      setCotacao(demo)
+      setAutoPecaNome(fornecedorParam || demo.fornecedorNome)
+      iniciarRespostas(demo)
+    }
     setCarregando(false)
   }, [id])
 
@@ -684,7 +646,7 @@ export function CotacaoAutoPecaPage() {
                     Auto Peças Fornecedora:
                   </span>
                   <span className="text-sm sm:text-base font-black text-[#0f172a] block">
-                    {autoPecaNome || 'Auto Peças Central'}
+                    {autoPecaNome || '—'}
                   </span>
                 </div>
                 <Buildings size={22} weight="bold" className="text-[#0284c7] shrink-0" />

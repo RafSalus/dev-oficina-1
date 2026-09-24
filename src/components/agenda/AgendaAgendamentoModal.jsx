@@ -17,12 +17,12 @@ import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
 import { customSelectStyles } from '../suprimentos/customSelectStyles'
 import { carregarClientesCadastrados } from '../../constants/mockClientesVeiculos'
 import {
-  MECANICOS_AGENDA,
   HORARIOS_GRADE,
   DIAS_SEMANA_NOMES,
   OPCOES_LOGISTICA,
   verificarConflitoGrade,
 } from '../../constants/agendaData'
+import { useMecanicosAgenda } from '../../hooks/useMecanicosAgenda'
 
 export function AgendaAgendamentoModal({
   isOpen,
@@ -35,6 +35,7 @@ export function AgendaAgendamentoModal({
   mecanicoPreSelecionado = '',
   agendamentosExistentes = [],
 }) {
+  const mecanicosAgenda = useMecanicosAgenda()
   const [listaClientes, setListaClientes] = useState([])
 
   // Cliente selecionado
@@ -80,7 +81,7 @@ export function AgendaAgendamentoModal({
         setVeiculoSelecionadoId(agendamentoParaEditar.veiculoId || '')
         setVeiculoModelo(agendamentoParaEditar.veiculoModelo || '')
         setVeiculoPlaca(agendamentoParaEditar.veiculoPlaca || '')
-        setMecanicoId(agendamentoParaEditar.mecanicoId || MECANICOS_AGENDA[0].id)
+        setMecanicoId(agendamentoParaEditar.mecanicoId || mecanicosAgenda[0]?.id || '')
         setDiaChave(agendamentoParaEditar.diaChave || 'seg')
         setHorarioInicio(agendamentoParaEditar.horarioInicio || '08:00')
         setDuracaoHoras(Number(agendamentoParaEditar.duracaoHoras) || 1)
@@ -99,7 +100,7 @@ export function AgendaAgendamentoModal({
         setVeiculoSelecionadoId('')
         setVeiculoModelo('')
         setVeiculoPlaca('')
-        setMecanicoId(mecanicoPreSelecionado || MECANICOS_AGENDA[0].id)
+        setMecanicoId(mecanicoPreSelecionado || mecanicosAgenda[0]?.id || '')
         setDiaChave(diaPreSelecionado || 'seg')
         setHorarioInicio(horarioPreSelecionado || '08:00')
         setDuracaoHoras(1)
@@ -184,7 +185,7 @@ export function AgendaAgendamentoModal({
   }
 
   // Opções de mecânicos (somente os nomes, sem box)
-  const opcoesMecanicos = MECANICOS_AGENDA.map((m) => ({
+  const opcoesMecanicos = mecanicosAgenda.map((m) => ({
     value: m.id,
     label: m.nome,
   }))
@@ -245,7 +246,15 @@ export function AgendaAgendamentoModal({
       return
     }
 
-    const mec = MECANICOS_AGENDA.find((m) => m.id === mecanicoId) || MECANICOS_AGENDA[0]
+    const mec = mecanicosAgenda.find((m) => m.id === mecanicoId) || mecanicosAgenda[0]
+
+    if (!mec) {
+
+      toast.error('Cadastre um mecânico ativo em Funcionários antes de agendar.')
+
+      return
+
+    }
 
     const agendamentoAtualizado = {
       id: agendamentoParaEditar?.id || `ag-${Date.now()}`,

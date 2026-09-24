@@ -1302,7 +1302,7 @@ export function OrcamentoOSListPage() {
                       {/* Coluna 5: Mecânico */}
                       <div className="col-span-1 min-w-0">
                         <span className="font-semibold text-[#344054] text-xs block truncate">
-                          {os.mecanicoNome || 'Carlos Eduardo'}
+                          {os.mecanicoNome || '—'}
                         </span>
                         <span className="text-[10px] text-[#667085]">Mecânica</span>
                       </div>

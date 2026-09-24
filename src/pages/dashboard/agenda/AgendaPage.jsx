@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { useIsMobile } from '../../../hooks/useIsMobile'
 import {
   MECANICOS_AGENDA,
+  MECANICO_VAZIO,
   obterDatasDaSemana,
   carregarAgendamentos,
   salvarAgendamentos,
@@ -45,7 +46,7 @@ export default function AgendaPage() {
   const [mecanicosLista, setMecanicosLista] = useState(MECANICOS_AGENDA)
 
   // Mecânico Selecionado: Mostra SOMENTE a agenda deste mecânico
-  const [mecanicoSelecionadoId, setMecanicoSelecionadoId] = useState(MECANICOS_AGENDA[0].id)
+  const [mecanicoSelecionadoId, setMecanicoSelecionadoId] = useState(MECANICOS_AGENDA[0]?.id || '')
 
   // Dados Centrais
   const [agendamentos, setAgendamentos] = useState([])
@@ -124,7 +125,7 @@ export default function AgendaPage() {
     return (
       mecanicosLista.find((m) => m.id === mecanicoSelecionadoId) ||
       mecanicosLista[0] ||
-      MECANICOS_AGENDA[0]
+      MECANICO_VAZIO
     )
   }, [mecanicosLista, mecanicoSelecionadoId])
 
@@ -224,6 +225,10 @@ export default function AgendaPage() {
   // Preenchimento Automático do Horário a partir do 1º Cliente da Fila (Sem preencher nada!)
   const handlePreencherHorarioAutomatico = (diaChave, horario, clienteFila) => {
     if (!clienteFila) return
+    if (!mecanicoAtivo.id) {
+      toast.error('Cadastre um mecânico ativo em Funcionários antes de agendar.')
+      return
+    }
 
     const novoAgendamento = {
       id: `ag-fila-${Date.now()}`,

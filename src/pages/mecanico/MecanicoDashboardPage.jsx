@@ -77,7 +77,7 @@ export function MecanicoDashboardPage() {
   const [osSelecionadaId, setOsSelecionadaId] = useState(() => {
     const abertas = obterOrdensAbertas()
     const minha = abertas.find((o) => o.mecanicoNome === mecanicoAtivo.nome)
-    return minha ? minha.numeroOS : (abertas[0]?.numeroOS || '002908')
+    return minha ? minha.numeroOS : (abertas[0]?.numeroOS || null)
   })
 
   // Recarregar ordens

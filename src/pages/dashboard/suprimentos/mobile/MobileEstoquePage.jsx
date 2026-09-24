@@ -39,8 +39,8 @@ const extrairTelefoneLimpo = (t) => {
 }
 
 const extrairTelefoneExibicao = (t) => {
-  if (!t) return '(43) 3456-7890'
-  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '(43) 3456-7890')
+  if (!t) return ''
+  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '')
 }
 
 const filtrarFornecedoresAutoPecas = (terceiros) => {
@@ -443,7 +443,7 @@ export function MobileEstoquePage() {
       id: novaId,
       numeroOS: '',
       clienteNome: 'Almoxarifado Central',
-      clienteTelefone: '(43) 3456-7890',
+      clienteTelefone: '',
       veiculoPlaca: 'OFICINA',
       veiculoModelo: tituloVeiculo,
       ano: '',

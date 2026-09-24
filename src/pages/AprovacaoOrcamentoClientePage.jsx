@@ -125,7 +125,7 @@ function ListaItensAprovacao({ titulo, itens, respostasLocais, estaAprovado, onT
 
 export function AprovacaoOrcamentoClientePage() {
   const { id } = useParams()
-  const numeroOS = id || '002908'
+  const numeroOS = id || ''
 
   // Aba ativa na tela do cliente
   const [activeTab, setActiveTab] = useState('orcamento') // 'orcamento', 'laudo', 'fotos'
@@ -171,113 +171,35 @@ export function AprovacaoOrcamentoClientePage() {
       console.error('Erro ao ler dados da OS para aprovacao:', e)
     }
 
-    // Dados padrao demonstrativos com base na Ordem Servico.jpg de referencia
+    // Nenhuma OS real encontrada para este numeroOS: retorna estrutura vazia
     return {
-      numeroOS: '002908',
-      dataEmissao: '19/08/26',
-      horaEmissao: '13:05',
-      consultorResponsavel: 'Bianca Amaral',
-      cliente: 'EDGAR AMARAL DA SILVEIRA',
-      codigoCliente: '0000161',
-      documento: '033.687.739-09',
-      endereco: 'R TUPINAMBA, 566',
-      cidade: 'APUCARANA',
-      uf: 'PR',
-      cep: '86812-405',
-      telefone: '(43) 98812-6874',
-      email: 'edgar.silveira@email.com',
-      placa: 'ASF6I46',
-      marca: 'FIAT',
-      modelo: 'DOBLO 1.8 CARGO',
-      marcaModelo: 'Fiat Doblo 1.8 Cargo',
-      ano: '2009/2010',
-      cor: 'Branca',
-      combustivel: 'FLEX',
-      km: '280.812',
-      kmAnterior: '279.003',
-      relatoCliente: 'Barulho na frente ao passar em desníveis e vazamento de água pelo arrefecimento com aquecimento rápido.',
-      mecanicoNome: 'Carlos Eduardo',
-      laudoTecnico: `LAUDO TÉCNICO DE DIAGNÓSTICO MECÂNICO
-Data da Inspeção: 19/08/2026 às 13:05
-Oficina: Mecânica Gabriel - Apucarana / PR
-Veículo: Fiat Doblo 1.8 Cargo | Placa: ASF6I46 | KM: 280.812 km
-
-1. DIAGNÓSTICO DO SISTEMA DE ARREFECIMENTO:
-Identificada corrosão com rompimento por fadiga térmica no tubo de água do coletor de admissão, ocasionando perda contínua de fluido de arrefecimento e risco iminente de superaquecimento do motor.
-
-2. PEÇAS COM TROCA OBRIGATÓRIA:
-- Anel vedador da admissão com perda total de elasticidade.
-- Tubo suporte de arrefecimento metálico corroído.
-- Abraçadeiras metálicas 14x22 com folga.
-- Aditivo de arrefecimento A05 orgânico para proteção contra nova cavitação.
-
-3. PARECER TÉCNICO:
-A substituição imediata dos componentes evita queima da junta do cabeçote e travamento do motor.`,
-      pecasOS: [
-        {
-          codigo: '10039B',
-          nome: 'ANEL VEDADOR DA ADM',
-          unidade: 'UN',
-          quantidade: 4,
-          precoUnitario: 15.0,
-          desconto: 0,
-          fotoUrl: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=600',
-          observacaoFoto: 'Anel ressecado e quebrado, provocando entrada de ar falso e vazamento.',
-        },
-        {
-          codigo: '0018969',
-          nome: 'TUBO SUPORTE ARREFECIMENTO',
-          unidade: 'PC',
-          quantidade: 1,
-          precoUnitario: 200.0,
-          desconto: 0,
-          fotoUrl: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=600',
-          observacaoFoto: 'Ponto crítico de ferrugem e trinca no bocal inferior.',
-        },
-        {
-          codigo: '2682',
-          nome: 'ABRACADEIRA 14X22',
-          unidade: 'UN',
-          quantidade: 2,
-          precoUnitario: 10.0,
-          desconto: 0,
-          fotoUrl: null,
-          observacaoFoto: '',
-        },
-        {
-          codigo: '010804',
-          nome: 'ADITIVO A05 PRONTO USO',
-          unidade: 'LT',
-          quantidade: 1,
-          precoUnitario: 40.0,
-          desconto: 0,
-          fotoUrl: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600',
-          observacaoFoto: 'Fluido antigo completamente degradado e com sedimentos de ferrugem.',
-        },
-        {
-          codigo: 'DIVERSAS',
-          nome: 'PEÇAS - PARAFUSO C/ PORCA E ARRUELA',
-          unidade: 'PC',
-          quantidade: 1,
-          precoUnitario: 10.0,
-          desconto: 0,
-          fotoUrl: null,
-          observacaoFoto: '',
-        },
-      ],
-      servicosOS: [
-        {
-          codigo: '01845',
-          nome: 'TROCA TUBO DE AGUA DO COLETOR DE ADM',
-          unidade: 'mo',
-          quantidade: 1,
-          valorUnitario: 300.0,
-          desconto: 0,
-          tempoEstimado: '2.5',
-          categoria: 'Arrefecimento',
-          observacoes: 'Desmontagem de coletores, limpeza química da face e torqueamento conforme manual.',
-        },
-      ],
+      numeroOS: numeroOS || '',
+      dataEmissao: '',
+      horaEmissao: '',
+      consultorResponsavel: '',
+      cliente: '',
+      codigoCliente: '',
+      documento: '',
+      endereco: '',
+      cidade: '',
+      uf: '',
+      cep: '',
+      telefone: '',
+      email: '',
+      placa: '',
+      marca: '',
+      modelo: '',
+      marcaModelo: '',
+      ano: '',
+      cor: '',
+      combustivel: '',
+      km: '',
+      kmAnterior: '',
+      relatoCliente: '',
+      mecanicoNome: '',
+      laudoTecnico: '',
+      pecasOS: [],
+      servicosOS: [],
       terceirosOS: [],
       descontoGeralOS: 0,
     }

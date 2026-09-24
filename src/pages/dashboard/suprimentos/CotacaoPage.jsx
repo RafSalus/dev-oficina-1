@@ -57,8 +57,8 @@ const extrairTelefoneLimpo = (t) => {
 }
 
 const extrairTelefoneExibicao = (t) => {
-  if (!t) return '(43) 3456-7890'
-  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '(43) 3456-7890')
+  if (!t) return ''
+  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '')
 }
 
 const filtrarFornecedoresAutoPecas = (terceiros) => {
@@ -107,7 +107,7 @@ export function CotacaoPage() {
   const [veiculoModelo, setVeiculoModelo] = useState('')
   const [ano, setAno] = useState('')
   const [km, setKm] = useState('')
-  const [mecanicoNome, setMecanicoNome] = useState('Carlos Eduardo')
+  const [mecanicoNome, setMecanicoNome] = useState('')
   const [status, setStatus] = useState('EM_COTACAO')
   const [observacoes, setObservacoes] = useState('')
   const [dataCriacao, setDataCriacao] = useState('')
@@ -173,7 +173,7 @@ export function CotacaoPage() {
       setVeiculoModelo(encontrada.veiculoModelo || '')
       setAno(encontrada.ano || '')
       setKm(encontrada.km || '')
-      setMecanicoNome(encontrada.mecanicoNome || 'Carlos Eduardo')
+      setMecanicoNome(encontrada.mecanicoNome || '')
       setStatus(encontrada.status || 'EM_COTACAO')
       setObservacoes(encontrada.observacoes || '')
       setDataCriacao(encontrada.dataCriacao || new Date().toISOString())
@@ -210,7 +210,7 @@ export function CotacaoPage() {
         )
         setAno(osEncontrada.ano || '')
         setKm(osEncontrada.km || '')
-        setMecanicoNome(osEncontrada.mecanicoNome || 'Carlos Eduardo')
+        setMecanicoNome(osEncontrada.mecanicoNome || '')
         setObservacoes(`Cotação de peças para a Ordem de Serviço #${osEncontrada.numeroOS}`)
 
         if (osEncontrada.pecasOS && osEncontrada.pecasOS.length > 0) {
@@ -249,7 +249,7 @@ export function CotacaoPage() {
       setVeiculoModelo('')
       setAno('')
       setKm('')
-      setMecanicoNome('Carlos Eduardo')
+      setMecanicoNome('')
       setObservacoes('')
       setItens([])
     }
@@ -303,7 +303,7 @@ export function CotacaoPage() {
     setVeiculoModelo(os.marcaModelo || `${os.marca || ''} ${os.modelo || ''}`.trim())
     setAno(os.ano || '')
     setKm(os.km || '')
-    setMecanicoNome(os.mecanicoNome || 'Carlos Eduardo')
+    setMecanicoNome(os.mecanicoNome || '')
 
     // Se estiver sem peças, importa as peças da OS
     if (itens.length === 0 && os.pecasOS && os.pecasOS.length > 0) {

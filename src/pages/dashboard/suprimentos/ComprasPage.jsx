@@ -66,8 +66,8 @@ const extrairTelefoneLimpo = (t) => {
 }
 
 const extrairTelefoneExibicao = (t) => {
-  if (!t) return '(43) 3456-7890'
-  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '(43) 3456-7890')
+  if (!t) return ''
+  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '')
 }
 
 const filtrarFornecedoresAutoPecas = (terceiros) => {
@@ -420,7 +420,7 @@ export function ComprasPage() {
         veiculoModelo: demanda.veiculoModelo || osEncontrada?.marcaModelo || '',
         ano: osEncontrada?.ano || '',
         km: osEncontrada?.km || '',
-        mecanicoNome: osEncontrada?.mecanicoNome || 'Carlos Eduardo',
+        mecanicoNome: osEncontrada?.mecanicoNome || '',
         status: 'EM_COTACAO',
         observacoes: `Cotação de peças para a Ordem de Serviço #${demanda.numeroOS}`,
         itens: itensCotacao,
@@ -483,7 +483,7 @@ export function ComprasPage() {
       veiculoModelo: todasMesmaOS ? selecionadas[0].veiculoModelo : '',
       ano: '',
       km: '',
-      mecanicoNome: 'Carlos Eduardo',
+      mecanicoNome: '',
       status: 'EM_COTACAO',
       observacoes: `Cotação de peças agrupadas contendo ${selecionadas.length} itens de OSs da oficina`,
       itens: itensParaCotacao,
@@ -746,7 +746,7 @@ export function ComprasPage() {
         id: novaId,
         numeroOS: '',
         clienteNome: 'Almoxarifado Central',
-        clienteTelefone: '(43) 3456-7890',
+        clienteTelefone: '',
         veiculoPlaca: 'OFICINA',
         veiculoModelo: 'Reposição de Almoxarifado',
         ano: '',
@@ -821,7 +821,7 @@ export function ComprasPage() {
         id: novaId,
         numeroOS: '',
         clienteNome: 'Almoxarifado Central',
-        clienteTelefone: '(43) 3456-7890',
+        clienteTelefone: '',
         veiculoPlaca: 'OFICINA',
         veiculoModelo: 'Reposição Completa de Almoxarifado',
         ano: '',

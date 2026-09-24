@@ -3,12 +3,12 @@ import Select from 'react-select'
 import { X, Clock, WarningCircle, Wrench, ArrowsClockwise, CheckCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import {
-  MECANICOS_AGENDA,
   DIAS_SEMANA_NOMES,
   HORARIOS_GRADE,
   verificarConflitoGrade,
 } from '../../../../constants/agendaData'
 import { mobileSelectStyles, labelBaseClass } from '../../nova-os/mobile/mobileSelectStyles'
+import { useMecanicosAgenda } from '../../../../hooks/useMecanicosAgenda'
 
 const OPCOES_MOTIVO_ATRASO = [
   { value: 'dificuldade_tecnica', label: 'Dificuldade técnica na execução do serviço' },
@@ -39,6 +39,7 @@ export function MobileAgendaTratarAtrasoModal({
   onSalvarAtraso,
   agendamentosExistentes = [],
 }) {
+  const mecanicosAgenda = useMecanicosAgenda()
   const [tipoAcao, setTipoAcao] = useState('estender')
   const [motivoAtraso, setMotivoAtraso] = useState(OPCOES_MOTIVO_ATRASO[0].value)
   const [tempoAdicional, setTempoAdicional] = useState(1)
@@ -57,7 +58,7 @@ export function MobileAgendaTratarAtrasoModal({
 
   if (!isOpen || !agendamento) return null
 
-  const opcoesMecanicos = MECANICOS_AGENDA.map((m) => ({ value: m.id, label: m.nome }))
+  const opcoesMecanicos = mecanicosAgenda.map((m) => ({ value: m.id, label: m.nome }))
   const opcoesDias = DIAS_SEMANA_NOMES.map((d) => ({ value: d.chave, label: `${d.nome} (${d.abrev})` }))
   const opcoesHorarios = HORARIOS_GRADE.map((h) => ({ value: h, label: `${h}h` }))
 
@@ -95,7 +96,7 @@ export function MobileAgendaTratarAtrasoModal({
         toast.error('Selecione o novo mecânico')
         return
       }
-      const mec = MECANICOS_AGENDA.find((m) => m.id === novoMecanicoId)
+      const mec = mecanicosAgenda.find((m) => m.id === novoMecanicoId)
       const conflito = verificarConflitoGrade({
         mecanicoId: novoMecanicoId,
         diaChave: agendamento.diaChave,

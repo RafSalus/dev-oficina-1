@@ -54,8 +54,8 @@ const extrairTelefoneLimpo = (t) => {
 }
 
 const extrairTelefoneExibicao = (t) => {
-  if (!t) return '(43) 3456-7890'
-  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '(43) 3456-7890')
+  if (!t) return ''
+  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '')
 }
 
 const filtrarFornecedoresAutoPecas = (terceiros) => {
@@ -102,7 +102,7 @@ export function CotacaoModalForm({
   const [veiculoModelo, setVeiculoModelo] = useState('')
   const [ano, setAno] = useState('')
   const [km, setKm] = useState('')
-  const [mecanicoNome, setMecanicoNome] = useState('Carlos Eduardo')
+  const [mecanicoNome, setMecanicoNome] = useState('')
   const [status, setStatus] = useState('EM_COTACAO')
   const [observacoes, setObservacoes] = useState('')
 
@@ -150,7 +150,7 @@ export function CotacaoModalForm({
         setVeiculoModelo(cotacaoParaEditar.veiculoModelo || '')
         setAno(cotacaoParaEditar.ano || '')
         setKm(cotacaoParaEditar.km || '')
-        setMecanicoNome(cotacaoParaEditar.mecanicoNome || 'Carlos Eduardo')
+        setMecanicoNome(cotacaoParaEditar.mecanicoNome || '')
         setStatus(cotacaoParaEditar.status || 'EM_COTACAO')
         setObservacoes(cotacaoParaEditar.observacoes || '')
         setItens(cotacaoParaEditar.itens && cotacaoParaEditar.itens.length > 0 ? cotacaoParaEditar.itens : [])
@@ -176,7 +176,7 @@ export function CotacaoModalForm({
         )
         setAno(osEncontrada?.ano || '')
         setKm(osEncontrada?.km || '')
-        setMecanicoNome(osEncontrada?.mecanicoNome || 'Carlos Eduardo')
+        setMecanicoNome(osEncontrada?.mecanicoNome || '')
         setStatus('EM_COTACAO')
         setObservacoes(
           demandaInicial.observacoes ||
@@ -242,7 +242,7 @@ export function CotacaoModalForm({
         setVeiculoModelo('')
         setAno('')
         setKm('')
-        setMecanicoNome('Carlos Eduardo')
+        setMecanicoNome('')
         setStatus('EM_COTACAO')
         setObservacoes('')
         setItens([])
@@ -298,7 +298,7 @@ export function CotacaoModalForm({
     setVeiculoModelo(os.marcaModelo || `${os.marca || ''} ${os.modelo || ''}`.trim())
     setAno(os.ano || '')
     setKm(os.km || '')
-    setMecanicoNome(os.mecanicoNome || 'Carlos Eduardo')
+    setMecanicoNome(os.mecanicoNome || '')
 
     // Se a cotação estiver sem itens e a OS tiver peças, importa
     if (itens.length === 0 && os.pecasOS && os.pecasOS.length > 0) {

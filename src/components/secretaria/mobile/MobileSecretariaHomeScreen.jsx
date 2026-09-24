@@ -23,10 +23,10 @@ import { usePwaInstall } from '../../../hooks/usePwaInstall'
 import { MOCK_CLIENTES_VEICULOS } from '../../../constants/mockClientesVeiculos'
 
 const STATS = [
-  { id: 'os', label: 'OS em Andamento', value: '6', icon: ClipboardText },
-  { id: 'faturamento', label: 'Faturamento Hoje', value: 'R$ 1.240', icon: CreditCard },
-  { id: 'patio', label: 'Veículos no Pátio', value: '3', icon: Garage },
-  { id: 'agenda', label: 'Agendamentos Hoje', value: '4', icon: CalendarDots },
+  { id: 'os', label: 'OS em Andamento', value: '—', icon: ClipboardText },
+  { id: 'faturamento', label: 'Faturamento Hoje', value: '—', icon: CreditCard },
+  { id: 'patio', label: 'Veículos no Pátio', value: '—', icon: Garage },
+  { id: 'agenda', label: 'Agendamentos Hoje', value: '—', icon: CalendarDots },
 ]
 
 const QUICK_ACTIONS = [

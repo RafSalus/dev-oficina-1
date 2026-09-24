@@ -44,24 +44,26 @@ describe('Story 1.5 & Story 1.10: Camada de Repositórios Assíncronos (Async Co
   })
 
   describe('clientesRepository', () => {
-    it('deve auto-semear clientes e retornar uma Promise com a lista', async () => {
+    it('deve retornar uma Promise com uma lista vazia quando não há clientes cadastrados', async () => {
       const clientes = await carregarClientes()
       expect(Array.isArray(clientes)).toBe(true)
-      expect(clientes.length).toBeGreaterThan(0)
-      expect(clientes[0].nome).toBeDefined()
+      expect(clientes.length).toBe(0)
     })
 
     it('deve buscar cliente por ID e por documento', async () => {
-      const todos = await carregarClientes()
-      const primeiro = todos[0]
+      const primeiro = await salvarCliente({
+        nome: 'Cliente Busca Teste',
+        documento: '555.666.777-88',
+        telefone: '(43) 98888-7777',
+      })
 
-      const porId = await obterClientePorId(primeiro.value)
+      const porId = await obterClientePorId(primeiro.value ?? primeiro.id)
       expect(porId).not.toBeNull()
       expect(porId.nome).toBe(primeiro.nome)
 
       const porDoc = await buscarClientePorDocumento(primeiro.documento)
       expect(porDoc).not.toBeNull()
-      expect(porDoc.value).toBe(primeiro.value)
+      expect(porDoc.nome).toBe(primeiro.nome)
     })
 
     it('deve salvar novo cliente e permitir exclusão', async () => {

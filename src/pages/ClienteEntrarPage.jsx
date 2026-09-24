@@ -79,7 +79,13 @@ function CustomerLoginForm({ onRequestRecovery }) {
         const cDoc = (c.documento || '').replace(/\D/g, '')
         const cTel = (c.telefone || '').replace(/\D/g, '')
         return cDoc === digits || cTel === digits
-      }) || MOCK_CLIENTES_VEICULOS[0]
+      })
+
+      if (!found) {
+        newErrors.cpfCnpj = 'Nenhum cliente encontrado com este documento.'
+        setErrors(newErrors)
+        return
+      }
 
       definirClienteAtivo(found)
       toast.success(`Login realizado com sucesso! Bem-vindo(a), ${found.nome}.`)

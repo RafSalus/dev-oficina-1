@@ -14,11 +14,11 @@ import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
 import { customSelectStyles } from '../suprimentos/customSelectStyles'
 import {
-  MECANICOS_AGENDA,
   DIAS_SEMANA_NOMES,
   HORARIOS_GRADE,
   verificarConflitoGrade,
 } from '../../constants/agendaData'
+import { useMecanicosAgenda } from '../../hooks/useMecanicosAgenda'
 
 const OPCOES_MOTIVO_ATRASO = [
   { value: 'dificuldade_tecnica', label: 'Dificuldade técnica na execução do serviço' },
@@ -42,6 +42,7 @@ export function AgendaTratarAtrasoModal({
   onSalvarAtraso,
   agendamentosExistentes = [],
 }) {
+  const mecanicosAgenda = useMecanicosAgenda()
   const [tipoAcao, setTipoAcao] = useState('estender') // 'estender' | 'transferir' | 'reagendar' | 'concluir'
   const [motivoAtraso, setMotivoAtraso] = useState(OPCOES_MOTIVO_ATRASO[0].value)
   const [tempoAdicional, setTempoAdicional] = useState(1)
@@ -59,7 +60,7 @@ export function AgendaTratarAtrasoModal({
 
   if (!agendamento) return null
 
-  const opcoesMecanicos = MECANICOS_AGENDA.map((m) => ({
+  const opcoesMecanicos = mecanicosAgenda.map((m) => ({
     value: m.id,
     label: m.nome,
   }))
@@ -111,7 +112,7 @@ export function AgendaTratarAtrasoModal({
         return
       }
 
-      const mec = MECANICOS_AGENDA.find((m) => m.id === novoMecanicoId)
+      const mec = mecanicosAgenda.find((m) => m.id === novoMecanicoId)
       const conflito = verificarConflitoGrade({
         mecanicoId: novoMecanicoId,
         diaChave: agendamento.diaChave,

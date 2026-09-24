@@ -26,260 +26,27 @@ import {
   Sparkle,
 } from '@phosphor-icons/react'
 import { useCliente } from '../../context/ClienteContext'
+import { WHATSAPP_ACCESS } from '../../constants/company'
 import { gerarLaudoTecnico } from '../../constants/catalogoPecasServicos'
 import { toast } from 'sonner'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { MobileClienteServicosPage } from './mobile/MobileClienteServicosPage'
 
-// Dados base da Ordem de Serviço com laudo pericial, checklist e fotos das peças
+// Estrutura base da Ordem de Serviço exibida no portal do cliente
 const DADOS_SERVICO_INICIAL = {
-  numeroOS: '002908',
-  dataEmissao: '19/08/2026',
-  horaEmissao: '13:05',
-  consultor: 'Bianca Amaral',
-  mecanico: 'Carlos Eduardo',
-  veiculo: 'Fiat Doblo 1.8 Cargo',
-  placa: 'ASF6I46',
-  ano: '2009/2010',
-  km: '280.812',
-  relatoCliente:
-    'Vazamento de água pelo compartimento do motor com aquecimento rápido do painel e ruído na dianteira ao trafegar em desníveis.',
-  laudoResumido:
-    'Identificada trinca por ressecamento térmico no tubo plástico de distribuição de arrefecimento do motor com vazamento severo de líquido sob pressão de 1.4 bar. Também foram constatadas palhetas dianteiras ressecadas riscando o para-brisa, lâmpada de ré queimada e saturação severa do filtro de cabine.',
-  laudoCompleto: `LAUDO TÉCNICO PERICIAL DE DIAGNÓSTICO MECÂNICO
-OFICINA: Mecânica Gabriel - Apucarana / PR
-ORDEM DE SERVIÇO: #002908 | DATA: 19/08/2026 às 13:05
-VEÍCULO: Fiat Doblo 1.8 Cargo | PLACA: ASF6I46 | KM ATUAL: 280.812 km
-MECÂNICO RESPONSÁVEL: Carlos Eduardo (Chefe de Bancada)
-CONSULTORA DE ATENDIMENTO: Bianca Amaral
-
-1. RELATO INICIAL DO CLIENTE (QUEIXA REGISTRADA):
-"Vazamento de água pelo compartimento do motor com aquecimento rápido do painel e ruído na dianteira ao trafegar em desníveis."
-
-2. METODOLOGIA DE INSPEÇÃO REALIZADA:
-- Teste de pressurização estática do sistema de arrefecimento (1.4 bar com manômetro de precisão).
-- Inspeção visual técnica com boroscópio sob o coletor de admissão e conexões de mangueiras.
-- Verificação do anel de vedação, abraçadeiras e ponto de fixação estrutural.
-- Checklist veicular preventivo (sistema de iluminação, palhetas de para-brisa e cabine).
-
-3. ANÁLISE DOS SISTEMAS E CONSTATAÇÕES TÉCNICAS:
-
-[ITEM CRÍTICO DE SEGURANÇA E FUNCIONAMENTO]
-- SISTEMA DE ARREFECIMENTO DO MOTOR:
-  Constatada fissura longitudinal no corpo de polímero do tubo de distribuição de água (código 0018969).
-  Houve vazamento severo de líquido sob pressão de trabalho do motor, gerando risco iminente de queima da junta do cabeçote ou empenamento por superaquecimento.
-  Recomendação Técnica: Substituição imediata do tubo suporte, anéis vedadores Sabó, abraçadeiras reforçadas e abastecimento de aditivo Paraflu com sangria completa.
-
-[ITENS COMPLEMENTARES / MANUTENÇÃO PREVENTIVA]
-- SISTEMA DE LIMPADORES E VISIBILIDADE:
-  Palhetas dianteiras de borracha ressecadas, gerando trepidação e riscos na lâmina do para-brisa. Recomendada troca preventiva por palhetas de silicone Bosch.
-- SISTEMA ELÉTRICO E SINALIZAÇÃO:
-  Lâmpada P21W da lanterna traseira direita queimada, passível de autuação em blitz e risco em frenagens noturnas.
-- SISTEMA DE CLIMATIZAÇÃO / SAÚDE DA CABINE:
-  Filtro de cabine saturado com ácaros e poeira. Recomendada substituição e higienização por ozônio.
-
-4. CONCLUSÃO TÉCNICA E PARECER:
-O veículo não apresenta condições seguras de rodagem enquanto o sistema de arrefecimento não for reparado e sangrado. Os demais itens apontados possuem caráter preventivo e de conformidade, podendo ser autorizados a critério do proprietário.
-
-Mecânica Gabriel • Compromisso com a Segurança e Transparência Técnica`,
-
-  // Checklist de Sistemas Veiculares
-  checklistSistemas: [
-    {
-      sistema: 'Arrefecimento do Motor',
-      status: 'Critico',
-      diagnostico: 'Fissura estrutural no tubo plástico com perda severa de líquido de arrefecimento sob pressão.',
-      acao: 'Troca imediata do tubo, vedações e aditivo.',
-    },
-    {
-      sistema: 'Limpadores e Para-Brisa',
-      status: 'Atencao',
-      diagnostico: 'Borrachas ressecadas com micro-trincas deixando faixas opacas no campo de visão.',
-      acao: 'Substituição preventiva das palhetas.',
-    },
-    {
-      sistema: 'Iluminação e Sinalização Traseira',
-      status: 'Atencao',
-      diagnostico: 'Lâmpada da lanterna direita inoperante (filamento térmico interrompido).',
-      acao: 'Substituição da lâmpada P21W.',
-    },
-    {
-      sistema: 'Climatização e Ar da Cabine',
-      status: 'Preventivo',
-      diagnostico: 'Filtro de cabine saturado de poeira e ácaros com redução do fluxo de ar.',
-      acao: 'Substituição do filtro e higienização.',
-    },
-  ],
-
-  // 1. PEÇAS E COMPONENTES COM EVIDÊNCIAS FOTOGRÁFICAS
-  pecas: [
-    {
-      id: 'p-1',
-      codigo: '0018969',
-      nome: 'Tubo Suporte de Arrefecimento',
-      marca: 'Valclei',
-      tipo: 'essencial',
-      motivoSeguranca: 'Crítico: Evita o superaquecimento severo e a queima da junta do cabeçote.',
-      foto: '/images/Interior_Frente.png',
-      fotoLegenda: 'Trinca longitudinal de 4cm no corpo plástico provocando perda de líquido sob 1.4 bar de pressão.',
-      estadoPeca: 'Trincado / Vazamento Ativo',
-      gravidade: 'Crítico de Segurança',
-      preco: 200.0,
-      quantidade: 1,
-    },
-    {
-      id: 'p-2',
-      codigo: '10039B',
-      nome: 'Anel Vedador do Coletor de Admissão',
-      marca: 'Sabó',
-      tipo: 'essencial',
-      motivoSeguranca: 'Vedação primária para estanqueidade e prevenção de entrada falsa de ar.',
-      foto: '/images/Interior_Lateral.png',
-      fotoLegenda: 'Anéis de borracha ressecados e achatados, sem capacidade elástica de vedação.',
-      estadoPeca: 'Ressecado e Deformado',
-      gravidade: 'Crítico de Segurança',
-      preco: 15.0,
-      quantidade: 4,
-    },
-    {
-      id: 'p-3',
-      codigo: '2682',
-      nome: 'Abraçadeira Reforçada 14x22',
-      marca: 'Suprema',
-      tipo: 'essencial',
-      motivoSeguranca: 'Fixação de alta pressão das mangueiras do radiador.',
-      foto: '/images/Interior_Lateral.png',
-      fotoLegenda: 'Abraçadeiras oxidadas com perda do torque de retenção da mangueira.',
-      estadoPeca: 'Oxidação e Fadiga Mecânica',
-      gravidade: 'Crítico de Segurança',
-      preco: 10.0,
-      quantidade: 2,
-    },
-    {
-      id: 'p-4',
-      codigo: '010804',
-      nome: 'Aditivo A05 Pronto para Uso',
-      marca: 'Paraflu',
-      tipo: 'essencial',
-      motivoSeguranca: 'Fluido anticorrosivo e refrigerante obrigatório do motor.',
-      foto: '/images/Interior_Frente.png',
-      fotoLegenda: 'Fluido antigo turvo contaminado com ferrugem e índice de acidez fora do limite seguro.',
-      estadoPeca: 'Fluido Contaminado',
-      gravidade: 'Crítico de Segurança',
-      preco: 40.0,
-      quantidade: 1,
-    },
-    {
-      id: 'p-5',
-      codigo: '9921',
-      nome: 'Par de Palhetas Silicone Dianteiras',
-      marca: 'Bosch Aerotwin',
-      tipo: 'opcional',
-      motivoOpcional: 'Borrachas ressecadas gerando faixas e ruído ao acionar na chuva.',
-      foto: '/images/Hero_Fundo_2.png',
-      fotoLegenda: 'Lâminas de borracha com micro-rasgos nas pontas riscando a lâmina de vidro.',
-      estadoPeca: 'Borracha Ressecada / Ruído',
-      gravidade: 'Manutenção Preventiva',
-      preco: 90.0,
-      quantidade: 1,
-    },
-    {
-      id: 'p-6',
-      codigo: '7506',
-      nome: 'Lâmpada P21W da Lanterna Traseira',
-      marca: 'Philips',
-      tipo: 'opcional',
-      motivoOpcional: 'Lâmpada do lado direito inoperante identificada no checklist.',
-      foto: '/images/Hero_Fundo_2.png',
-      fotoLegenda: 'Filamento metálico rompido por fadiga térmica, deixando a lanterna direita apagada.',
-      estadoPeca: 'Filamento Rompido',
-      gravidade: 'Manutenção Preventiva',
-      preco: 25.0,
-      quantidade: 1,
-    },
-    {
-      id: 'p-7',
-      codigo: 'AKX3534',
-      nome: 'Filtro de Ar-Condicionado (Cabine)',
-      marca: 'Tecfil',
-      tipo: 'opcional',
-      motivoOpcional: 'Elemento com acúmulo de poeira e ácaros, reduzindo a vazão.',
-      foto: '/images/Interior_Frente.png',
-      fotoLegenda: 'Elemento de microfibra saturado de fuligem urbana, poeira e ácaros.',
-      estadoPeca: 'Saturação Severa',
-      gravidade: 'Higiene e Conforto',
-      preco: 65.0,
-      quantidade: 1,
-    },
-  ],
-
-  // 2. MÃO DE OBRA TÉCNICA
-  servicos: [
-    {
-      id: 's-1',
-      codigo: 'MO-01845',
-      nome: 'Troca do Tubo de Água e Sangria do Sistema',
-      tempoHoras: '2.5h',
-      tipo: 'essencial',
-      motivoSeguranca: 'Desmontagem técnica, substituição e eliminação de ar do arrefecimento.',
-      preco: 300.0,
-      quantidade: 1,
-    },
-    {
-      id: 's-2',
-      codigo: 'MO-00412',
-      nome: 'Instalação de Palhetas e Regulagem dos Esguichos',
-      tempoHoras: '0.3h',
-      tipo: 'opcional',
-      motivoOpcional: 'Troca rápida das palhetas e desobstrução dos bicos injetores.',
-      preco: 30.0,
-      quantidade: 1,
-    },
-    {
-      id: 's-3',
-      codigo: 'MO-00198',
-      nome: 'Troca da Lâmpada de Lanterna e Teste Elétrico',
-      tempoHoras: '0.2h',
-      tipo: 'opcional',
-      motivoOpcional: 'Abertura do soquete traseiro e teste de voltagem.',
-      preco: 20.0,
-      quantidade: 1,
-    },
-    {
-      id: 's-4',
-      codigo: 'MO-00890',
-      nome: 'Oxi-Sanitização e Higienização por Ozônio',
-      tempoHoras: '0.5h',
-      tipo: 'opcional',
-      motivoOpcional: 'Descontaminação do duto do ar-condicionado contra bactérias e odores.',
-      preco: 80.0,
-      quantidade: 1,
-    },
-  ],
-
-  // 3. SERVIÇOS TERCEIRIZADOS
-  terceiros: [
-    {
-      id: 't-1',
-      codigo: 'TERC-0019',
-      nome: 'Teste de Estanqueidade e Pressurização do Radiador',
-      parceiro: 'Radiadores Apucarana',
-      tipo: 'essencial',
-      motivoSeguranca: 'Garante que não existem microfuros adicionais na colmeia do radiador.',
-      preco: 120.0,
-      quantidade: 1,
-    },
-    {
-      id: 't-2',
-      codigo: 'TERC-0082',
-      nome: 'Cristalização de Para-Brisa com Repelência de Água',
-      parceiro: 'Detailing Apucarana',
-      tipo: 'opcional',
-      motivoOpcional: 'Aplicação de película hidrofóbica para visibilidade sob chuva intensa.',
-      preco: 70.0,
-      quantidade: 1,
-    },
-  ],
+  numeroOS: '',
+  dataEmissao: '',
+  horaEmissao: '',
+  consultor: '',
+  mecanico: '',
+  veiculo: '',
+  placa: '',
+  ano: '',
+  km: '',
+  relatoCliente: '',
+  pecas: [],
+  servicos: [],
+  terceiros: [],
 }
 
 export function ClienteServicosPage() {
@@ -316,12 +83,12 @@ export function ClienteServicosPage() {
   const [copiado, setCopiado] = useState(false)
   const [fotoZoom, setFotoZoom] = useState(null)
   const [formaPagamento, setFormaPagamento] = useState('pix')
-  const [nomeResponsavel, setNomeResponsavel] = useState(clienteAtivo?.nome || 'Edgar Amaral da Silveira')
+  const [nomeResponsavel, setNomeResponsavel] = useState(clienteAtivo?.nome || '')
 
   // Laudo formatado no padrão oficial homologado da Oficina (gerado pela tela de OS)
   const laudoOficialPadraoOS = useMemo(() => {
     return gerarLaudoTecnico({
-      cliente: clienteAtivo?.nome || 'Edgar Amaral da Silveira',
+      cliente: clienteAtivo?.nome || '',
       placa: servico.placa,
       marcaModelo: servico.veiculo,
       km: servico.km,
@@ -443,10 +210,24 @@ export function ClienteServicosPage() {
   // Link WhatsApp direto com a Consultora
   const linkWhatsApp = useMemo(() => {
     const texto = encodeURIComponent(
-      `Olá Bianca! Sou o ${clienteAtivo?.nome || 'Edgar'}, proprietário do ${servico.veiculo} (${servico.placa}). Estou no Portal do Cliente analisando a OS #${servico.numeroOS} e gostaria de tirar uma dúvida.`
+      `Olá! Sou ${clienteAtivo?.nome || 'cliente'}, proprietário do ${servico.veiculo} (${servico.placa}). Estou no Portal do Cliente analisando a OS #${servico.numeroOS} e gostaria de tirar uma dúvida.`
     )
-    return `https://wa.me/5543988126874?text=${texto}`
+    return `${WHATSAPP_ACCESS.href}?text=${texto}`
   }, [clienteAtivo, servico])
+
+  if (!servico.numeroOS) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl border border-[#e4e7ec] p-8 text-center max-w-sm">
+          <CarProfile size={32} className="mx-auto mb-3 text-[#98a2b3]" />
+          <p className="text-sm font-bold text-[#101828]">Nenhuma ordem de serviço em andamento</p>
+          <p className="text-xs text-[#667085] mt-1">
+            Assim que sua oficina abrir uma OS para o seu veículo, o orçamento e o laudo técnico aparecerão aqui.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (isMobile) {
     return (
@@ -1046,7 +827,7 @@ export function ClienteServicosPage() {
                             Cliente / Titular:
                           </span>
                           <span className="font-bold text-[#101828]">
-                            {clienteAtivo?.nome || 'Edgar Amaral da Silveira'}
+                            {clienteAtivo?.nome || '—'}
                           </span>
                         </div>
 

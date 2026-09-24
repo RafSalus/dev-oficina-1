@@ -236,6 +236,9 @@ export function MecanicoVisaoGeral({ osAtiva, requisicoesPecas, setActiveTab, re
             <CalendarDots size={16} weight="bold" className="text-[#0284c7]" />
           </div>
           <div className="space-y-1.5 text-xs">
+            {AGENDA_DO_DIA.length === 0 && (
+              <p className="text-[11px] text-[#667085]">Nenhum atendimento programado para hoje.</p>
+            )}
             {AGENDA_DO_DIA.slice(0, 3).map((ag, i) => (
               <div
                 key={i}

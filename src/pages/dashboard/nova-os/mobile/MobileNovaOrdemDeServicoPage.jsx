@@ -19,7 +19,7 @@ import Select from 'react-select'
 import { IMaskInput } from 'react-imask'
 import { toast } from 'sonner'
 import { carregarClientesCadastrados } from '../../../../constants/mockClientesVeiculos'
-import { MOCK_MECANICOS } from '../../../../constants/mecanicos'
+import { MOCK_MECANICOS } from '../../../../constants/mecanicos' // kept for backward compat, no longer seeded
 import { obterMecanicosAtivos } from '../../../../repositories/funcionariosRepository'
 import { ITENS_CHECKLIST_ENTRADA } from '../../../../constants/checklistItems'
 import { formatarCPF, formatarCNPJ, formatarTelefone } from '../../../../utils/fiscalValidators'
@@ -86,7 +86,9 @@ export function MobileNovaOrdemDeServicoPage({
     )
   }, [formData.veiculoId, formData.placa, veiculosOptions])
 
-  const [mecanicosLista, setMecanicosLista] = useState(MOCK_MECANICOS)
+  const [mecanicosLista, setMecanicosLista] = useState([
+    { value: '', label: 'Selecione o mecânico', nome: '' },
+  ])
 
   useEffect(() => {
     let cancelado = false
@@ -95,7 +97,7 @@ export function MobileNovaOrdemDeServicoPage({
         const ativos = await obterMecanicosAtivos()
         if (!cancelado && ativos && ativos.length > 0) {
           setMecanicosLista([
-            MOCK_MECANICOS[0],
+            { value: '', label: 'Selecione o mecânico', nome: '' },
             ...ativos.map((a) => ({
               value: a.id,
               label: a.nome,

@@ -15,7 +15,6 @@ import {
 import { toast } from 'sonner'
 import { carregarClientesCadastrados } from '../../../../constants/mockClientesVeiculos'
 import {
-  MECANICOS_AGENDA,
   HORARIOS_GRADE,
   DIAS_SEMANA_NOMES,
   verificarConflitoGrade,
@@ -26,6 +25,7 @@ import {
   textareaBaseClass,
   labelBaseClass,
 } from '../../nova-os/mobile/mobileSelectStyles'
+import { useMecanicosAgenda } from '../../../../hooks/useMecanicosAgenda'
 
 export function MobileAgendaAgendamentoModal({
   isOpen,
@@ -39,6 +39,7 @@ export function MobileAgendaAgendamentoModal({
   agendamentosExistentes = [],
   onTratarAtraso,
 }) {
+  const mecanicosAgenda = useMecanicosAgenda()
   const [listaClientes, setListaClientes] = useState([])
 
   const [clienteSelecionadoId, setClienteSelecionadoId] = useState('')
@@ -77,7 +78,7 @@ export function MobileAgendaAgendamentoModal({
       setVeiculoSelecionadoId(agendamentoParaEditar.veiculoId || '')
       setVeiculoModelo(agendamentoParaEditar.veiculoModelo || '')
       setVeiculoPlaca(agendamentoParaEditar.veiculoPlaca || '')
-      setMecanicoId(agendamentoParaEditar.mecanicoId || MECANICOS_AGENDA[0].id)
+      setMecanicoId(agendamentoParaEditar.mecanicoId || mecanicosAgenda[0]?.id || '')
       setDiaChave(agendamentoParaEditar.diaChave || 'seg')
       setHorarioInicio(agendamentoParaEditar.horarioInicio || '08:00')
       setDuracaoHoras(Number(agendamentoParaEditar.duracaoHoras) || 1)
@@ -95,7 +96,7 @@ export function MobileAgendaAgendamentoModal({
       setVeiculoSelecionadoId('')
       setVeiculoModelo('')
       setVeiculoPlaca('')
-      setMecanicoId(mecanicoPreSelecionado || MECANICOS_AGENDA[0].id)
+      setMecanicoId(mecanicoPreSelecionado || mecanicosAgenda[0]?.id || '')
       setDiaChave(diaPreSelecionado || 'seg')
       setHorarioInicio(horarioPreSelecionado || '08:00')
       setDuracaoHoras(1)
@@ -172,7 +173,7 @@ export function MobileAgendaAgendamentoModal({
     setVeiculoPlaca(v.placa || '')
   }
 
-  const opcoesMecanicos = MECANICOS_AGENDA.map((m) => ({ value: m.id, label: m.nome }))
+  const opcoesMecanicos = mecanicosAgenda.map((m) => ({ value: m.id, label: m.nome }))
   const opcoesDias = DIAS_SEMANA_NOMES.map((d) => ({ value: d.chave, label: `${d.nome} (${d.abrev})` }))
   const opcoesHorarios = HORARIOS_GRADE.map((h) => ({ value: h, label: `${h}h` }))
   const opcoesDuracao = [
@@ -217,7 +218,15 @@ export function MobileAgendaAgendamentoModal({
       return
     }
 
-    const mec = MECANICOS_AGENDA.find((m) => m.id === mecanicoId) || MECANICOS_AGENDA[0]
+    const mec = mecanicosAgenda.find((m) => m.id === mecanicoId) || mecanicosAgenda[0]
+
+    if (!mec) {
+
+      toast.error('Cadastre um mecânico ativo em Funcionários antes de agendar.')
+
+      return
+
+    }
 
     const agendamentoAtualizado = {
       id: agendamentoParaEditar?.id || `ag-${Date.now()}`,

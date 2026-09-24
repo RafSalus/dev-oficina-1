@@ -120,7 +120,7 @@ export function MecanicoHeaderMetricas({
                 VEÍCULO EM ATENDIMENTO NA SUA BANCADA:
               </span>
               <span className="px-2 py-0.2 bg-[#e0f2fe] text-[#0369a1] rounded text-[10px] font-bold font-mono">
-                #{osAtiva?.numeroOS || '002908'}
+                #{osAtiva?.numeroOS || '—'}
               </span>
             </div>
             <p className="font-extrabold text-sm text-[#101828] truncate">

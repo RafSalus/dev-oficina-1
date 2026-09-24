@@ -23,52 +23,22 @@ export const PAPEL_POR_CARGO = {
   secretaria: 'secretaria',
 }
 
-// Único registro real (não é mock): o admin/proprietário, já provisionado no Supabase Auth
-// (ver docs/handoff/handoff-waves-1-4.md). Os demais colaboradores de exemplo foram removidos.
-export const SEED_FUNCIONARIOS = [
-  {
-    id: 'admin-rafael',
-    nome: 'Rafael Amaral Salustiano',
-    cpf: '401.928.374-55',
-    telefone: '(43) 99185-1501',
-    cargo: 'analista',
-    cargoLabel: 'Administrador & Proprietário',
-    especialidade: 'Direção Geral, Diagnóstico Avançado e Gestão da Oficina',
-    email: 'rtzrafael@gmail.com',
-    endereco: 'Rua Aquiles, 554, Vila Shangri-La, Apucarana - PR',
-    cep: '86812-480',
-    numero: '554',
-    comissaoServicos: 0,
-    comissaoPecas: 0,
-    dataAdmissao: '2020-01-01',
-    horarioTrabalho: 'Integral / Acesso 24h',
-    boxElevador: 'Geral / Administrativo',
-    ativo: true,
-    observacoes: 'Sócio-proprietário e Administrador do Sistema.',
-    authUserId: 'b0815410-e82e-4034-aa87-567faf2f6500',
-  },
-]
+export const SEED_FUNCIONARIOS = []
 
 function getStoredFuncionarios() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_FUNCIONARIOS)
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_FUNCIONARIOS, JSON.stringify(SEED_FUNCIONARIOS))
-      return [...SEED_FUNCIONARIOS]
+      localStorage.setItem(STORAGE_KEY_FUNCIONARIOS, JSON.stringify([]))
+      return []
     }
     const parsed = JSON.parse(raw)
     if (Array.isArray(parsed)) {
-      // Garantir que Rafael Amaral Salustiano esteja sempre registrado
-      const indexAdmin = parsed.findIndex((f) => f.email === 'rtzrafael@gmail.com')
-      if (indexAdmin < 0) {
-        parsed.unshift(SEED_FUNCIONARIOS[0])
-        localStorage.setItem(STORAGE_KEY_FUNCIONARIOS, JSON.stringify(parsed))
-      }
       return parsed
     }
-    return [...SEED_FUNCIONARIOS]
+    return []
   } catch {
-    return [...SEED_FUNCIONARIOS]
+    return []
   }
 }
 
@@ -295,7 +265,6 @@ export async function criarLoginFuncionario(funcionarioId) {
       return { ok: false, message: data?.message || 'Erro ao criar acesso de login.' }
     }
 
-    // Reflete o vínculo localmente sem esperar o próximo carregarFuncionarios()
     const lista = getStoredFuncionarios()
     const index = lista.findIndex((f) => String(f.id) === String(funcionarioId))
     if (index >= 0) {

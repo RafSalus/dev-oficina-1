@@ -62,18 +62,12 @@ export function gerarNumeroVenda() {
   return String(maiorNumero + 1).padStart(6, '0')
 }
 
-// Gera uma chave de acesso de 44 dígitos no padrão visual de uma NF-e/NFC-e (simulada, sem validade fiscal real)
 export function gerarChaveAcessoMock() {
-  let chave = ''
-  for (let i = 0; i < 44; i += 1) {
-    chave += Math.floor(Math.random() * 10)
-  }
-  return chave.replace(/(.{4})/g, '$1 ').trim()
+  return ''
 }
 
 export function gerarProtocoloMock() {
-  const agora = Date.now().toString().slice(-9)
-  return `135260${agora}`
+  return ''
 }
 
 export function calcularTotaisCarrinho(itens, descontoGeral = 0, tipoDescontoGeral = 'valor') {

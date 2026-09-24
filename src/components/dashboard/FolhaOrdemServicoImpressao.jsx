@@ -14,28 +14,28 @@ export function FolhaOrdemServicoImpressao({
   style = {},
 }) {
   const {
-    numeroOS = '002908',
+    numeroOS = '',
     dataEmissao = new Date().toLocaleDateString('pt-BR', { year: '2-digit', month: '2-digit', day: '2-digit' }),
     horaEmissao = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    consultorResponsavel = 'BIANCA',
-    cliente = 'EDGAR AMARAL DA SILVEIRA',
-    codigoCliente = '0000161',
-    documento = '033.687.739-09',
-    endereco = 'R TUPINAMBA, 566',
-    cidade = 'APUCARANA',
-    uf = 'PR',
-    cep = '86812-405',
-    telefone = '(43) 98812-6874',
+    consultorResponsavel = '',
+    cliente = '',
+    codigoCliente = '',
+    documento = '',
+    endereco = '',
+    cidade = '',
+    uf = '',
+    cep = '',
+    telefone = '',
     email = '',
-    placa = 'ASF6I46',
-    marca = 'FIAT',
-    modelo = 'DOBLO 1.8 CARGO',
-    marcaModelo = 'FIAT DOBLO 1.8 CARGO',
-    ano = '2009/2010',
-    cor = 'BRANCA',
-    combustivel = 'FLEX',
-    km = '280.812',
-    kmAnterior = '279.003',
+    placa = '',
+    marca = '',
+    modelo = '',
+    marcaModelo = '',
+    ano = '',
+    cor = '',
+    combustivel = '',
+    km = '',
+    kmAnterior = '',
     chassis = '',
     frota = '',
     pecasOS = [],
@@ -65,49 +65,8 @@ export function FolhaOrdemServicoImpressao({
         marca: p.marca || '',
       }))
     }
-    // Mock padrão do documento físico da Mecânica Gabriel
-    return [
-      {
-        codigo: '10039B',
-        nome: 'ANEL VEDADOR DA ADM',
-        unidade: 'UN',
-        quantidade: 4,
-        precoUnitario: 15.0,
-        desconto: 0,
-      },
-      {
-        codigo: '0018969',
-        nome: 'TUBO SUPORTE ARREFECIMENTO',
-        unidade: 'PC',
-        quantidade: 1,
-        precoUnitario: 200.0,
-        desconto: 0,
-      },
-      {
-        codigo: '2682',
-        nome: 'ABRACADEIRA 14X22',
-        unidade: 'UN',
-        quantidade: 2,
-        precoUnitario: 10.0,
-        desconto: 0,
-      },
-      {
-        codigo: '010804',
-        nome: 'ADITIVO A05 PRONTO USO',
-        unidade: 'LT',
-        quantidade: 1,
-        precoUnitario: 40.0,
-        desconto: 0,
-      },
-      {
-        codigo: 'DIVERSAS',
-        nome: 'PEÇAS - PARAFUSO C/ PORCA E ARRUELA',
-        unidade: 'PC',
-        quantidade: 1,
-        precoUnitario: 10.0,
-        desconto: 0,
-      },
-    ]
+    // Fallback: retorna array vazio quando não há dados
+    return []
   }, [pecasOS])
 
   // Lista consolidada de Mão de Obra e Serviços da Oficina
@@ -123,16 +82,8 @@ export function FolhaOrdemServicoImpressao({
         tempoHoras: s.tempoHoras || '',
       }))
     }
-    return [
-      {
-        codigo: '01845',
-        nome: 'TROCA TUBO DE AGUA DO COLETOR DE ADM',
-        unidade: 'mo',
-        quantidade: 1,
-        precoUnitario: 300.0,
-        desconto: 0,
-      },
-    ]
+    // Fallback: retorna array vazio quando não há dados
+    return []
   }, [servicosOS])
 
   // Lista consolidada de Serviços de Terceiros Homologados
@@ -378,7 +329,7 @@ export function FolhaOrdemServicoImpressao({
                         ORÇAMENTO-
                       </span>
                       <span className="text-xl font-black tracking-wide text-[#101828] font-mono whitespace-nowrap">
-                        {numeroOS || '002908'}
+                        {numeroOS || '—'}
                       </span>
                     </div>
                   </div>
@@ -419,7 +370,7 @@ export function FolhaOrdemServicoImpressao({
                 <div className="w-48 p-1.5 flex flex-col justify-between shrink-0">
                   <div className="flex justify-between items-center whitespace-nowrap">
                     <span className="text-[10px] font-extrabold uppercase whitespace-nowrap">ORÇAMENTO-</span>
-                    <span className="text-sm font-black font-mono whitespace-nowrap">{numeroOS || '002908'}</span>
+                    <span className="text-sm font-black font-mono whitespace-nowrap">{numeroOS || '—'}</span>
                   </div>
                   <div className="flex justify-between text-[9px] border-t border-black/30 pt-0.5 whitespace-nowrap">
                     <span>Data: {dataEmissao}</span>

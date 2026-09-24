@@ -19,11 +19,7 @@ import {
   registrarExecucaoPreventiva,
 } from '../../constants/mockManutencaoPreventiva'
 
-const MECANICOS_OPCOES = [
-  { value: 'Gabriel Amaral', label: 'Gabriel Amaral (Chefe de Oficina)' },
-  { value: 'Carlos Eduardo', label: 'Carlos Eduardo (Mecânico Especialista)' },
-  { value: 'Lucas Silveira', label: 'Lucas Silveira (Técnico de Manutenção)' },
-]
+const MECANICOS_OPCOES = []
 
 export function ModalRegistrarPreventiva({
   isOpen,
@@ -39,7 +35,7 @@ export function ModalRegistrarPreventiva({
   const [dataExecucao, setDataExecucao] = useState('')
   const [intervaloKm, setIntervaloKm] = useState('10000')
   const [intervaloMeses, setIntervaloMeses] = useState('6')
-  const [mecanico, setMecanico] = useState(MECANICOS_OPCOES[0])
+  const [mecanico, setMecanico] = useState(null)
   const [observacoes, setObservacoes] = useState('')
   const [atualizarKmVeiculo, setAtualizarKmVeiculo] = useState(true)
 
@@ -153,7 +149,7 @@ export function ModalRegistrarPreventiva({
       data: dataExecucao,
       intervaloKm,
       intervaloMeses,
-      mecanicoNome: mecanico?.value || 'Gabriel Amaral',
+      mecanicoNome: mecanico?.value || '',
       observacoes,
       atualizarKmVeiculo,
       garantiaPendente,

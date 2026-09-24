@@ -83,29 +83,7 @@ export function MecanicoHeader({ isPinned = false, onTogglePin }) {
   }
 
   // Notificações em tempo real do mecânico
-  const notificacoes = [
-    {
-      id: 1,
-      titulo: 'Peça disponível no Almoxarifado',
-      mensagem: 'Tubo de arrefecimento da OS #002908 pronto para retirada no balcão.',
-      tempo: 'Há 5 min',
-      tipo: 'peca',
-    },
-    {
-      id: 2,
-      titulo: 'Orçamento Aprovado pelo Cliente',
-      mensagem: 'Fiat Doblo 1.8 Cargo (OS #002908) autorizada pelo cliente.',
-      tempo: 'Há 25 min',
-      tipo: 'aprovacao',
-    },
-    {
-      id: 3,
-      titulo: 'Novo Agendamento de Revisão',
-      mensagem: 'Toyota Corolla agendado para as 16:00 (Revisão 60.000 km).',
-      tempo: 'Há 1 hora',
-      tipo: 'agenda',
-    },
-  ]
+  const notificacoes = []
 
   return (
     <>
@@ -211,6 +189,9 @@ export function MecanicoHeader({ isPinned = false, onTogglePin }) {
                 </div>
 
                 <div className="max-h-72 overflow-y-auto no-scrollbar divide-y divide-[#f2f4f7]">
+                  {notificacoes.length === 0 && (
+                    <p className="p-4 text-center text-[#667085]">Nenhuma notificação no momento.</p>
+                  )}
                   {notificacoes.map((item) => (
                     <div
                       key={item.id}
@@ -381,7 +362,7 @@ export function MecanicoHeader({ isPinned = false, onTogglePin }) {
                     <Phone size={15} className="text-[#0284c7]" /> Telefone
                   </span>
                   <span className="font-bold text-[#101828]">
-                    {mecanicoAtivo.telefone || '(43) 99876-0000'}
+                    {mecanicoAtivo.telefone || '—'}
                   </span>
                 </div>
 

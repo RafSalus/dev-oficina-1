@@ -4,13 +4,14 @@ import { IMaskInput } from 'react-imask'
 import { X, ShieldCheck, CheckCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { carregarClientesCadastrados } from '../../../../constants/mockClientesVeiculos'
-import { MECANICOS_AGENDA, ordenarFilaPorPrioridadeEChegada } from '../../../../constants/agendaData'
+import { ordenarFilaPorPrioridadeEChegada } from '../../../../constants/agendaData'
 import {
   mobileSelectStyles,
   inputBaseClass,
   textareaBaseClass,
   labelBaseClass,
 } from '../../nova-os/mobile/mobileSelectStyles'
+import { useMecanicosAgenda } from '../../../../hooks/useMecanicosAgenda'
 
 const OPCOES_PRIORIDADE = [
   { value: 'GARANTIA', label: '★ Garantia de Serviço (Prioridade 1)' },
@@ -20,6 +21,7 @@ const OPCOES_PRIORIDADE = [
 ]
 
 export function MobileAgendaFilaFormModal({ isOpen, onClose, fila = [], onAtualizarFila }) {
+  const mecanicosAgenda = useMecanicosAgenda()
   const listaClientesCadastrados = useMemo(() => carregarClientesCadastrados(), [])
   const opcoesClientes = useMemo(
     () =>
@@ -33,7 +35,7 @@ export function MobileAgendaFilaFormModal({ isOpen, onClose, fila = [], onAtuali
 
   const opcoesMecanicos = [
     { value: '', label: 'Qualquer mecânico disponível' },
-    ...MECANICOS_AGENDA.map((m) => ({ value: m.id, label: m.nome })),
+    ...mecanicosAgenda.map((m) => ({ value: m.id, label: m.nome })),
   ]
 
   const [clienteNome, setClienteNome] = useState('')

@@ -84,29 +84,7 @@ export function ClienteHeader({ isPinned = false, onTogglePin }) {
   }
 
   // Notificações do cliente
-  const notificacoes = [
-    {
-      id: 1,
-      titulo: 'Orçamento Pronto para Aprovação',
-      mensagem: 'Revisão preventiva e peças da OS #002908 aguardando sua autorização.',
-      tempo: 'Há 10 min',
-      tipo: 'orcamento',
-    },
-    {
-      id: 2,
-      titulo: 'Checklist de Entrada Realizado',
-      mensagem: 'Vistoria fotográfica do Fiat Doblo 1.8 concluída na recepção.',
-      tempo: 'Há 45 min',
-      tipo: 'checklist',
-    },
-    {
-      id: 3,
-      titulo: 'Próxima Revisão Programada',
-      mensagem: 'Alerta preventivo de troca de óleo e filtros recomendada.',
-      tempo: 'Há 2 dias',
-      tipo: 'alerta',
-    },
-  ]
+  const notificacoes = []
 
   return (
     <>
@@ -212,6 +190,9 @@ export function ClienteHeader({ isPinned = false, onTogglePin }) {
                 </div>
 
                 <div className="max-h-72 overflow-y-auto no-scrollbar divide-y divide-[#f2f4f7]">
+                  {notificacoes.length === 0 && (
+                    <p className="p-4 text-center text-[#667085]">Nenhuma notificação no momento.</p>
+                  )}
                   {notificacoes.map((item) => (
                     <div
                       key={item.id}

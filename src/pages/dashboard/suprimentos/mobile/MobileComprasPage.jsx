@@ -44,8 +44,8 @@ const extrairTelefoneLimpo = (t) => {
   return limpo.length >= 8 ? limpo : '43998544106'
 }
 const extrairTelefoneExibicao = (t) => {
-  if (!t) return '(43) 3456-7890'
-  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '(43) 3456-7890')
+  if (!t) return ''
+  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '')
 }
 const filtrarFornecedoresAutoPecas = (terceiros) => {
   if (!Array.isArray(terceiros)) return []
@@ -447,7 +447,7 @@ export function MobileComprasPage() {
       id: novaId,
       numeroOS: '',
       clienteNome: 'Almoxarifado Central',
-      clienteTelefone: '(43) 3456-7890',
+      clienteTelefone: '',
       veiculoPlaca: 'OFICINA',
       veiculoModelo: 'Reposição de Almoxarifado',
       ano: '',
@@ -525,7 +525,7 @@ export function MobileComprasPage() {
       clienteTelefone: demanda.clienteTelefone || osEncontrada?.telefone || '',
       veiculoPlaca: demanda.veiculoPlaca || osEncontrada?.placa || '',
       veiculoModelo: demanda.veiculoModelo || osEncontrada?.marcaModelo || '',
-      mecanicoNome: osEncontrada?.mecanicoNome || 'Carlos Eduardo',
+      mecanicoNome: osEncontrada?.mecanicoNome || '',
       observacoes: `Cotação de peças para a Ordem de Serviço #${demanda.numeroOS}`,
     })
     toast.info(`Abrindo tela de cotação das peças da OS #${demanda.numeroOS}.`)
@@ -551,7 +551,7 @@ export function MobileComprasPage() {
       clienteNome: todasMesmaOS ? selecionadas[0].clienteNome : '',
       veiculoPlaca: todasMesmaOS ? selecionadas[0].veiculoPlaca : '',
       veiculoModelo: todasMesmaOS ? selecionadas[0].veiculoModelo : '',
-      mecanicoNome: 'Carlos Eduardo',
+      mecanicoNome: '',
       observacoes: `Cotação agrupada com ${selecionadas.length} itens de OSs`,
     })
     toast.info(`Abrindo cotação com ${selecionadas.length} itens selecionados.`)

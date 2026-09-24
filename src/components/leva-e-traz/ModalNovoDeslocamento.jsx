@@ -46,9 +46,9 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
 
   // Equipe
   const [quantidadeFuncionarios, setQuantidadeFuncionarios] = useState(2) // 1 ou 2
-  const [motoristaPrincipal, setMotoristaPrincipal] = useState(MOTORISTAS_PADRAO[0])
-  const [auxiliar, setAuxiliar] = useState(MOTORISTAS_PADRAO[1])
-  const [veiculoApoio, setVeiculoApoio] = useState(VEICULOS_APOIO_PADRAO[0])
+  const [motoristaPrincipal, setMotoristaPrincipal] = useState(null)
+  const [auxiliar, setAuxiliar] = useState(null)
+  const [veiculoApoio, setVeiculoApoio] = useState(null)
   const [veiculosApoioDisponiveis, setVeiculosApoioDisponiveis] = useState([])
 
   // Opção Levar Cliente Embora
@@ -102,7 +102,7 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
 
       const listaApoio = carregarVeiculosDeApoio()
       setVeiculosApoioDisponiveis(listaApoio)
-      setVeiculoApoio(listaApoio[0] || VEICULOS_APOIO_PADRAO[0])
+      setVeiculoApoio(listaApoio[0] || null)
     }
   }, [isOpen])
 
@@ -110,7 +110,7 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
   useEffect(() => {
     if (tipoServico === 'busca_veiculo' || tipoServico === 'entrega_veiculo') {
       setQuantidadeFuncionarios(2)
-      setVeiculoApoio(veiculosApoioDisponiveis[0] || VEICULOS_APOIO_PADRAO[0])
+      setVeiculoApoio(veiculosApoioDisponiveis[0] || null)
     } else if (tipoServico === 'busca_pecas') {
       setQuantidadeFuncionarios(1)
       const moto = veiculosApoioDisponiveis.find((v) => v.tipo.includes('Moto')) || veiculosApoioDisponiveis[0]

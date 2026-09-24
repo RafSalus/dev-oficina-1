@@ -25,12 +25,12 @@ import {
   obterOcupacoesOSMecanico,
   recalcularCascataDeAtrasos,
   PRIORIDADE_FILA,
-  MECANICOS_AGENDA,
   ordenarFilaPorPrioridadeEChegada,
 } from '../../../../constants/agendaData'
 import { MobileAgendaAgendamentoModal } from './MobileAgendaAgendamentoModal'
 import { MobileAgendaTratarAtrasoModal } from './MobileAgendaTratarAtrasoModal'
 import { MobileAgendaFilaFormModal } from './MobileAgendaFilaFormModal'
+import { useMecanicosAgenda } from '../../../../hooks/useMecanicosAgenda'
 
 const FILTROS_PRIORIDADE = [
   { chave: 'TODOS', rotulo: 'Todos' },
@@ -232,9 +232,10 @@ function SlotLivre({ horario, isAlmoco, primeiroFila, confirmando, onIniciarEnvi
 }
 
 function FilaCard({ item, posicao, onRemover }) {
+  const mecanicosAgenda = useMecanicosAgenda()
   const isGarantia = item.prioridade === 'GARANTIA'
   const pInfo = PRIORIDADE_FILA[item.prioridade] || PRIORIDADE_FILA.NORMAL
-  const mecPref = MECANICOS_AGENDA.find((m) => m.id === item.mecanicoPreferencialId)
+  const mecPref = mecanicosAgenda.find((m) => m.id === item.mecanicoPreferencialId)
 
   return (
     <div
@@ -344,6 +345,7 @@ export function MobileAgendaPage({
   agendamentoAtrasadoAlvo,
   onSalvarAtrasoTratado,
 }) {
+  const mecanicosAgenda = useMecanicosAgenda()
   const [diaSelecionadoChave, setDiaSelecionadoChave] = useState(() => {
     const hoje = semanaDias.find((d) => d.isHoje)
     return hoje ? hoje.chave : semanaDias[0]?.chave || 'seg'
@@ -502,7 +504,7 @@ export function MobileAgendaPage({
         <>
           {/* Seletor de Mecânicos */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 -mx-4 px-4">
-            {MECANICOS_AGENDA.map((mec) => {
+            {mecanicosAgenda.map((mec) => {
               const isAtivo = mecanicoSelecionadoId === mec.id
               const totalMec = agendamentos.filter((a) => a.mecanicoId === mec.id).length
               const temAtraso = agendamentos.some((a) => a.mecanicoId === mec.id && a.emAtraso)

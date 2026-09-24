@@ -51,8 +51,8 @@ const extrairTelefoneLimpo = (t) => {
 }
 
 const extrairTelefoneExibicao = (t) => {
-  if (!t) return '(43) 3456-7890'
-  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '(43) 3456-7890')
+  if (!t) return ''
+  return String(t.telefone || t.contatoTelefone || t.contato?.telefone || '')
 }
 
 const filtrarFornecedoresAutoPecas = (terceiros) => {
@@ -386,7 +386,7 @@ export function EstoquePage() {
         id: novaId,
         numeroOS: '',
         clienteNome: 'Almoxarifado Central',
-        clienteTelefone: '(43) 3456-7890',
+        clienteTelefone: '',
         veiculoPlaca: 'OFICINA',
         veiculoModelo: 'Reposição de Almoxarifado',
         ano: '',
@@ -460,7 +460,7 @@ export function EstoquePage() {
         id: novaId,
         numeroOS: '',
         clienteNome: 'Almoxarifado Central',
-        clienteTelefone: '(43) 3456-7890',
+        clienteTelefone: '',
         veiculoPlaca: 'OFICINA',
         veiculoModelo: 'Reposição Completa de Almoxarifado',
         ano: '',
@@ -1172,7 +1172,7 @@ export function EstoquePage() {
                           </td>
 
                           <td className="py-3 px-4 text-slate-700 text-[11px]">
-                            {item.fornecedorPreferencial || 'Auto Peças Central'}
+                            {item.fornecedorPreferencial || '—'}
                           </td>
 
                           <td className="py-3 px-4 text-right">

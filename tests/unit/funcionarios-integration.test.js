@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
-  carregarFuncionarios,
   salvarFuncionario,
   alternarStatusFuncionario,
   excluirFuncionario,
@@ -97,17 +96,17 @@ describe('Story 1.10: Módulo de Cadastro de Funcionários & Integração Viva',
   it('deve excluir um colaborador e atualizar persistência', async () => {
     const ricardo = await salvarFuncionario({
       nome: 'Mecânico Temporário',
-      cargo: 'auxiliar',
+      cargo: 'aux_mecanico',
       ativo: true,
     })
 
-    const antes = await carregarFuncionarios()
-    expect(antes.some((f) => f.id === ricardo.id)).toBe(true)
+    const antes = await obterFuncionarioPorId(ricardo.id)
+    expect(antes).not.toBeNull()
 
     const excluido = await excluirFuncionario(ricardo.id)
     expect(excluido).toBe(true)
 
-    const depois = await carregarFuncionarios()
-    expect(depois.some((f) => f.id === ricardo.id)).toBe(false)
+    const depois = await obterFuncionarioPorId(ricardo.id)
+    expect(depois).toBeNull()
   })
 })

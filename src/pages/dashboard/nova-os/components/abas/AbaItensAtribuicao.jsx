@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import Select from 'react-select'
 import { Wrench } from '@phosphor-icons/react'
-import { MOCK_MECANICOS } from '../../../../../constants/mecanicos'
+import { MOCK_MECANICOS } from '../../../../../constants/mecanicos' // kept for backward compat, no longer seeded
 import { obterMecanicosAtivos } from '../../../../../repositories/funcionariosRepository'
 import { obterOrdensAbertas } from '../../../orcamento/mockOrdensAbertas'
 import { SecaoForm, Campo, inputClass, selectStylesPortal } from '../formularioAberturaShared'
 
 export function AbaItensAtribuicao({ formData, updateFormData }) {
-  const [mecanicosDinamicos, setMecanicosDinamicos] = useState(MOCK_MECANICOS)
+  const [mecanicosDinamicos, setMecanicosDinamicos] = useState([
+    { value: '', label: 'Selecione o mecânico', nome: '' },
+  ])
 
   useEffect(() => {
     let cancelado = false
@@ -16,7 +18,7 @@ export function AbaItensAtribuicao({ formData, updateFormData }) {
         const ativos = await obterMecanicosAtivos()
         if (!cancelado && ativos && ativos.length > 0) {
           const formatados = [
-            MOCK_MECANICOS[0],
+            { value: '', label: 'Selecione o mecânico', nome: '' },
             ...ativos.map((a) => ({
               value: a.id,
               label: a.nome,

@@ -21,16 +21,17 @@ import { customSelectStyles } from '../suprimentos/customSelectStyles'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
 import { carregarClientesCadastrados } from '../../constants/mockClientesVeiculos'
 import {
-  MECANICOS_AGENDA,
   PRIORIDADE_FILA,
   ordenarFilaPorPrioridadeEChegada,
 } from '../../constants/agendaData'
+import { useMecanicosAgenda } from '../../hooks/useMecanicosAgenda'
 
 export function AgendaFilaDedicada({
   fila = [],
   onAtualizarFila,
   onAgendarClienteDaFila,
 }) {
+  const mecanicosAgenda = useMecanicosAgenda()
   const navigate = useNavigate()
   const location = useLocation()
   const [busca, setBusca] = useState('')
@@ -80,7 +81,7 @@ export function AgendaFilaDedicada({
 
   const opcoesMecanicos = [
     { value: '', label: 'Qualquer mecânico disponível' },
-    ...MECANICOS_AGENDA.map((m) => ({
+    ...mecanicosAgenda.map((m) => ({
       value: m.id,
       label: m.nome,
     })),
@@ -362,7 +363,7 @@ export function AgendaFilaDedicada({
                 {filaFiltrada.map((item, index) => {
                   const isGarantia = item.prioridade === 'GARANTIA'
                   const pInfo = PRIORIDADE_FILA[item.prioridade] || PRIORIDADE_FILA.NORMAL
-                  const mecPref = MECANICOS_AGENDA.find((m) => m.id === item.mecanicoPreferencialId)
+                  const mecPref = mecanicosAgenda.find((m) => m.id === item.mecanicoPreferencialId)
 
                   return (
                     <tr
