@@ -4,6 +4,7 @@ import {
   salvarFuncionario,
   alternarStatusFuncionario,
   excluirFuncionario,
+  criarLoginFuncionario,
 } from '../../../../repositories/funcionariosRepository'
 import { toast } from 'sonner'
 
@@ -13,6 +14,7 @@ export function useFuncionarios() {
   const [filtroCargo, setFiltroCargo] = useState('TODOS')
   const [filtroStatus, setFiltroStatus] = useState('TODOS')
   const [termoBusca, setTermoBusca] = useState('')
+  const [criandoAcessoId, setCriandoAcessoId] = useState(null)
 
   const recarregar = useCallback(async () => {
     try {
@@ -77,6 +79,30 @@ export function useFuncionarios() {
     }
   }
 
+  const criarAcesso = async (funcionario) => {
+    if (!funcionario.email) {
+      toast.warning('Cadastre um e-mail para este colaborador antes de criar o acesso.')
+      return { ok: false }
+    }
+    setCriandoAcessoId(funcionario.id)
+    try {
+      const resultado = await criarLoginFuncionario(funcionario.id)
+      if (resultado.ok) {
+        toast.success(`Convite de acesso enviado para ${funcionario.email}.`)
+        await recarregar()
+      } else {
+        toast.error(resultado.message || 'Não foi possível criar o acesso de login.')
+      }
+      return resultado
+    } catch (err) {
+      console.error('Erro ao criar acesso de login:', err)
+      toast.error('Erro ao criar acesso de login.')
+      return { ok: false }
+    } finally {
+      setCriandoAcessoId(null)
+    }
+  }
+
   const excluir = async (id, nome) => {
     try {
       const sucesso = await excluirFuncionario(id)
@@ -126,7 +152,7 @@ export function useFuncionarios() {
     const ativos = funcionarios.filter((f) => f.ativo).length
     const inativos = total - ativos
     const mecanicos = funcionarios.filter(
-      (f) => f.ativo && (f.cargo === 'mecanico' || f.cargo === 'eletricista' || f.cargo === 'auxiliar')
+      (f) => f.ativo && (f.cargo === 'mecanico' || f.cargo === 'aux_mecanico' || f.cargo === 'gerente')
     ).length
     const secretarias = funcionarios.filter(
       (f) => f.ativo && f.cargo === 'secretaria'
@@ -167,6 +193,8 @@ export function useFuncionarios() {
     salvar,
     alternarStatus,
     excluir,
+    criarAcesso,
+    criandoAcessoId,
     recarregar,
   }
 }

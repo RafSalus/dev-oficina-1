@@ -3,11 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Key, SignOut } from '@phosphor-icons/react'
 import { IMaskInput } from 'react-imask'
 import { ManagementAuthLayout } from '../layouts/ManagementAuthLayout'
-import { useAdminAuth } from '../context/AdminAuthContext'
+import { useAdminAuth, caminhoDashboardPorPapel } from '../context/AdminAuthContext'
 import { toast } from 'sonner'
 
 export function GestaoMfaVerificarPage() {
-  const { verifyMfa, signOut, status } = useAdminAuth()
+  const { verifyMfa, signOut, status, role } = useAdminAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -18,9 +18,9 @@ export function GestaoMfaVerificarPage() {
 
   useEffect(() => {
     if (status === 'aal2') {
-      navigate(returnUrl || '/gestao/dashboard', { replace: true })
+      navigate(returnUrl || caminhoDashboardPorPapel(role), { replace: true })
     }
-  }, [status, navigate, returnUrl])
+  }, [status, navigate, returnUrl, role])
 
   const handleVerify = async (e) => {
     if (e) e.preventDefault()
@@ -35,7 +35,7 @@ export function GestaoMfaVerificarPage() {
       const res = await verifyMfa(null, clean)
       if (res.ok) {
         toast.success('Autenticação confirmada com sucesso!')
-        navigate(returnUrl || '/gestao/dashboard', { replace: true })
+        navigate(returnUrl || caminhoDashboardPorPapel(role), { replace: true })
       } else {
         toast.error(res.message || 'Código de verificação incorreto ou expirado.')
       }

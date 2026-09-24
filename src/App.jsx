@@ -13,6 +13,7 @@ import { LandingPage } from './pages/LandingPage'
 import { ClienteEntrarPage } from './pages/ClienteEntrarPage'
 import { GestaoEntrarPage } from './pages/GestaoEntrarPage'
 import { GestaoRecuperarSenhaPage } from './pages/GestaoRecuperarSenhaPage'
+import { GestaoRedefinirSenhaPage } from './pages/GestaoRedefinirSenhaPage'
 import { GestaoAcessoNegadoPage } from './pages/GestaoAcessoNegadoPage'
 import { GestaoMfaConfigurarPage } from './pages/GestaoMfaConfigurarPage'
 import { GestaoMfaVerificarPage } from './pages/GestaoMfaVerificarPage'
@@ -77,6 +78,7 @@ export default function App() {
             {/* Management Auth routes */}
             <Route path="/gestao/entrar" element={<GestaoEntrarPage />} />
             <Route path="/gestao/recuperar-senha" element={<GestaoRecuperarSenhaPage />} />
+            <Route path="/gestao/redefinir-senha" element={<GestaoRedefinirSenhaPage />} />
             <Route path="/gestao/acesso-negado" element={<GestaoAcessoNegadoPage />} />
             <Route path="/gestao/mfa/configurar" element={<GestaoMfaConfigurarPage />} />
             <Route path="/gestao/mfa/verificar" element={<GestaoMfaVerificarPage />} />

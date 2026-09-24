@@ -142,104 +142,6 @@ export function AdminAuthProvider({ children }) {
           return { ok: true, user: data.user }
         }
 
-        // Se for o administrador proprietário provisionado no Supabase Auth (Rafael Amaral Salustiano)
-        if (
-          normalizedEmail === 'rtzrafael@gmail.com' &&
-          (password === 'GabrielAdmin2026!' || !error || error.message?.includes('Email not confirmed'))
-        ) {
-          const rafaelUser = {
-            id: 'b0815410-e82e-4034-aa87-567faf2f6500',
-            email: 'rtzrafael@gmail.com',
-            role: 'admin',
-            aud: 'authenticated',
-            app_metadata: { provider: 'email', providers: ['email'] },
-            user_metadata: {
-              name: 'Rafael Amaral Salustiano',
-              nome: 'Rafael Amaral Salustiano',
-              role: 'admin',
-              telefone: '(43) 99185-1501',
-              cep: '86812-480',
-              endereco: 'Rua Aquiles, 554, Vila Shangri-La, Apucarana - PR',
-            },
-          }
-          try {
-            localStorage.setItem(
-              ADMIN_SESSION_STORAGE_KEY,
-              JSON.stringify({
-                user: rafaelUser,
-                role: 'admin',
-                status: 'aal2',
-                timestamp: Date.now(),
-              })
-            )
-          } catch {}
-
-          setUser(rafaelUser)
-          setRole('admin')
-          setStatus('aal2')
-          return { ok: true, user: rafaelUser }
-        }
-
-        // Reconhecimento de colaboradores cadastrados na equipe (Secretária ou Mecânico)
-        const equipeCadastrada = [
-          {
-            email: 'bianca.amaral@mecanicagabriel.com.br',
-            role: 'secretaria',
-            nome: 'Bianca Amaral',
-            cargoLabel: 'Secretária e Recepção',
-          },
-          {
-            email: 'carlos.eduardo@mecanicagabriel.com.br',
-            role: 'mecanico',
-            nome: 'Carlos Eduardo Silveira',
-            cargoLabel: 'Chefe de Oficina',
-          },
-          {
-            email: 'gabriel.amaral@mecanicagabriel.com.br',
-            role: 'mecanico',
-            nome: 'Gabriel Amaral',
-            cargoLabel: 'Mecânico Especialista',
-          },
-          {
-            email: 'danilo.silva@mecanicagabriel.com.br',
-            role: 'mecanico',
-            nome: 'Danilo Silva',
-            cargoLabel: 'Eletricista Automotivo',
-          },
-        ]
-
-        const membroEquipe = equipeCadastrada.find((m) => m.email.toLowerCase() === normalizedEmail)
-        if (membroEquipe && (password === 'Oficina2026!' || password === 'GabrielAdmin2026!')) {
-          const colaboradorUser = {
-            id: `staff-${membroEquipe.role}-${Date.now()}`,
-            email: membroEquipe.email,
-            role: membroEquipe.role,
-            aud: 'authenticated',
-            user_metadata: {
-              name: membroEquipe.nome,
-              nome: membroEquipe.nome,
-              role: membroEquipe.role,
-              cargoLabel: membroEquipe.cargoLabel,
-            },
-          }
-          try {
-            localStorage.setItem(
-              ADMIN_SESSION_STORAGE_KEY,
-              JSON.stringify({
-                user: colaboradorUser,
-                role: membroEquipe.role,
-                status: 'aal2',
-                timestamp: Date.now(),
-              })
-            )
-          } catch {}
-
-          setUser(colaboradorUser)
-          setRole(membroEquipe.role)
-          setStatus('aal2')
-          return { ok: true, user: colaboradorUser }
-        }
-
         if (error) {
           return { ok: false, message: MESSAGES.invalidCredentials }
         }
@@ -462,4 +364,15 @@ export function autorizarDispositivoAtual(token = 'authorized_workshop_device') 
   } catch {
     return false
   }
+}
+
+/**
+ * Rota do dashboard padrão de cada papel — usado pelas páginas de MFA (configurar/verificar)
+ * para redirecionar de volta ao portal correto após a etapa de segundo fator, já que o MFA
+ * é obrigatório para admin, secretaria e mecânico (não só para o portal de gestão).
+ */
+export function caminhoDashboardPorPapel(role) {
+  if (role === 'secretaria') return '/secretaria/dashboard'
+  if (role === 'mecanico') return '/mecanico/dashboard'
+  return '/gestao/dashboard'
 }

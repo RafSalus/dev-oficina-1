@@ -71,14 +71,14 @@ export function ProtectedRoute({ children, portal = 'gestao', allowedRoles }) {
     return <Navigate to={`/gestao/entrar?returnUrl=${returnUrl}`} replace />
   }
 
-  // Desafios de MFA para Gestão / Admin (Story 1.9 / AC11)
-  if (portal === 'gestao' && role === 'admin') {
-    if (status === 'mfa_setup_required') {
-      return <Navigate to="/gestao/mfa/configurar" replace />
-    }
-    if (status === 'mfa_verify_required') {
-      return <Navigate to="/gestao/mfa/verificar" replace />
-    }
+  // Desafios de MFA — obrigatório para todo login real (admin, secretaria e mecânico), não só
+  // para o portal de gestão (Story 1.9 ampliada). As páginas de MFA são compartilhadas entre
+  // portais e usam returnUrl para voltar exatamente para onde o usuário tentou entrar.
+  if (status === 'mfa_setup_required') {
+    return <Navigate to={`/gestao/mfa/configurar?returnUrl=${returnUrl}`} replace />
+  }
+  if (status === 'mfa_verify_required') {
+    return <Navigate to={`/gestao/mfa/verificar?returnUrl=${returnUrl}`} replace />
   }
 
   // Se o papel do usuário é expressamente restrito (AC8)

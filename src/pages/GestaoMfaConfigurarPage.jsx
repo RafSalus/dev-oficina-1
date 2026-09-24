@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ShieldCheck, Copy, Check, SignOut, QrCode } from '@phosphor-icons/react'
 import { IMaskInput } from 'react-imask'
 import { ManagementAuthLayout } from '../layouts/ManagementAuthLayout'
-import { useAdminAuth } from '../context/AdminAuthContext'
+import { useAdminAuth, caminhoDashboardPorPapel } from '../context/AdminAuthContext'
 import { toast } from 'sonner'
 
 export function GestaoMfaConfigurarPage() {
-  const { enrollMfa, verifyMfa, signOut } = useAdminAuth()
+  const { enrollMfa, verifyMfa, signOut, role } = useAdminAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const returnUrl = searchParams.get('returnUrl')
 
   const [loading, setLoading] = useState(true)
   const [factorId, setFactorId] = useState(null)
@@ -65,7 +67,7 @@ export function GestaoMfaConfigurarPage() {
       const res = await verifyMfa(factorId, clean)
       if (res.ok) {
         toast.success('Autenticação de dois fatores ativada com sucesso! Acesso liberado.')
-        navigate('/gestao/dashboard', { replace: true })
+        navigate(returnUrl || caminhoDashboardPorPapel(role), { replace: true })
       } else {
         toast.error(res.message || 'Código inválido ou expirado.')
       }

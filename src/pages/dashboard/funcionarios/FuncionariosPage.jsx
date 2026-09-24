@@ -36,6 +36,8 @@ export function FuncionariosPage() {
     salvar,
     alternarStatus,
     excluir,
+    criarAcesso,
+    criandoAcessoId,
   } = useFuncionarios()
 
   const [modalAberto, setModalAberto] = useState(false)
@@ -339,6 +341,26 @@ export function FuncionariosPage() {
                       {/* Ações */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="inline-flex items-center gap-1">
+                          {func.authUserId ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"
+                              title="Este colaborador já possui acesso de login"
+                            >
+                              <ShieldCheck size={13} weight="fill" />
+                              <span>Acesso ativo</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => criarAcesso(func)}
+                              disabled={criandoAcessoId === func.id}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10.5px] font-bold text-[#0284c7] bg-sky-50 border border-sky-200 hover:bg-sky-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                              title={func.email ? 'Enviar convite de acesso por e-mail' : 'Cadastre um e-mail para habilitar'}
+                            >
+                              <ShieldCheck size={13} weight="bold" />
+                              <span>{criandoAcessoId === func.id ? 'Enviando...' : 'Criar acesso'}</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleEditar(func)}
@@ -421,7 +443,24 @@ export function FuncionariosPage() {
                   </div>
 
                   {/* Ações no Card */}
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100 flex-wrap">
+                    {func.authUserId ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                        <ShieldCheck size={14} weight="fill" />
+                        <span>Acesso ativo</span>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => criarAcesso(func)}
+                        disabled={criandoAcessoId === func.id}
+                        className="px-3 py-1.5 rounded-xl border border-sky-200 bg-sky-50 text-xs font-bold text-[#0284c7] hover:bg-sky-100 flex items-center gap-1 disabled:opacity-50"
+                      >
+                        <ShieldCheck size={14} weight="bold" />
+                        <span>{criandoAcessoId === func.id ? 'Enviando...' : 'Criar acesso'}</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => handleEditar(func)}

@@ -2,21 +2,36 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 export const STORAGE_KEY_FUNCIONARIOS = 'dev_oficina_funcionarios'
 
+// Cargos e o portal correspondente (Story: login e cadastro de funcionários):
+// analista -> acesso de admin (/gestao); gerente, mecanico, aux_mecanico -> acesso de
+// mecânico (/mecanico); secretaria -> /secretaria. Ver PAPEL_POR_CARGO abaixo.
 export const CARGOS_FUNCIONARIO_OPCOES = [
-  { value: 'mecanico', label: 'Mecânico Especialista' },
-  { value: 'secretaria', label: 'Secretária / Atendimento' },
-  { value: 'gerente', label: 'Gerente Geral' },
-  { value: 'eletricista', label: 'Eletricista Automotivo' },
-  { value: 'auxiliar', label: 'Auxiliar de Mecânica' },
+  { value: 'analista', label: 'Analista' },
+  { value: 'gerente', label: 'Gerente' },
+  { value: 'mecanico', label: 'Mecânico' },
+  { value: 'aux_mecanico', label: 'Aux. Mecânico' },
+  { value: 'secretaria', label: 'Secretária' },
 ]
 
+// Mapeia o cargo de RH para o papel (role) usado pelo ProtectedRoute/Supabase Auth
+// (user_metadata.role) ao provisionar o login — ver supabase/functions/criar-login-funcionario.
+export const PAPEL_POR_CARGO = {
+  analista: 'admin',
+  gerente: 'mecanico',
+  mecanico: 'mecanico',
+  aux_mecanico: 'mecanico',
+  secretaria: 'secretaria',
+}
+
+// Único registro real (não é mock): o admin/proprietário, já provisionado no Supabase Auth
+// (ver docs/handoff/handoff-waves-1-4.md). Os demais colaboradores de exemplo foram removidos.
 export const SEED_FUNCIONARIOS = [
   {
     id: 'admin-rafael',
     nome: 'Rafael Amaral Salustiano',
     cpf: '401.928.374-55',
     telefone: '(43) 99185-1501',
-    cargo: 'gerente',
+    cargo: 'analista',
     cargoLabel: 'Administrador & Proprietário',
     especialidade: 'Direção Geral, Diagnóstico Avançado e Gestão da Oficina',
     email: 'rtzrafael@gmail.com',
@@ -30,90 +45,7 @@ export const SEED_FUNCIONARIOS = [
     boxElevador: 'Geral / Administrativo',
     ativo: true,
     observacoes: 'Sócio-proprietário e Administrador do Sistema.',
-  },
-  {
-    id: 'func-carlos',
-    nome: 'Carlos Eduardo Silveira',
-    cpf: '284.910.482-15',
-    telefone: '(43) 99876-1122',
-    cargo: 'mecanico',
-    cargoLabel: 'Chefe de Oficina',
-    especialidade: 'Injeção Eletrônica e Motor',
-    email: 'carlos.eduardo@mecanicagabriel.com.br',
-    comissaoServicos: 15.0,
-    comissaoPecas: 2.5,
-    dataAdmissao: '2022-03-10',
-    horarioTrabalho: '08:00 às 19:00',
-    boxElevador: 'Box 01 (Elevador Hidráulico)',
-    ativo: true,
-    observacoes: 'Chefe da equipe técnica de oficina.',
-  },
-  {
-    id: 'func-gabriel',
-    nome: 'Gabriel Amaral',
-    cpf: '392.817.409-88',
-    telefone: '(43) 99876-3344',
-    cargo: 'mecanico',
-    cargoLabel: 'Mecânico Especialista',
-    especialidade: 'Suspensão, Freios e Geometria 3D',
-    email: 'gabriel.amaral@mecanicagabriel.com.br',
-    comissaoServicos: 12.0,
-    comissaoPecas: 2.0,
-    dataAdmissao: '2023-01-15',
-    horarioTrabalho: '08:00 às 19:00',
-    boxElevador: 'Box 02 (Alinhador 3D)',
-    ativo: true,
-    observacoes: 'Especialista em alinhamento 3D e suspensão esportiva.',
-  },
-  {
-    id: 'func-rafael',
-    nome: 'Rafael Salustiano',
-    cpf: '401.928.374-55',
-    telefone: '(43) 99876-5566',
-    cargo: 'mecanico',
-    cargoLabel: 'Mecânico Pleno',
-    especialidade: 'Transmissão, Câmbio e Embreagem',
-    email: 'rafael.salustiano@mecanicagabriel.com.br',
-    comissaoServicos: 10.0,
-    comissaoPecas: 2.0,
-    dataAdmissao: '2023-08-01',
-    horarioTrabalho: '08:00 às 19:00',
-    boxElevador: 'Box 03 (Elevador 4 Toneladas)',
-    ativo: true,
-    observacoes: 'Responsável pelas trocas de embreagem e reparos de transmissão.',
-  },
-  {
-    id: 'func-bianca',
-    nome: 'Bianca Amaral',
-    cpf: '512.637.819-20',
-    telefone: '(43) 99812-4455',
-    cargo: 'secretaria',
-    cargoLabel: 'Secretária e Recepção',
-    especialidade: 'Atendimento, Triagem e Orçamentos',
-    email: 'bianca.amaral@mecanicagabriel.com.br',
-    comissaoServicos: 2.0,
-    comissaoPecas: 1.0,
-    dataAdmissao: '2021-06-20',
-    horarioTrabalho: '08:00 às 19:00',
-    ativo: true,
-    observacoes: 'Responsável pela recepção presencial, checklist de entrada e orçamentos.',
-  },
-  {
-    id: 'func-danilo',
-    nome: 'Danilo Silva',
-    cpf: '601.782.910-33',
-    telefone: '(43) 99876-9900',
-    cargo: 'eletricista',
-    cargoLabel: 'Eletricista Automotivo',
-    especialidade: 'Elétrica, Baterias e Ar Condicionado',
-    email: 'danilo.silva@mecanicagabriel.com.br',
-    comissaoServicos: 12.0,
-    comissaoPecas: 2.0,
-    dataAdmissao: '2024-02-01',
-    horarioTrabalho: '08:00 às 19:00',
-    boxElevador: 'Box 05 (Bancada Elétrica)',
-    ativo: true,
-    observacoes: 'Técnico certificado em diagnósticos elétricos e ar condicionado.',
+    authUserId: 'b0815410-e82e-4034-aa87-567faf2f6500',
   },
 ]
 
@@ -173,6 +105,7 @@ export async function carregarFuncionarios({ apenasAtivos = false, cargo = null 
           comissaoPecas: Number(f.comissao_pecas ?? f.comissaoPecas ?? 0),
           dataAdmissao: f.data_admissao || f.dataAdmissao || '',
           horarioTrabalho: f.horario_trabalho || f.horarioTrabalho || '',
+          authUserId: f.auth_user_id || f.authUserId || null,
         }))
         setStoredFuncionarios(lista)
       }
@@ -209,7 +142,7 @@ export async function obterMecanicosAtivos() {
   const lista = getStoredFuncionarios()
   const elegiveis = lista
     .filter(
-      (f) => f.ativo && (f.cargo === 'mecanico' || f.cargo === 'eletricista' || f.cargo === 'auxiliar')
+      (f) => f.ativo && (f.cargo === 'mecanico' || f.cargo === 'aux_mecanico' || f.cargo === 'gerente')
     )
     .map((f) => ({
       ...f,
@@ -232,6 +165,11 @@ export async function salvarFuncionario(funcionario) {
   const cargoItem = CARGOS_FUNCIONARIO_OPCOES.find((c) => c.value === funcionario.cargo)
   const cargoLabel = cargoItem ? cargoItem.label : funcionario.cargo
 
+  // authUserId nunca vem do formulário de cadastro — só é gravado pela Edge Function
+  // criar-login-funcionario. Preserva o valor já existente ao editar, para não perder o
+  // vínculo com a conta de login a cada "Salvar Colaborador".
+  const authUserIdExistente = index >= 0 ? lista[index].authUserId : null
+
   const atualizado = {
     ...funcionario,
     id,
@@ -239,6 +177,7 @@ export async function salvarFuncionario(funcionario) {
     comissaoServicos: Number(funcionario.comissaoServicos) || 0,
     comissaoPecas: Number(funcionario.comissaoPecas) || 0,
     ativo: funcionario.ativo !== false,
+    authUserId: funcionario.authUserId || authUserIdExistente || null,
     dataAtualizacao: new Date().toISOString(),
   }
 
@@ -326,4 +265,46 @@ export async function excluirFuncionario(id) {
     return Promise.resolve(true)
   }
   return Promise.resolve(false)
+}
+
+/**
+ * Provisiona o login real (Supabase Auth) de um colaborador já cadastrado, via Edge Function
+ * (única forma segura de usar a service_role key — nunca é exposta ao navegador). O funcionário
+ * recebe um e-mail de convite do Supabase para definir a própria senha; o cargo é convertido
+ * para o papel de portal correspondente (ver PAPEL_POR_CARGO) e gravado em user_metadata.role.
+ *
+ * Requer que `funcionario.email` esteja preenchido e que ainda não exista `authUserId`.
+ * @param {string} funcionarioId
+ * @returns {Promise<{ok: boolean, message?: string, authUserId?: string}>}
+ */
+export async function criarLoginFuncionario(funcionarioId) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { ok: false, message: 'Recurso indisponível: Supabase não está configurado neste ambiente.' }
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke('criar-login-funcionario', {
+      body: { funcionarioId },
+    })
+
+    if (error) {
+      const mensagem = data?.message || error.message || 'Erro ao criar acesso de login.'
+      return { ok: false, message: mensagem }
+    }
+    if (!data?.ok) {
+      return { ok: false, message: data?.message || 'Erro ao criar acesso de login.' }
+    }
+
+    // Reflete o vínculo localmente sem esperar o próximo carregarFuncionarios()
+    const lista = getStoredFuncionarios()
+    const index = lista.findIndex((f) => String(f.id) === String(funcionarioId))
+    if (index >= 0) {
+      lista[index] = { ...lista[index], authUserId: data.authUserId }
+      setStoredFuncionarios(lista)
+    }
+
+    return { ok: true, authUserId: data.authUserId }
+  } catch (err) {
+    return { ok: false, message: err.message || 'Erro ao chamar o serviço de criação de login.' }
+  }
 }

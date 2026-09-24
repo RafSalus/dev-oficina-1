@@ -178,23 +178,30 @@ describe('Story 1.5 & Story 1.10: Camada de Repositórios Assíncronos (Async Co
     })
   })
 
-  describe('funcionariosRepository (Story 1.10)', () => {
-    it('deve auto-semear a equipe inicial com mecânicos, secretária e cargos variados', async () => {
+  describe('funcionariosRepository (Story 1.10 / Story de login e cadastro)', () => {
+    it('deve auto-semear apenas o administrador real (sem dados mock de equipe)', async () => {
       const equipe = await carregarFuncionarios()
       expect(Array.isArray(equipe)).toBe(true)
-      expect(equipe.length).toBeGreaterThanOrEqual(4)
+      expect(equipe.length).toBeGreaterThanOrEqual(1)
 
-      const carlos = await obterFuncionarioPorId('func-carlos')
-      expect(carlos).not.toBeNull()
-      expect(carlos.nome).toContain('Carlos Eduardo')
-      expect(carlos.cargo).toBe('mecanico')
+      const admin = await obterFuncionarioPorId('admin-rafael')
+      expect(admin).not.toBeNull()
+      expect(admin.nome).toContain('Rafael Amaral Salustiano')
+      expect(admin.cargo).toBe('analista')
+      expect(admin.authUserId).toBe('b0815410-e82e-4034-aa87-567faf2f6500')
     })
 
-    it('deve filtrar apenas mecânicos ativos para escala de trabalho', async () => {
+    it('deve filtrar mecânico, aux. mecânico e gerente como elegíveis para escala de trabalho', async () => {
+      await salvarFuncionario({ nome: 'Mecânico Teste', cargo: 'mecanico', ativo: true })
+      await salvarFuncionario({ nome: 'Aux Teste', cargo: 'aux_mecanico', ativo: true })
+      await salvarFuncionario({ nome: 'Gerente Teste', cargo: 'gerente', ativo: true })
+      await salvarFuncionario({ nome: 'Secretária Teste', cargo: 'secretaria', ativo: true })
+
       const mecanicos = await obterMecanicosAtivos()
       expect(Array.isArray(mecanicos)).toBe(true)
       expect(mecanicos.every((m) => m.ativo)).toBe(true)
-      expect(mecanicos.every((m) => ['mecanico', 'eletricista', 'auxiliar'].includes(m.cargo))).toBe(true)
+      expect(mecanicos.every((m) => ['mecanico', 'aux_mecanico', 'gerente'].includes(m.cargo))).toBe(true)
+      expect(mecanicos.some((m) => m.cargo === 'secretaria')).toBe(false)
     })
 
     it('deve salvar, alternar status e excluir colaborador', async () => {
