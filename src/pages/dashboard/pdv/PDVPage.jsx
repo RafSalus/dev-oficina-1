@@ -100,7 +100,6 @@ export function PDVPage() {
     if (!numeroOS) return
     carregarOSParaFaturamento(numeroOS)
     setSearchParams({}, { replace: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const carregarOSParaFaturamento = (numeroOS) => {

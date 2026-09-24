@@ -4,6 +4,8 @@ import globals from 'globals'
 export default [
   js.configs.recommended,
   {
+    // Sem `files`, o flat config só casa .js/.mjs/.cjs e ignorava todo o front-end em .jsx
+    files: ['**/*.{js,jsx,mjs,cjs}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -25,7 +27,7 @@ export default [
       'no-empty': ['warn', { allowEmptyCatch: true }],
       'no-useless-assignment': 'warn',
       'preserve-caught-error': 'warn',
-      'no-undef': 'warn',
+      'no-undef': 'error',
       'no-debugger': 'warn',
     },
   },

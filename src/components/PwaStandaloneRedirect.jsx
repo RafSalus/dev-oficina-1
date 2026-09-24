@@ -32,7 +32,6 @@ export function PwaStandaloneRedirect() {
       } catch {}
       navigate(destino, { replace: true })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return null
