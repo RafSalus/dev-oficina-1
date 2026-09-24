@@ -1,1122 +1,149 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { useAprovacaoOrcamento } from '../hooks/useAprovacaoOrcamento'
 import {
-  CheckCircle,
-  Receipt,
-  FileText,
-  Camera,
-  WhatsappLogo,
-  Car,
-  Clock,
-  ShieldCheck,
-  CreditCard,
-  CurrencyDollar,
-  Eye,
-  X,
-  Printer,
-  Copy,
-  Check,
-  WarningCircle,
-  ArrowSquareOut,
-  PhoneCall,
-  Buildings,
-} from '@phosphor-icons/react'
-import { FolhaOrdemServicoImpressao } from '../components/dashboard/FolhaOrdemServicoImpressao'
-import { toast } from 'sonner'
-import {
-  obterOrdensAbertas,
-  obterOrdensFinalizadas,
-  atualizarStatusOrdem,
-  registrarAprovacaoItens,
-  responderItemAdicional,
-} from './dashboard/orcamento/mockOrdensAbertas'
-import { Lock, ShieldWarning } from '@phosphor-icons/react'
+  AprovacaoHeader,
+  AprovacaoTabsNav,
+  AprovacaoOrcamentoTab,
+  AprovacaoLaudoTab,
+  AprovacaoFotosTab,
+  AprovacaoFooter,
+  AprovacaoModalConfirmacao,
+  AprovacaoModalImpressao,
+  AprovacaoFotoZoomModal,
+} from '../components/aprovacao'
 
-// Lista de itens do orçamento com o modelo de aprovação por item: essenciais aparecem
-// travados (o cliente não pode desmarcá-los), opcionais têm um botão para incluir/excluir do
-// total. Reaproveitada pelas três categorias (peças, serviços, terceiros) e, na Fase 5, pela
-// seção de itens adicionais encontrados durante a execução.
-function ListaItensAprovacao({ titulo, itens, respostasLocais, estaAprovado, onToggleItem, onVerFoto }) {
-  if (itens.length === 0) return null
-
-  return (
-    <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs overflow-hidden">
-      <div className="px-4 py-3 bg-[#f8fafc] border-b border-[#d0d5dd] flex items-center justify-between">
-        <span className="text-xs font-extrabold text-[#101828] uppercase tracking-wider">{titulo}</span>
-        <span className="text-[11px] font-bold text-[#667085]">{itens.length} itens</span>
-      </div>
-
-      <div className="divide-y divide-[#eaecf0]">
-        {itens.map((item) => {
-          const isEssencial = item.classificacao === 'essencial'
-          const isRecusado = respostasLocais[item.itemId] === 'recusado'
-          return (
-            <div
-              key={item.itemId}
-              className={`p-3.5 flex items-center justify-between gap-3 hover:bg-[#fcfcfd] ${isRecusado ? 'opacity-50' : ''}`}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-xs font-bold text-[#101828] line-clamp-1 ${isRecusado ? 'line-through' : ''}`}>
-                    {item.nome}
-                  </span>
-                  {isEssencial ? (
-                    <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold">
-                      <Lock size={9} weight="bold" />
-                      Obrigatório
-                    </span>
-                  ) : (
-                    <span className="shrink-0 px-1.5 py-0.2 rounded-full bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd] text-[9px] font-bold">
-                      Opcional
-                    </span>
-                  )}
-                </div>
-                <div className="text-[11px] text-[#667085] flex items-center gap-2 mt-0.5">
-                  <span className="font-mono font-semibold">{item.codigo || item.itemId}</span>
-                  <span>•</span>
-                  <span>Qtd: {item.quantidade}</span>
-                  {item.parceiroNome && (
-                    <>
-                      <span>•</span>
-                      <span>Parceiro: {item.parceiroNome}</span>
-                    </>
-                  )}
-                </div>
-                {item.motivo && (
-                  <p className="text-[10.5px] text-[#475467] italic mt-1 leading-relaxed">{item.motivo}</p>
-                )}
-              </div>
-
-              <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
-                <span className={`text-xs font-extrabold ${isRecusado ? 'text-[#98a2b3] line-through' : 'text-[#101828]'}`}>
-                  R$ {item.subtotal.toFixed(2)}
-                </span>
-                {item.foto && (
-                  <button
-                    type="button"
-                    onClick={() => onVerFoto(item.foto)}
-                    className="text-[10px] text-[#0284c7] font-bold flex items-center gap-1 hover:underline cursor-pointer"
-                  >
-                    <Camera size={11} weight="bold" />
-                    <span>Ver Foto</span>
-                  </button>
-                )}
-                {!isEssencial && !estaAprovado && (
-                  <button
-                    type="button"
-                    onClick={() => onToggleItem(item.itemId, item.classificacao)}
-                    className={`h-6 px-2 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
-                      isRecusado
-                        ? 'bg-white border border-[#d0d5dd] text-[#667085]'
-                        : 'bg-[#101828] text-white'
-                    }`}
-                  >
-                    {isRecusado ? 'Incluir' : 'Incluído'}
-                  </button>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
+/**
+ * Página pública de aprovação de orçamento pelo cliente (/aprovacao/:id).
+ * Decomposta de monólito de 1.123L para container enxuto de responsabilidade única (NFR17 / ADR-003).
+ */
 export function AprovacaoOrcamentoClientePage() {
   const { id } = useParams()
-  const numeroOS = id || ''
+  const {
+    temOS,
+    dadosOS,
+    estaAprovado,
+    dataHoraAprovacao,
+    nomeResponsavelAprovacao,
+    formaPagamentoEscolhida,
+    itensAprovaveis,
+    respostasLocais,
+    totais,
+    fotosDasPecas,
+    handleToggleItem,
+    confirmarAprovacao,
+    responderItemAdicionalOS,
+    enviarConfirmacaoWhatsApp,
+    tirarDuvidasWhatsApp,
+  } = useAprovacaoOrcamento(id)
 
-  // Aba ativa na tela do cliente
-  const [activeTab, setActiveTab] = useState('orcamento') // 'orcamento', 'laudo', 'fotos'
-
-  // Modais
+  const [activeTab, setActiveTab] = useState('orcamento')
   const [modalAprovacaoAberto, setModalAprovacaoAberto] = useState(false)
   const [modalFolhaImpressaoAberta, setModalFolhaImpressaoAberta] = useState(false)
   const [fotoZoomUrl, setFotoZoomUrl] = useState(null)
+  const [nomeResponsavel, setNomeResponsavel] = useState('')
+  const [formaPagamento, setFormaPagamento] = useState('pix')
 
-  // Estado do formulario de aprovacao
-  const [nomeResponsavelAprovacao, setNomeResponsavelAprovacao] = useState('')
-  const [formaPagamentoEscolhida, setFormaPagamentoEscolhida] = useState('pix')
-  const [estaAprovado, setEstaAprovado] = useState(false)
-  const [dataHoraAprovacao, setDataHoraAprovacao] = useState(null)
-
-  // Carrega dados salvos da OS do localStorage
-  const [dadosOS, setDadosOS] = useState(() => {
-    try {
-      // Prioridade 1: a OS real do sistema da oficina (abertas ou já finalizadas)
-      const ordemReal =
-        obterOrdensAbertas().find((o) => String(o.numeroOS) === String(numeroOS)) ||
-        obterOrdensFinalizadas().find((o) => String(o.numeroOS) === String(numeroOS))
-      if (ordemReal) return ordemReal
-
-      // Tenta carregar dados da OS salva ou do rascunho
-      const orcamentosRaw = localStorage.getItem('dev_oficina_orcamentos')
-      if (orcamentosRaw) {
-        const orcamentos = JSON.parse(orcamentosRaw)
-        if (orcamentos[numeroOS]) return orcamentos[numeroOS]
-      }
-
-      const draftRaw = localStorage.getItem('dev_oficina_draft_os')
-      if (draftRaw) {
-        const draft = JSON.parse(draftRaw)
-        if (draft.cliente || draft.pecasOS?.length || draft.servicosOS?.length) {
-          return {
-            ...draft,
-            numeroOS,
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Erro ao ler dados da OS para aprovacao:', e)
-    }
-
-    // Nenhuma OS real encontrada para este numeroOS: retorna estrutura vazia
-    return {
-      numeroOS: numeroOS || '',
-      dataEmissao: '',
-      horaEmissao: '',
-      consultorResponsavel: '',
-      cliente: '',
-      codigoCliente: '',
-      documento: '',
-      endereco: '',
-      cidade: '',
-      uf: '',
-      cep: '',
-      telefone: '',
-      email: '',
-      placa: '',
-      marca: '',
-      modelo: '',
-      marcaModelo: '',
-      ano: '',
-      cor: '',
-      combustivel: '',
-      km: '',
-      kmAnterior: '',
-      relatoCliente: '',
-      mecanicoNome: '',
-      laudoTecnico: '',
-      pecasOS: [],
-      servicosOS: [],
-      terceirosOS: [],
-      descontoGeralOS: 0,
-    }
-  })
-
-  // Sincroniza estado de aprovacao salvo
-  useEffect(() => {
-    try {
-      const aprovacoesRaw = localStorage.getItem('dev_oficina_aprovacoes')
-      if (aprovacoesRaw) {
-        const aprovacoes = JSON.parse(aprovacoesRaw)
-        if (aprovacoes[numeroOS]) {
-          setEstaAprovado(true)
-          setDataHoraAprovacao(aprovacoes[numeroOS].dataHora)
-          setNomeResponsavelAprovacao(aprovacoes[numeroOS].responsavel || '')
-          setFormaPagamentoEscolhida(aprovacoes[numeroOS].formaPagamento || 'pix')
-        }
-      }
-    } catch (e) {
-      console.error('Erro ao verificar status de aprovacao:', e)
-    }
-  }, [numeroOS])
-
-  // Modelo unificado de aprovação por item (essencial trava, opcional o cliente decide) — o
-  // mesmo shape (itensAprovacaoOS) também é usado pelos itens adicionais reportados durante a
-  // execução. Item sem metadata em itensAprovacaoOS (OS antigas, sem essa classificação) é
-  // tratado como essencial/travado, preservando o comportamento anterior de "tudo obrigatório".
-  const metadataPorItem = useMemo(() => {
-    const mapa = new Map()
-    ;(dadosOS.itensAprovacaoOS || []).forEach((it) => mapa.set(it.itemId, it))
-    return mapa
-  }, [dadosOS.itensAprovacaoOS])
-
-  const itensAprovaveis = useMemo(() => {
-    const montar = (lista, categoria, precoField) =>
-      (lista || []).map((item, idx) => {
-        const itemId = item.id || item.codigo || `${categoria}-${idx}`
-        const meta = metadataPorItem.get(itemId)
-        const preco = parseFloat(item[precoField] ?? item.precoUnitario) || 0
-        const qtd = parseFloat(item.quantidade) || 1
-        const desconto = parseFloat(item.desconto) || 0
-        return {
-          itemId,
-          categoria,
-          nome: item.nome,
-          codigo: item.codigo,
-          quantidade: qtd,
-          precoUnitario: preco,
-          subtotal: Math.max(0, preco * qtd - desconto),
-          foto: item.fotoUrl || item.foto || null,
-          motivo: meta?.motivo || item.motivoSeguranca || item.motivoOpcional || item.observacaoFoto || '',
-          classificacao: meta?.classificacao || 'essencial',
-          parceiroNome: item.parceiroNome,
-        }
-      })
-
-    const terceirosNormalizados = (dadosOS.terceirosOS || []).map((t) => ({
-      ...t,
-      precoUnitario: t.valorVenda ?? t.precoFinal ?? t.precoUnitario,
-    }))
-
-    return [
-      ...montar(dadosOS.pecasOS, 'peca', 'precoUnitario'),
-      ...montar(dadosOS.servicosOS, 'servico', 'valorUnitario'),
-      ...montar(terceirosNormalizados, 'terceiro', 'precoUnitario'),
-    ]
-  }, [dadosOS, metadataPorItem])
-
-  // Resposta do cliente por item nesta sessão — 'aprovado' por padrão (inclusive opcionais,
-  // que ele pode desmarcar), a menos que já exista uma resposta 'recusado' salva antes.
-  const [respostasLocais, setRespostasLocais] = useState({})
-
-  useEffect(() => {
-    const inicial = {}
-    itensAprovaveis.forEach((item) => {
-      const metaExistente = metadataPorItem.get(item.itemId)
-      inicial[item.itemId] = metaExistente?.respostaCliente === 'recusado' ? 'recusado' : 'aprovado'
+  const handleSubmeterAprovacao = (e) => {
+    e.preventDefault()
+    confirmarAprovacao({
+      nomeResponsavel: nomeResponsavel || dadosOS.cliente,
+      formaPagamento,
     })
-    setRespostasLocais(inicial)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dadosOS.numeroOS])
-
-  const handleToggleItemAprovacao = (itemId, classificacao) => {
-    if (estaAprovado) {
-      toast.info('Este orçamento já foi aprovado e está em execução.')
-      return
-    }
-    if (classificacao === 'essencial') {
-      toast.warning('Itens essenciais de segurança não podem ser removidos do orçamento.')
-      return
-    }
-    setRespostasLocais((prev) => ({
-      ...prev,
-      [itemId]: prev[itemId] === 'recusado' ? 'aprovado' : 'recusado',
-    }))
-  }
-
-  // Calculos financeiros — soma só os itens que seguem aprovados nesta sessão
-  const totais = useMemo(() => {
-    const somaPorCategoria = (categoria) =>
-      itensAprovaveis
-        .filter((it) => it.categoria === categoria && respostasLocais[it.itemId] !== 'recusado')
-        .reduce((acc, it) => acc + it.subtotal, 0)
-
-    const subTotalPecas = somaPorCategoria('peca')
-    const subTotalServicos = somaPorCategoria('servico')
-    const subTotalTerceiros = somaPorCategoria('terceiro')
-
-    const descGeral = parseFloat(dadosOS.descontoGeralOS) || 0
-    const totalGeral = Math.max(0, subTotalPecas + subTotalServicos + subTotalTerceiros - descGeral)
-
-    const valorPixComDesconto = totalGeral * 0.95
-    const valorParcelado10x = (totalGeral / 10).toFixed(2)
-
-    return {
-      subTotalPecas,
-      subTotalServicos,
-      subTotalTerceiros,
-      descGeral,
-      totalGeral,
-      valorPixComDesconto,
-      valorParcelado10x,
-    }
-  }, [itensAprovaveis, respostasLocais, dadosOS.descontoGeralOS])
-
-  // Coleta todas as pecas e itens que possuem fotos anexadas (orçamento e diagnóstico técnico)
-  const fotosDasPecas = useMemo(() => {
-    const lista = []
-    ;(dadosOS.pecasDiagnostico || []).forEach((p) => {
-      if (p.fotoUrl) {
-        lista.push({
-          id: p.id || p.nome,
-          nome: p.nome,
-          fotoUrl: p.fotoUrl,
-          observacao: p.observacao || 'Registro fotográfico feito durante o diagnóstico técnico.',
-        })
-      }
-    })
-
-    ;(dadosOS.pecasOS || []).forEach((p) => {
-      if (p.fotoUrl) {
-        lista.push({
-          id: p.codigo || p.id,
-          nome: p.nome,
-          fotoUrl: p.fotoUrl,
-          observacao: p.observacaoFoto || p.observacoes || 'Registro de avaria e desgaste físico.',
-        })
-      }
-    })
-
-    ;(dadosOS.terceirosOS || []).forEach((t) => {
-      if (t.fotoUrl) {
-        lista.push({
-          id: t.codigo || t.id,
-          nome: t.nome,
-          fotoUrl: t.fotoUrl,
-          observacao: t.observacoes || 'Necessidade de intervenção e reparo externo.',
-        })
-      }
-    })
-
-    return lista
-  }, [dadosOS])
-
-  // Confirmar aprovacao do cliente
-  const handleConfirmarAprovacao = (e) => {
-    e?.preventDefault()
-
-    const nomeFinal = nomeResponsavelAprovacao.trim() || dadosOS.cliente || 'Cliente Titular'
-    const agora = new Date()
-    const dataHoraStr = `${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-
-    const registro = {
-      numeroOS,
-      responsavel: nomeFinal,
-      formaPagamento: formaPagamentoEscolhida,
-      dataHora: dataHoraStr,
-      totalAprovado: totais.totalGeral,
-    }
-
-    try {
-      const salvas = localStorage.getItem('dev_oficina_aprovacoes')
-      const parsed = salvas ? JSON.parse(salvas) : {}
-      parsed[numeroOS] = registro
-      localStorage.setItem('dev_oficina_aprovacoes', JSON.stringify(parsed))
-    } catch (err) {
-      console.error('Erro ao gravar aprovacao:', err)
-    }
-
-    // Grava a resposta do cliente item a item na OS real (itens opcionais recusados saem do
-    // total, mas continuam registrados) e recalcula o valorTotal com base só no que segue aprovado.
-    const itensAprovacaoFinal = itensAprovaveis.map((item) => ({
-      itemId: item.itemId,
-      categoria: item.categoria,
-      classificacao: item.classificacao,
-      motivo: item.motivo,
-      respostaCliente: respostasLocais[item.itemId] === 'recusado' ? 'recusado' : 'aprovado',
-    }))
-    registrarAprovacaoItens(numeroOS, itensAprovacaoFinal)
-
-    // Reflete a aprovação na OS real da oficina, para que ela avance sozinha no Kanban/lista
-    // sem depender de um aviso manual do cliente por WhatsApp.
-    if (dadosOS.status === 'aguardando_aprovacao') {
-      atualizarStatusOrdem(numeroOS, 'aprovado_execucao')
-    }
-
-    setEstaAprovado(true)
-    setDataHoraAprovacao(dataHoraStr)
     setModalAprovacaoAberto(false)
-
-    toast.success('Orçamento aprovado com sucesso! A oficina já foi notificada.')
   }
 
-  // Resposta do cliente a um item encontrado durante a execução (peça quebrou, item de
-  // segurança) — aprovado materializa o item no orçamento real da OS; recusado só marca o
-  // status. Em ambos os casos a OS deixa de estar bloqueada (motivoImpedimentoAvancoPorItemAdicional).
-  const handleResponderItemAdicional = (itemAdicionalId, resposta) => {
-    const atualizada = responderItemAdicional(numeroOS, itemAdicionalId, resposta)
-    if (atualizada) {
-      setDadosOS(atualizada)
-      toast.success(
-        resposta === 'aprovado'
-          ? 'Item aprovado! A oficina já foi notificada e vai incluí-lo no serviço.'
-          : 'Item recusado. A oficina foi notificada.'
-      )
-    }
-  }
-
-  // Notificar aprovacao diretamente no WhatsApp da oficina
-  const handleEnviarConfirmacaoWhatsApp = () => {
-    const nomeFinal = nomeResponsavelAprovacao || dadosOS.cliente || 'Cliente Titular'
-    const veiculo = `${dadosOS.marcaModelo || 'Veículo'} (Placa ${dadosOS.placa || 'Sem placa'})`
-    const msg = `Olá, equipe da *Mecânica Gabriel*! 👋%0A%0AConfirmo a *APROVAÇÃO DO ORÇAMENTO*:%0A📄 *Orçamento:* #${numeroOS}%0A🚗 *Veículo:* ${veiculo}%0A👤 *Autorizado por:* ${nomeFinal}%0A💰 *Valor Total:* R$ ${totais.totalGeral.toFixed(2)}%0A💳 *Condição:* ${
-      formaPagamentoEscolhida === 'pix' ? 'À vista no PIX (com 5% de desconto)' : 'Cartão de Crédito'
-    }%0A%0APodem iniciar os serviços conforme o orçamento aprovado! 👍`
-
-    const zapUrl = `https://wa.me/5543998544106?text=${msg}`
-    window.open(zapUrl, '_blank')
-  }
-
-  // Abrir WhatsApp para tirar duvidas
-  const handleTirarDuvidasWhatsApp = () => {
-    const veiculo = `${dadosOS.marcaModelo || 'Veículo'} (Placa ${dadosOS.placa || 'Sem placa'})`
-    const msg = `Olá, equipe da *Mecânica Gabriel*! 👋%0A%0AEstou analisando o *Orçamento #${numeroOS}* do meu veículo *${veiculo}* e gostaria de tirar algumas dúvidas antes da aprovação.`
-    const zapUrl = `https://wa.me/5543998544106?text=${msg}`
-    window.open(zapUrl, '_blank')
-  }
-
-  // Fechar aba e retornar ao sistema principal (Regra 15 - Suporte a Fullscreen)
-  const handleFecharAba = () => {
-    if (window.self !== window.top) {
-      try {
-        window.parent.postMessage({ tipo: 'FECHAR_MODAL_PREVIEW' }, '*')
-      } catch {}
-      return
-    }
-
-    window.close()
-    setTimeout(() => {
-      if (!window.closed) {
-        if (window.history.length > 1) {
-          window.history.back()
-        } else {
-          window.location.href = '/gestao/ordem-de-servico'
-        }
-      }
-    }, 150)
+  if (!temOS) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md bg-white p-8 rounded-2xl border border-[#d0d5dd] shadow-sm space-y-4">
+          <h2 className="text-lg font-bold text-[#101828]">Orçamento não localizado</h2>
+          <p className="text-xs text-[#667085] leading-relaxed">
+            Não encontramos um orçamento válido com o identificador #{id || 'N/D'}.
+            Verifique o link recebido ou entre em contato com nossa equipe.
+          </p>
+          <button
+            type="button"
+            onClick={tirarDuvidasWhatsApp}
+            className="w-full py-2.5 px-4 rounded-xl bg-[#25D366] text-white text-xs font-bold hover:bg-[#1eb956] transition-all cursor-pointer shadow-xs"
+          >
+            Falar no WhatsApp da Oficina
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#101828] flex flex-col pb-24 select-none">
-      {/* 1. TOPO DA APLICAÇÃO (CLIENT PORTAL HEADER) */}
-      <header className="sticky top-0 z-30 bg-white border-b border-[#d0d5dd] shadow-xs px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <img
-              src="/favicon-96x96.png"
-              alt="Mecânica Gabriel"
-              className="w-9 h-9 object-contain rounded-xl border border-[#e4e7ec] shrink-0"
-            />
-            <div className="min-w-0">
-              <h1 className="text-sm font-black text-[#101828] leading-tight truncate">
-                Mecânica Gabriel
-              </h1>
-              <span className="text-[10px] font-semibold text-[#667085] block truncate">
-                Orçamento e Aprovação Digital • OS #{numeroOS}
-              </span>
-            </div>
-          </div>
+      <AprovacaoHeader
+        dadosOS={dadosOS}
+        estaAprovado={estaAprovado}
+        dataHoraAprovacao={dataHoraAprovacao}
+        onAbrirFolhaImpressao={() => setModalFolhaImpressaoAberta(true)}
+        onTirarDuvidasWhatsApp={tirarDuvidasWhatsApp}
+      />
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Contato Direto com Consultor */}
-            <button
-              type="button"
-              onClick={handleTirarDuvidasWhatsApp}
-              className="h-8 px-2.5 sm:px-3 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <WhatsappLogo size={15} weight="fill" />
-              <span className="hidden sm:inline">Dúvidas? Fale Conosco</span>
-            </button>
+      <AprovacaoTabsNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        fotosCount={fotosDasPecas.length}
+      />
 
-            {/* Visualizar Folha Oficial */}
-            <button
-              type="button"
-              onClick={() => setModalFolhaImpressaoAberta(true)}
-              className="h-8 px-2.5 rounded-xl border border-[#d0d5dd] bg-[#f8fafc] hover:bg-[#f2f4f7] text-[#101828] text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Visualizar documento oficial para impressão"
-            >
-              <Printer size={14} weight="bold" />
-              <span className="hidden md:inline">Folha Oficial</span>
-            </button>
-
-            {/* Botão Fechar Aba e Voltar ao Sistema (Regra 15 - Suporte a Fullscreen) */}
-            <button
-              type="button"
-              onClick={handleFecharAba}
-              className="h-8 px-3 rounded-xl bg-[#101828] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-              title="Fechar esta aba e voltar para a tela do sistema"
-            >
-              <X size={14} weight="bold" />
-              <span>Fechar Aba</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* 2. BANNER DO VEÍCULO E STATUS DE APROVAÇÃO */}
-      <div className="bg-[#101828] text-white px-4 py-3.5 shadow-sm">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#38bdf8] shrink-0">
-              <Car size={20} weight="bold" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-extrabold bg-[#0284c7] text-white px-2 py-0.5 rounded-md">
-                  {dadosOS.placa || 'SEM PLACA'}
-                </span>
-                <span className="text-sm font-bold truncate">
-                  {dadosOS.marcaModelo || 'Veículo em Atendimento'}
-                </span>
-              </div>
-              <div className="text-[11px] text-white/70 mt-0.5">
-                {dadosOS.ano || '2009/2010'} • {dadosOS.cor || 'Branca'} • {dadosOS.km ? `${dadosOS.km} km` : 'KM N/D'}
-              </div>
-            </div>
-          </div>
-
-          <div className="shrink-0 flex items-center">
-            {estaAprovado ? (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0284c7] text-white text-xs font-bold shadow-xs">
-                <CheckCircle size={15} weight="fill" />
-                <span>Aprovado em {dataHoraAprovacao}</span>
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-black text-xs font-bold animate-pulse">
-                <Clock size={15} weight="bold" />
-                <span>Aguardando sua autorização</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. NAVEGAÇÃO POR ABAS (RESPONSIVO E TOUCH-FRIENDLY) */}
-      <div className="bg-white border-b border-[#d0d5dd] sticky top-[57px] z-20 shadow-xs px-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-1 overflow-x-auto py-1.5">
-          <button
-            type="button"
-            onClick={() => setActiveTab('orcamento')}
-            className={`flex-1 min-w-[110px] py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'orcamento'
-                ? 'bg-[#101828] text-white shadow-xs'
-                : 'text-[#475467] hover:text-[#101828] hover:bg-[#f2f4f7]'
-            }`}
-          >
-            <Receipt size={16} weight="bold" />
-            <span>Orçamento</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('laudo')}
-            className={`flex-1 min-w-[110px] py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'laudo'
-                ? 'bg-[#101828] text-white shadow-xs'
-                : 'text-[#475467] hover:text-[#101828] hover:bg-[#f2f4f7]'
-            }`}
-          >
-            <FileText size={16} weight="bold" />
-            <span>Laudo Técnico</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('fotos')}
-            className={`flex-1 min-w-[110px] py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'fotos'
-                ? 'bg-[#101828] text-white shadow-xs'
-                : 'text-[#475467] hover:text-[#101828] hover:bg-[#f2f4f7]'
-            }`}
-          >
-            <Camera size={16} weight="bold" />
-            <span>Peças com Fotos</span>
-            {fotosDasPecas.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-[#0284c7] text-white">
-                {fotosDasPecas.length}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* 4. CONTEÚDO PRINCIPAL DA ABA SELECIONADA */}
       <main className="max-w-4xl mx-auto w-full p-4 space-y-4 flex-1">
-        {/* ========================================================================= */}
-        {/* ABA 1: ORÇAMENTO COMPLETO */}
-        {/* ========================================================================= */}
         {activeTab === 'orcamento' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
-            {/* Cards de Resumo Financeiro */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="p-3 bg-white rounded-2xl border border-[#d0d5dd] shadow-xs">
-                <span className="text-[10px] font-bold text-[#667085] uppercase block">
-                  Peças e Materiais
-                </span>
-                <span className="text-base font-extrabold text-[#101828] mt-0.5 block">
-                  R$ {totais.subTotalPecas.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="p-3 bg-white rounded-2xl border border-[#d0d5dd] shadow-xs">
-                <span className="text-[10px] font-bold text-[#667085] uppercase block">
-                  Mão de Obra
-                </span>
-                <span className="text-base font-extrabold text-[#101828] mt-0.5 block">
-                  R$ {totais.subTotalServicos.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="p-3 bg-white rounded-2xl border border-[#d0d5dd] shadow-xs">
-                <span className="text-[10px] font-bold text-[#667085] uppercase block">
-                  Serviços de Terceiros
-                </span>
-                <span className="text-base font-extrabold text-[#101828] mt-0.5 block">
-                  R$ {totais.subTotalTerceiros.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="p-3 bg-[#101828] text-white rounded-2xl shadow-xs">
-                <span className="text-[10px] font-bold text-white/70 uppercase block">
-                  Total da Ordem
-                </span>
-                <span className="text-base font-black text-[#38bdf8] mt-0.5 block">
-                  R$ {totais.totalGeral.toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            {/* Condições e Facilidades de Pagamento */}
-            <div className="p-4 bg-white rounded-2xl border border-[#d0d5dd] shadow-xs space-y-2.5">
-              <div className="flex items-center gap-2">
-                <CreditCard size={18} weight="bold" className="text-[#0284c7]" />
-                <h3 className="text-xs font-extrabold text-[#101828] uppercase tracking-wider">
-                  Condições de Pagamento Disponíveis
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <div className="p-3 rounded-xl bg-[#f8fafc] border border-[#d0d5dd] flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-[#101828] block">
-                      À Vista no PIX ou Dinheiro
-                    </span>
-                    <span className="text-[11px] text-[#0284c7] font-semibold block">
-                      5% de desconto promocional
-                    </span>
-                  </div>
-                  <span className="text-sm font-extrabold text-[#101828]">
-                    R$ {totais.valorPixComDesconto.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-[#f8fafc] border border-[#d0d5dd] flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-[#101828] block">
-                      Cartão de Crédito
-                    </span>
-                    <span className="text-[11px] text-[#667085] block">
-                      Em até 10x sem juros
-                    </span>
-                  </div>
-                  <span className="text-sm font-extrabold text-[#101828]">
-                    10x de R$ {totais.valorParcelado10x}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Itens Identificados Durante a Execução (Fase 5 — aditivos) */}
-            {(dadosOS.itensAdicionaisOS || []).length > 0 && (
-              <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs overflow-hidden">
-                <div className="px-4 py-3 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
-                  <ShieldWarning size={16} weight="bold" className="text-amber-700" />
-                  <span className="text-xs font-extrabold text-amber-900 uppercase tracking-wider">
-                    Itens Identificados Durante a Execução
-                  </span>
-                </div>
-                <div className="divide-y divide-[#eaecf0]">
-                  {dadosOS.itensAdicionaisOS.map((item) => {
-                    const isPendente = item.status === 'pendente_cliente'
-                    return (
-                      <div key={item.id} className="p-3.5 flex items-center justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-[#101828] line-clamp-1">{item.descricao}</span>
-                            {item.classificacao === 'seguranca' && (
-                              <span className="shrink-0 px-1.5 py-0.2 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-bold">
-                                Segurança
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[11px] text-[#667085]">R$ {Number(item.valorEstimado || 0).toFixed(2)}</span>
-                        </div>
-                        {isPendente ? (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleResponderItemAdicional(item.id, 'recusado')}
-                              className="h-8 px-2.5 rounded-lg border border-[#d0d5dd] text-[#475467] text-[11px] font-bold cursor-pointer hover:bg-[#f2f4f7]"
-                            >
-                              Recusar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleResponderItemAdicional(item.id, 'aprovado')}
-                              className="h-8 px-2.5 rounded-lg bg-[#101828] hover:bg-black text-white text-[11px] font-bold cursor-pointer"
-                            >
-                              Aprovar
-                            </button>
-                          </div>
-                        ) : item.status === 'aprovado' ? (
-                          <span className="px-2 py-0.5 rounded-full bg-[#101828] text-white text-[10px] font-bold shrink-0">Aprovado</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-[#f2f4f7] text-[#667085] text-[10px] font-bold shrink-0">Recusado</span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Detalhamento das Peças */}
-            <ListaItensAprovacao
-              titulo="Peças e Componentes de Reposição"
-              itens={itensAprovaveis.filter((it) => it.categoria === 'peca')}
-              respostasLocais={respostasLocais}
-              estaAprovado={estaAprovado}
-              onToggleItem={handleToggleItemAprovacao}
-              onVerFoto={setFotoZoomUrl}
-            />
-
-            {/* Detalhamento dos Serviços de Oficina */}
-            <ListaItensAprovacao
-              titulo="Serviços Mecânicos e Mão de Obra"
-              itens={itensAprovaveis.filter((it) => it.categoria === 'servico')}
-              respostasLocais={respostasLocais}
-              estaAprovado={estaAprovado}
-              onToggleItem={handleToggleItemAprovacao}
-              onVerFoto={setFotoZoomUrl}
-            />
-
-            {/* Detalhamento de Terceiros (se houver) */}
-            {itensAprovaveis.some((it) => it.categoria === 'terceiro') && (
-              <ListaItensAprovacao
-                titulo="Serviços Especializados de Terceiros"
-                itens={itensAprovaveis.filter((it) => it.categoria === 'terceiro')}
-                respostasLocais={respostasLocais}
-                estaAprovado={estaAprovado}
-                onToggleItem={handleToggleItemAprovacao}
-                onVerFoto={setFotoZoomUrl}
-              />
-            )}
-          </div>
+          <AprovacaoOrcamentoTab
+            totais={totais}
+            itensAprovaveis={itensAprovaveis}
+            itensAdicionaisOS={dadosOS.itensAdicionaisOS}
+            respostasLocais={respostasLocais}
+            estaAprovado={estaAprovado}
+            onToggleItem={handleToggleItem}
+            onVerFoto={setFotoZoomUrl}
+            onResponderItemAdicional={responderItemAdicionalOS}
+          />
         )}
 
-        {/* ========================================================================= */}
-        {/* ABA 2: LAUDO TÉCNICO OFICIAL */}
-        {/* ========================================================================= */}
-        {activeTab === 'laudo' && (
-          <div className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs p-5 space-y-4 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between border-b border-[#d0d5dd] pb-3">
-              <div>
-                <h2 className="text-sm font-extrabold text-[#101828]">
-                  Laudo Técnico de Inspeção
-                </h2>
-                <span className="text-xs text-[#667085]">
-                  Parecer técnico emitido pelo mecânico responsável da oficina
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-[#0284c7] font-bold">
-                <ShieldCheck size={18} weight="bold" />
-                <span>Garantia de Qualidade</span>
-              </div>
-            </div>
+        {activeTab === 'laudo' && <AprovacaoLaudoTab dadosOS={dadosOS} />}
 
-            {dadosOS.relatoCliente && (
-              <div className="p-3.5 rounded-xl bg-[#f8fafc] border border-[#d0d5dd]">
-                <span className="text-[11px] font-bold text-[#667085] uppercase block mb-1">
-                  Queixa Inicial Relatada pelo Cliente:
-                </span>
-                <p className="text-xs text-[#344054] italic leading-relaxed">
-                  "{dadosOS.relatoCliente}"
-                </p>
-              </div>
-            )}
-
-            <div className="p-4 rounded-xl bg-[#f8fafc] border border-[#d0d5dd] font-mono text-xs text-[#101828] leading-relaxed whitespace-pre-wrap">
-              {dadosOS.laudoTecnico ||
-                'Nenhum laudo técnico detalhado registrado para esta Ordem de Serviço.'}
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] text-[#667085] pt-2">
-              <span>Mecânico Responsável: <strong className="text-[#101828] font-bold">{dadosOS.mecanicoNome || 'Mecânica Gabriel'}</strong></span>
-              <span>Apucarana - PR</span>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* ABA 3: PEÇAS DANIFICADAS COM FOTOS */}
-        {/* ========================================================================= */}
         {activeTab === 'fotos' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
-            <div className="p-3.5 bg-[#e0f2fe] border border-[#bae6fd] rounded-2xl flex items-center gap-2.5">
-              <Camera size={20} weight="bold" className="text-[#0284c7] shrink-0" />
-              <p className="text-xs text-[#0369a1] leading-relaxed">
-                Fotos reais registradas durante a desmontagem e triagem do veículo para comprovação do desgaste e transparência total.
-              </p>
-            </div>
-
-            {fotosDasPecas.length === 0 && (
-              <div className="p-6 text-center bg-white border border-dashed border-[#d0d5dd] rounded-2xl">
-                <Camera size={28} weight="light" className="mx-auto text-[#98a2b3] mb-2" />
-                <p className="text-sm font-bold text-[#101828]">Nenhuma foto anexada a este orçamento</p>
-                <p className="text-xs text-[#667085] mt-1">
-                  Fale com nosso consultor pelo WhatsApp se quiser ver evidências das peças antes de aprovar.
-                </p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {fotosDasPecas.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white rounded-2xl border border-[#d0d5dd] shadow-xs overflow-hidden flex flex-col group"
-                >
-                  <div
-                    onClick={() => setFotoZoomUrl(item.fotoUrl)}
-                    className="relative h-48 bg-black overflow-hidden cursor-zoom-in"
-                  >
-                    <img
-                      src={item.fotoUrl}
-                      alt={item.nome}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <span className="px-3 py-1.5 rounded-xl bg-white/90 text-black text-xs font-bold flex items-center gap-1.5 shadow-md">
-                        <Eye size={14} weight="bold" />
-                        <span>Ampliar Imagem</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
-                    <div>
-                      <h4 className="text-xs font-extrabold text-[#101828] line-clamp-1">
-                        {item.nome}
-                      </h4>
-                      <p className="text-[11px] text-[#475467] mt-1 leading-relaxed">
-                        {item.observacao}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-[#eaecf0] flex items-center justify-between text-[10px] text-[#667085]">
-                      <span className="font-bold text-[#b42318]">Substituição Recomendada</span>
-                      <button
-                        type="button"
-                        onClick={() => setFotoZoomUrl(item.fotoUrl)}
-                        className="text-[#0284c7] font-bold hover:underline cursor-pointer"
-                      >
-                        Ver Detalhes
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <AprovacaoFotosTab fotosDasPecas={fotosDasPecas} onVerFoto={setFotoZoomUrl} />
         )}
       </main>
 
-      {/* 5. BARRA FIXA INFERIOR DE APROVAÇÃO (STICKY FOOTER MOBILE E DESKTOP) */}
-      <footer className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-[#d0d5dd] shadow-lg p-3 sm:py-3.5">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-          <div>
-            <span className="text-[10px] font-bold text-[#667085] uppercase block leading-none">
-              Total do Orçamento
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-lg sm:text-xl font-black text-[#101828]">
-                R$ {totais.totalGeral.toFixed(2)}
-              </span>
-              <span className="text-[11px] text-[#0284c7] font-bold hidden sm:inline">
-                ou 10x de R$ {totais.valorParcelado10x}
-              </span>
-            </div>
-          </div>
+      <AprovacaoFooter
+        totais={totais}
+        estaAprovado={estaAprovado}
+        onAbrirModalAprovacao={() => {
+          setNomeResponsavel(nomeResponsavelAprovacao || dadosOS.cliente || '')
+          setFormaPagamento(formaPagamentoEscolhida || 'pix')
+          setModalAprovacaoAberto(true)
+        }}
+        onEnviarWhatsApp={enviarConfirmacaoWhatsApp}
+      />
 
-          <div className="flex items-center gap-2">
-            {estaAprovado ? (
-              <button
-                type="button"
-                onClick={handleEnviarConfirmacaoWhatsApp}
-                className="h-10 px-4 rounded-xl bg-[#25D366] hover:bg-[#1eb956] text-white text-xs font-extrabold flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
-              >
-                <WhatsappLogo size={16} weight="fill" />
-                <span>Reenviar no WhatsApp</span>
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setModalAprovacaoAberto(true)}
-                  className="h-10 px-5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-black flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
-                >
-                  <CheckCircle size={17} weight="bold" />
-                  <span>Aprovar Orçamento</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </footer>
+      <AprovacaoModalConfirmacao
+        isOpen={modalAprovacaoAberto}
+        onClose={() => setModalAprovacaoAberto(false)}
+        onConfirm={handleSubmeterAprovacao}
+        dadosOS={dadosOS}
+        totalGeral={totais.totalGeral}
+        nomeResponsavel={nomeResponsavel}
+        setNomeResponsavel={setNomeResponsavel}
+        formaPagamento={formaPagamento}
+        setFormaPagamento={setFormaPagamento}
+      />
 
-      {/* ========================================================================= */}
-      {/* MODAL: APROVAÇÃO DIGITAL DO CLIENTE */}
-      {/* ========================================================================= */}
-      {modalAprovacaoAberto && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <form
-            onSubmit={handleConfirmarAprovacao}
-            className="bg-white w-full max-w-md rounded-2xl border border-[#d0d5dd] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
-          >
-            <div className="px-5 py-3.5 border-b border-[#d0d5dd] bg-[#f8fafc] flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <CheckCircle size={18} weight="bold" className="text-[#0284c7]" />
-                <h3 className="text-sm font-extrabold text-[#101828]">
-                  Autorização de Serviços e Peças
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalAprovacaoAberto(false)}
-                className="p-1 rounded-lg text-[#667085] hover:text-[#101828] hover:bg-[#eaecf0] transition-colors cursor-pointer"
-              >
-                <X size={16} weight="bold" />
-              </button>
-            </div>
+      <AprovacaoModalImpressao
+        isOpen={modalFolhaImpressaoAberta}
+        onClose={() => setModalFolhaImpressaoAberta(false)}
+        dadosOS={dadosOS}
+      />
 
-            <div className="p-5 space-y-4 text-xs">
-              <p className="text-[#475467] leading-relaxed">
-                Ao confirmar, você autoriza a <strong>Mecânica Gabriel</strong> a iniciar os reparos no veículo <strong>{dadosOS.marcaModelo || 'Veículo'}</strong> no valor total de:
-              </p>
-
-              <div className="p-3 bg-[#f8fafc] rounded-xl border border-[#d0d5dd] flex items-center justify-between">
-                <span className="font-bold text-[#344054]">Valor Autorizado:</span>
-                <span className="text-base font-black text-[#0284c7]">
-                  R$ {totais.totalGeral.toFixed(2)}
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#344054] mb-1">
-                  Nome Completo do Responsável <span className="text-[#0284c7]">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={nomeResponsavelAprovacao}
-                  onChange={(e) => setNomeResponsavelAprovacao(e.target.value)}
-                  placeholder={dadosOS.cliente || 'Digite seu nome completo...'}
-                  className="w-full h-9.5 px-3 rounded-xl border border-[#d0d5dd] text-xs font-bold text-[#101828] bg-white focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#344054] mb-1">
-                  Forma de Pagamento Preferida
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormaPagamentoEscolhida('pix')}
-                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
-                      formaPagamentoEscolhida === 'pix'
-                        ? 'border-[#0284c7] bg-[#e0f2fe]/40 text-[#101828]'
-                        : 'border-[#d0d5dd] bg-white text-[#475467]'
-                    }`}
-                  >
-                    <span className="font-bold block">PIX / À Vista</span>
-                    <span className="text-[10px] text-[#0284c7] font-semibold">5% desconto</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormaPagamentoEscolhida('cartao')}
-                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
-                      formaPagamentoEscolhida === 'cartao'
-                        ? 'border-[#0284c7] bg-[#e0f2fe]/40 text-[#101828]'
-                        : 'border-[#d0d5dd] bg-white text-[#475467]'
-                    }`}
-                  >
-                    <span className="font-bold block">Cartão de Crédito</span>
-                    <span className="text-[10px] text-[#667085]">Até 10x</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-5 py-3 border-t border-[#d0d5dd] bg-[#f8fafc] flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setModalAprovacaoAberto(false)}
-                className="px-3.5 py-2 rounded-xl border border-[#d0d5dd] bg-white text-[#475467] text-xs font-semibold hover:bg-[#f2f4f7] cursor-pointer"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-black hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
-              >
-                <CheckCircle size={15} weight="bold" />
-                <span>Confirmar e Autorizar</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: FOLHA OFICIAL DE ORÇAMENTO (PARA IMPRESSÃO / VISUALIZAÇÃO) */}
-      {/* ========================================================================= */}
-      {modalFolhaImpressaoAberta && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150">
-          <div className="bg-[#525659] w-full max-w-5xl h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-            <div className="px-5 py-3 bg-[#323639] text-white flex items-center justify-between shrink-0">
-              <span className="text-xs font-bold font-mono">
-                Folha Oficial de Impressão • Orçamento #{numeroOS}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Printer size={15} weight="bold" />
-                  <span>Imprimir</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalFolhaImpressaoAberta(false)}
-                  className="p-1 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer"
-                >
-                  <X size={18} weight="bold" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center bg-[#525659]">
-              <FolhaOrdemServicoImpressao formData={dadosOS} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: ZOOM DE FOTO */}
-      {/* ========================================================================= */}
-      {fotoZoomUrl && (
-        <div
-          onClick={() => setFotoZoomUrl(null)}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150 cursor-zoom-out"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-3xl max-h-[85vh] bg-black rounded-2xl overflow-hidden border border-white/20 shadow-2xl flex flex-col"
-          >
-            <div className="absolute top-3 right-3 z-10">
-              <button
-                type="button"
-                onClick={() => setFotoZoomUrl(null)}
-                className="w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black transition-colors cursor-pointer"
-              >
-                <X size={16} weight="bold" />
-              </button>
-            </div>
-            <img
-              src={fotoZoomUrl}
-              alt="Ampliação da peça"
-              className="w-full h-full object-contain max-h-[80vh]"
-            />
-          </div>
-        </div>
-      )}
+      <AprovacaoFotoZoomModal
+        fotoUrl={fotoZoomUrl}
+        onClose={() => setFotoZoomUrl(null)}
+      />
     </div>
   )
 }
