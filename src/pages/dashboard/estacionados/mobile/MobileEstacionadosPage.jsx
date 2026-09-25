@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React from 'react'
 import {
   Garage,
   Plus,
@@ -6,19 +6,12 @@ import {
   ClockCounterClockwise,
   UserPlus,
   WhatsappLogo,
-  Car,
   PencilSimple,
   Trash,
   X,
-  FunnelSimple,
 } from '@phosphor-icons/react'
-import { toast } from 'sonner'
-import {
-  carregarVeiculosEstacionados,
-  excluirVeiculoEstacionado,
-  obterHistoricoCompletoVeiculo,
-} from '../../../../constants/mockVeiculosEstacionados'
-import { formatarTelefone } from '../../../../utils/fiscalValidators'
+import { obterHistoricoCompletoVeiculo } from '../../../../constants/mockVeiculosEstacionados'
+import { useEstacionadosWorkflow } from '../../../../hooks/useEstacionadosWorkflow'
 import { ModalHistoricoManutencao } from '../../../../components/estacionados/ModalHistoricoManutencao'
 import { ModalVincularCliente } from '../../../../components/estacionados/ModalVincularCliente'
 import { ModalEstacionarVeiculo } from '../../../../components/estacionados/ModalEstacionarVeiculo'
@@ -79,146 +72,109 @@ function EstacionadoCard({ veiculo, onVerHistorico, onVincular, onEditar, onExcl
       {/* Dados do Antigo e Novo Dono */}
       <div className="bg-slate-50 rounded-xl p-2.5 space-y-1.5 text-xs border border-slate-100">
         <div className="flex items-center justify-between">
-          <span className="text-[10.5px] text-slate-500">Antigo Dono:</span>
-          <span className="font-bold text-slate-800 truncate max-w-[170px]">{veiculo.antigoClienteNome || '—'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[10.5px] text-slate-500">Novo Comprador:</span>
-          <span className="font-bold text-sky-800 truncate max-w-[170px]">
-            {veiculo.novoDonoNome || 'Aguardando cadastro'}
-          </span>
-        </div>
-        {veiculo.dataEstacionamento && (
-          <div className="flex items-center justify-between text-[10px] text-slate-400">
-            <span>Data da venda:</span>
-            <span>{veiculo.dataEstacionamento}</span>
+          <div className="text-slate-500 truncate max-w-[190px]">
+            Antigo Dono: <strong className="text-slate-800">{veiculo.antigoClienteNome || 'Não inf.'}</strong>
           </div>
-        )}
-      </div>
+          {foneAntigoLimpo && (
+            <a
+              href={`https://wa.me/55${foneAntigoLimpo}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-600 p-0.5"
+              title="WhatsApp Antigo Proprietário"
+            >
+              <WhatsappLogo size={14} weight="fill" />
+            </a>
+          )}
+        </div>
 
-      {/* Resumo de Histórico */}
-      <div className="flex items-center justify-between pt-1">
-        <button
-          type="button"
-          onClick={() => onVerHistorico(veiculo)}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-700 hover:text-sky-800 cursor-pointer"
-        >
-          <ClockCounterClockwise size={14} weight="bold" />
-          <span>{historico.length} manutenções no histórico</span>
-        </button>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onEditar(veiculo)}
-            className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-lg cursor-pointer"
-            title="Editar"
-          >
-            <PencilSimple size={15} />
-          </button>
-          <button
-            type="button"
-            onClick={() => onExcluir(veiculo)}
-            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
-            title="Excluir"
-          >
-            <Trash size={15} />
-          </button>
+        <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+          {veiculo.novoDonoNome ? (
+            <div className="text-sky-900 font-bold truncate max-w-[190px]">
+              Comprador: <span>{veiculo.novoDonoNome}</span>
+            </div>
+          ) : (
+            <span className="text-slate-400 italic text-[11px]">Aguardando novo dono</span>
+          )}
+
+          {foneNovoLimpo && (
+            <a
+              href={`https://wa.me/55${foneNovoLimpo}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-600 p-0.5"
+              title="WhatsApp Novo Comprador"
+            >
+              <WhatsappLogo size={14} weight="fill" />
+            </a>
+          )}
         </div>
       </div>
 
-      {/* Botões de Ação Principal */}
-      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+      {/* Ações Mobile */}
+      <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
         <button
           type="button"
           onClick={() => onVincular(veiculo)}
-          className="h-10 rounded-xl bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+          className="h-9 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
         >
-          <UserPlus size={15} weight="bold" />
-          <span>Vincular Cliente</span>
+          <UserPlus size={14} weight="bold" />
+          <span>Vincular</span>
         </button>
 
-        {foneNovoLimpo ? (
-          <a
-            href={`https://wa.me/55${foneNovoLimpo}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="h-10 rounded-xl bg-[#25D366] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-          >
-            <WhatsappLogo size={15} weight="fill" />
-            <span>WhatsApp Dono</span>
-          </a>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onVerHistorico(veiculo)}
-            className="h-10 rounded-xl bg-sky-50 border border-sky-200 text-[#0284c7] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <ClockCounterClockwise size={15} weight="bold" />
-            <span>Ver Prontuário</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => onVerHistorico(veiculo)}
+          className="h-9 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer border border-slate-200"
+        >
+          <ClockCounterClockwise size={14} />
+          <span>{historico.length} OS</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onEditar(veiculo)}
+          className="h-9 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+        >
+          <PencilSimple size={14} />
+          <span>Editar</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onExcluir(veiculo)}
+          className="h-9 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+        >
+          <Trash size={14} />
+          <span>Excluir</span>
+        </button>
       </div>
     </div>
   )
 }
 
 export function MobileEstacionadosPage() {
-  const [estacionados, setEstacionados] = useState([])
-  const [busca, setBusca] = useState('')
-
-  // Modais
-  const [modalEstacionarAberto, setModalEstacionarAberto] = useState(false)
-  const [modalHistoricoAberto, setModalHistoricoAberto] = useState(false)
-  const [modalVincularAberto, setModalVincularAberto] = useState(false)
-  const [modalEditarAberto, setModalEditarAberto] = useState(false)
-  const [veiculoSelecionado, setVeiculoSelecionado] = useState(null)
-
-  const recarregar = () => {
-    const lista = carregarVeiculosEstacionados()
-    setEstacionados(lista)
-  }
-
-  useEffect(() => {
-    recarregar()
-    const handleStorage = () => recarregar()
-    window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
-  }, [])
-
-  const metricas = useMemo(() => {
-    const total = estacionados.length
-    const comComprador = estacionados.filter(
-      (v) => v.novoDonoNome && v.novoDonoNome.trim().length > 0
-    ).length
-    let totalManutencoes = 0
-    estacionados.forEach((v) => {
-      const hist = obterHistoricoCompletoVeiculo(v.placa, v)
-      totalManutencoes += hist.length
-    })
-    return { total, comComprador, totalManutencoes }
-  }, [estacionados])
-
-  const filtrados = useMemo(() => {
-    if (!busca.trim()) return estacionados
-    const termo = busca.trim().toLowerCase()
-    return estacionados.filter(
-      (v) =>
-        (v.placa || '').toLowerCase().includes(termo) ||
-        (v.marcaModelo || '').toLowerCase().includes(termo) ||
-        (v.antigoClienteNome || '').toLowerCase().includes(termo) ||
-        (v.novoDonoNome || '').toLowerCase().includes(termo)
-    )
-  }, [estacionados, busca])
-
-  const handleExcluir = (veiculo) => {
-    try {
-      excluirVeiculoEstacionado(veiculo.id)
-      recarregar()
-      toast.success(`Veículo placa ${veiculo.placa} excluído.`)
-    } catch {
-      toast.error('Erro ao excluir veículo.')
-    }
-  }
+  const {
+    busca,
+    setBusca,
+    metricas,
+    estacionadosFiltrados,
+    modalEstacionarAberto,
+    setModalEstacionarAberto,
+    modalHistoricoAberto,
+    setModalHistoricoAberto,
+    modalVincularAberto,
+    setModalVincularAberto,
+    modalEditarAberto,
+    setModalEditarAberto,
+    veiculoSelecionado,
+    handleAbrirEstacionar,
+    handleAbrirHistorico,
+    handleAbrirVincular,
+    handleAbrirEditar,
+    handleExcluir,
+    recarregarEstacionados,
+  } = useEstacionadosWorkflow()
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#f8fafc] overflow-hidden">
@@ -231,10 +187,7 @@ export function MobileEstacionadosPage() {
           </div>
           <button
             type="button"
-            onClick={() => {
-              setVeiculoSelecionado(null)
-              setModalEstacionarAberto(true)
-            }}
+            onClick={handleAbrirEstacionar}
             className="h-9 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
             <Plus size={15} weight="bold" />
@@ -274,7 +227,7 @@ export function MobileEstacionadosPage() {
 
       {/* Lista de Cards de Veículos Estacionados */}
       <div className="flex-1 p-3 overflow-y-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-h-0 space-y-3">
-        {filtrados.length === 0 ? (
+        {estacionadosFiltrados.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center p-6 text-center">
             <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
               <Garage size={24} />
@@ -285,22 +238,13 @@ export function MobileEstacionadosPage() {
             </p>
           </div>
         ) : (
-          filtrados.map((v) => (
+          estacionadosFiltrados.map((v) => (
             <EstacionadoCard
               key={v.id || v.placa}
               veiculo={v}
-              onVerHistorico={(veic) => {
-                setVeiculoSelecionado(veic)
-                setModalHistoricoAberto(true)
-              }}
-              onVincular={(veic) => {
-                setVeiculoSelecionado(veic)
-                setModalVincularAberto(true)
-              }}
-              onEditar={(veic) => {
-                setVeiculoSelecionado(veic)
-                setModalEditarAberto(true)
-              }}
+              onVerHistorico={handleAbrirHistorico}
+              onVincular={handleAbrirVincular}
+              onEditar={handleAbrirEditar}
               onExcluir={handleExcluir}
             />
           ))
@@ -318,21 +262,21 @@ export function MobileEstacionadosPage() {
         isOpen={modalVincularAberto}
         onClose={() => setModalVincularAberto(false)}
         veiculo={veiculoSelecionado}
-        onVinculoConcluido={recarregar}
+        onVinculoConcluido={recarregarEstacionados}
       />
 
       <ModalEstacionarVeiculo
         isOpen={modalEstacionarAberto}
         onClose={() => setModalEstacionarAberto(false)}
         veiculoInicial={veiculoSelecionado}
-        onEstacionadoConcluido={recarregar}
+        onEstacionadoConcluido={recarregarEstacionados}
       />
 
       <ModalEditarEstacionado
         isOpen={modalEditarAberto}
         onClose={() => setModalEditarAberto(false)}
         veiculo={veiculoSelecionado}
-        onEdicaoConcluida={recarregar}
+        onEdicaoConcluida={recarregarEstacionados}
       />
     </div>
   )
