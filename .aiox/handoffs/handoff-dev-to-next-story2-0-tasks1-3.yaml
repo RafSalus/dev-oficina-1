@@ -1,0 +1,30 @@
+handoff:
+  version: "1.0"
+  timestamp: "2026-09-24T20:10:00-03:00"
+  from_agent: "dev"
+  to_agent: "next-session"
+  pipeline_id: "epic-2-implementacao"
+  consumed: true
+  last_command: "*develop 2.0 (Tasks 1-3 concluídas e commitadas)"
+
+  story_context:
+    story_id: "Story 2.0"
+    story_path: "docs/stories/2.0.saneamento-arquitetural-e-decomposicao-monolitos.md"
+    story_status: "InProgress (Tasks 1, 2 e 3 concluídas; faltam 4 e 5)"
+    current_task: "Task 4 — ClienteModalForm.jsx (1.325L) e EstoquePage.jsx (1.238L)"
+    branch: "main (3 commits locais à frente, sem push)"
+
+  decisions:
+    - "Padrão: hooks de domínio em src/hooks/, funções puras em src/utils/{dominio}/, componentes em src/components/{dominio}/; containers com no máximo 250L"
+    - "CotacaoModalForm.jsx removido (código fantasma sem import)"
+    - "eslint.config.js passou a cobrir .jsx e no-undef virou error; revelou e corrigiu useEffect sem import em MobileNovaOrdemDeServicoPage"
+    - "Formulários rápidos ficam no nível do painel/pai para preservar o que foi digitado ao trocar de aba ou cancelar (paridade com o original)"
+
+  files_modified:
+    - "Commits: ef761e6 (lint), 5fef218 (Tasks 1-2), 658c47d (Task 3)"
+
+  blockers:
+    - "CodeRabbit CLI não instalado (depende do proprietário: script de instalação + login interativo)"
+    - "repositories.test.js falha no HEAD sem as mudanças não commitadas da Story 2.1 (falha já existia no 54aad58)"
+
+  next_action: "Task 4: EstoquePage deve reutilizar src/utils/compras/cotacaoHelpers.js (hoje tem cópias locais dos helpers de telefone/autopeças, assim como MobileEstoquePage e MobileComprasPage). Depois, Task 5 (quality gates) e marcar a story como Ready for Review. Arquivos protegidos seguem fora dos commits: MFA, Garantias, Story 2.1 e a migration remover_dados_mock."

@@ -1,0 +1,1 @@
+- [QA em HEAD isolado](project_qa-isolated-head.md) — working tree tem trabalho de outras stories; gates via git archive + .env

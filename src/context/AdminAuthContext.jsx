@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { getSupabaseAdminClient, isSupabaseConfigured } from '../lib/supabase'
 import { MESSAGES } from '../constants/company'
+import { limparDadosDominioLocalStorage } from '../utils/storageCleaners'
 
 const AdminAuthContext = createContext(null)
 
@@ -25,6 +26,7 @@ export function AdminAuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [role, setRole] = useState(null)
   const mfaPendingRef = useRef(null)
+  const inFlightEnrollRef = useRef(null)
 
   const limparSessao = useCallback((proximoStatus) => {
     setUser(null)
@@ -109,6 +111,7 @@ export function AdminAuthProvider({ children }) {
       try {
         const { data, error } = await client.auth.signInWithPassword({ email: normalizedEmail, password })
         if (!error && data?.session) {
+          limparDadosDominioLocalStorage()
           await refreshSession()
           return { ok: true, user: data.user }
         }
@@ -117,6 +120,7 @@ export function AdminAuthProvider({ children }) {
           return { ok: false, message: MESSAGES.invalidCredentials }
         }
 
+        limparDadosDominioLocalStorage()
         await refreshSession()
         return { ok: true, user: data?.user }
       } catch {
@@ -130,6 +134,7 @@ export function AdminAuthProvider({ children }) {
     try {
       // Remove a sessão local de versões anteriores, que não é mais usada para autorização
       localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY)
+      limparDadosDominioLocalStorage()
     } catch {}
     const client = getSupabaseAdminClient()
     if (client) {
@@ -175,24 +180,46 @@ export function AdminAuthProvider({ children }) {
       return { ok: false, message: MESSAGES.serviceUnavailable }
     }
 
-    try {
-      const { data, error } = await client.auth.mfa.enroll({
-        factorType: 'totp',
-        friendlyName: 'Mecanica Gabriel Admin',
-      })
-      if (error) {
-        return { ok: false, message: error.message }
-      }
-      return {
-        ok: true,
-        factorId: data.id,
-        qrCode: data.totp.qr_code,
-        secret: data.totp.secret,
-        uri: data.totp.uri,
-      }
-    } catch (err) {
-      return { ok: false, message: err.message || 'Erro ao iniciar pareamento MFA.' }
+    if (inFlightEnrollRef.current) {
+      return inFlightEnrollRef.current
     }
+
+    const enrollPromise = (async () => {
+      try {
+        // Limpa fatores TOTP 'unverified' pré-existentes para evitar acúmulo e violação da constraint unique
+        try {
+          const { data: factorsData } = await client.auth.mfa.listFactors()
+          const unverifiedFactors = (factorsData?.totp || []).filter((f) => f.status === 'unverified')
+          for (const factor of unverifiedFactors) {
+            await client.auth.mfa.unenroll({ factorId: factor.id })
+          }
+        } catch (cleanupErr) {
+          console.warn('[MFA] Aviso na limpeza de fatores pendentes:', cleanupErr)
+        }
+
+        const { data, error } = await client.auth.mfa.enroll({
+          factorType: 'totp',
+          issuer: 'Mecanica Gabriel',
+        })
+        if (error) {
+          return { ok: false, message: error.message }
+        }
+        return {
+          ok: true,
+          factorId: data.id,
+          qrCode: data.totp.qr_code,
+          secret: data.totp.secret,
+          uri: data.totp.uri,
+        }
+      } catch (err) {
+        return { ok: false, message: err.message || 'Erro ao iniciar pareamento MFA.' }
+      } finally {
+        inFlightEnrollRef.current = null
+      }
+    })()
+
+    inFlightEnrollRef.current = enrollPromise
+    return enrollPromise
   }, [])
 
   const verifyMfa = useCallback(
@@ -208,14 +235,28 @@ export function AdminAuthProvider({ children }) {
       }
 
       try {
-        const { data: challengeData, error: challengeError } = await client.auth.mfa.challenge({ factorId })
+        let targetFactorId = factorId
+        if (!targetFactorId) {
+          const { data: factorsData, error: listError } = await client.auth.mfa.listFactors()
+          if (listError) {
+            return { ok: false, message: listError.message }
+          }
+          const verified = (factorsData?.totp || []).find((f) => f.status === 'verified')
+          const candidate = verified || (factorsData?.totp || [])[0]
+          if (!candidate) {
+            return { ok: false, message: 'Nenhum fator MFA encontrado para verificação.' }
+          }
+          targetFactorId = candidate.id
+        }
+
+        const { data: challengeData, error: challengeError } = await client.auth.mfa.challenge({ factorId: targetFactorId })
         if (challengeError) {
           return { ok: false, message: challengeError.message }
         }
 
         const challengeId = challengeData.id
         const { data, error: verifyError } = await client.auth.mfa.verify({
-          factorId,
+          factorId: targetFactorId,
           challengeId,
           code: cleanCode,
         })

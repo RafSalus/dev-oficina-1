@@ -1,0 +1,30 @@
+handoff:
+  version: "1.0"
+  timestamp: "2026-09-24T20:40:00-03:00"
+  from_agent: "dev"
+  to_agent: "qa"
+  pipeline_id: "epic-2-implementacao"
+  consumed: false
+  last_command: "*develop 2.0 (Tasks 1-5 concluídas)"
+
+  story_context:
+    story_id: "Story 2.0"
+    story_path: "docs/stories/2.0.saneamento-arquitetural-e-decomposicao-monolitos.md"
+    story_status: "Ready for Review"
+    current_task: "QA gate (*qa-gate 2.0)"
+    branch: "main (commits ef761e6, 5fef218, 658c47d, 1e6e72f; sem push)"
+
+  decisions:
+    - "Padrão ADR-003: hooks em src/hooks/, funções puras em src/utils/{dominio}/, componentes em src/components/{dominio}/"
+    - "CotacaoModalForm.jsx removido (código fantasma sem import)"
+    - "ESLint passou a cobrir .jsx e no-undef é error; 3 bugs reais corrigidos (ReferenceError em Compras, imports quebrados da Task 1, useEffect sem import no mobile)"
+    - "Paridade: formulários rápidos preservam o que foi digitado ao trocar de aba ou cancelar"
+
+  files_modified:
+    - "Ver File List (Tasks 1-4) na story"
+
+  blockers:
+    - "Sem verificação manual no navegador (coberto por 30 testes de tela em jsdom + vite build)"
+    - "CodeRabbit CLI não instalado"
+
+  next_action: "@qa: revisar a Story 2.0 (7 ACs), rodar npm test / npm run lint / vite build, dar o veredito PASS/CONCERNS/FAIL e, se aprovada, encaminhar para @devops *push"

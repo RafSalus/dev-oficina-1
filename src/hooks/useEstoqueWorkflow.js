@@ -109,6 +109,13 @@ export function useEstoqueWorkflow() {
     salvarPecasCadastradas(novaLista)
   }
 
+  const excluirPeca = (id) => {
+    const novaLista = pecas.filter((p) => p.id !== id)
+    setPecas(novaLista)
+    salvarPecasCadastradas(novaLista)
+    toast.success('Peça excluída do almoxarifado.')
+  }
+
   const copiarListaReposicao = () => {
     if (itensReposicao.length === 0) {
       toast.info('Não há itens com necessidade de reposição no momento.')
@@ -207,6 +214,7 @@ export function useEstoqueWorkflow() {
       abrirPeca,
       abrirKardexDaPeca,
       salvarPeca,
+      excluirPeca,
       copiarListaReposicao,
       cotarReposicao,
       cotarTodasReposicoes,

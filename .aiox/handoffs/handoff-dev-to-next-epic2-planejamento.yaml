@@ -1,0 +1,37 @@
+handoff:
+  version: "1.0"
+  timestamp: "2026-09-24T14:00:00-03:00"
+  from_agent: "dev"
+  to_agent: "next-session"
+  pipeline_id: "epic-2-planejamento"
+  consumed: true
+  last_command: "validação do Epic 2 (@po) e resolução dos 5 pontos"
+
+  story_context:
+    story_id: "Epic 2 (stories 2.1 a 2.20c)"
+    story_path: "docs/stories/epic-2-INDEX.md"
+    story_status: "Stories validadas pelo @po; Onda A em Ready para início da implementação"
+    current_task: "Iniciar desenvolvimento pela Story 2.4 e 2.1 (@dev)"
+    branch: "main"
+
+  decisions:
+    - "ADRs criados: adr-005 (acesso a dados: fail-closed, RPCs atômicas, UUID + sequences, estoque via Kardex, caixa PDV), adr-006 (tokens públicos com hash por fornecedor + Edge Function de Storage), adr-007 (login do cliente por CPF, Opção B: Edge Function cliente-auth), em docs/architecture/project-decisions/"
+    - "Decisões do proprietário: janela 08h-19h vale para Veículos e Suprimentos, não para Clientes; PDV vende após as 19h enquanto o caixa do dia estiver aberto (conceito de caixa novo, na Story 2.19); rotas :id→:token com quebra única; mecânico vê só as próprias requisições"
+    - "Estoque (FR23 revisado, Opção 1): baixa no USO da peça pela OS (RPC aplicar_peca_na_os); o PDV baixa só o que ainda não foi baixado; índice único impede baixa dupla; o mecânico não lança movimentação manual; estorno só manual (devolver_peca_da_os)"
+    - "Cliente por CPF: a Secretaria confere a identidade pelo WhatsApp do telefone JÁ cadastrado; pendentes expiram em 30 dias; recusado tem a conta Auth excluída na hora; retenção de 3 anos"
+    - "Tela de Garantias (UI mock, fora de story) ADIADA pelo proprietário: não commitar e não incluir em stories por ora"
+
+  files_modified:
+    - "docs/architecture/project-decisions/adr-005..007 (novos)"
+    - "docs/stories/2.1 a 2.20 (editadas pelo @sm) + 2.20a/2.20b/2.20c (novas; a 2.20 deve ficar Superseded)"
+    - "docs/prd.md (v1.5 pelo @pm)"
+    - "docs/stories/epic-2-INDEX.md (a atualizar pelo @sm)"
+    - ".claude/settings.json (language → português do Brasil)"
+
+  blockers:
+    - "O @pm CONCLUIU (PRD v1.5 + docs/sprint-change-proposal-2026-09-24.md criado). Verificar se o @sm concluiu: INDEX atualizado, a 2.20 marcada Superseded, as seções Estimativa/Escopo/DoD nas 20 stories"
+    - "Para o @po confirmar (vindo do @pm): itens a-e e g da OQ-5 fechados como [AUTO-DECISION]; divergência entre FR24 item 3 e ADR-007 §3.6 (quem cria o registro do cliente na aprovação); D4 está como decisão no PRD, mas como 'a confirmar' no ADR-005 §2.10; atualizar supabase-persistence-model.md; Story 1.1 citada como AC10 e AC12 no PRD"
+    - "Pendente: texto do termo de consentimento LGPD (@po + jurídico). @devops: desligar o signup público no Supabase Auth"
+    - "ATENÇÃO: há alterações de origem desconhecida fora desta sessão (package.json, package-lock.json, src/context/AdminAuthContext.jsx, src/pages/GestaoMfaConfigurarPage.jsx, tests/unit/repositories.test.js, tests/unit/mfa-auth-flow.test.jsx novo). Confirmar com o proprietário antes de commitar"
+
+  next_action: "1) Conferir o resultado do @sm e do @pm (itens do primeiro blocker). 2) @po revalida as stories 2.1-2.20c (*validate-story-draft). 3) Commitar e aplicar supabase/migrations/20260924120000_remover_dados_mock.sql (pré-requisito da 2.1; push via @devops). 4) Iniciar o desenvolvimento pela Story 2.4, depois 2.1, conforme a ordem do INDEX. Obs.: o servidor Vite (npm run dev, porta 5173) estava rodando nesta sessão."

@@ -1,0 +1,111 @@
+schema: 1
+story: '2.1'
+story_title: 'Fundação do Cliente Supabase e Camada de Repositório Assíncrona (+ ajustes de MFA TOTP no mesmo commit)'
+gate: PASS
+status_reason: >-
+  Iteração 2 concluída com sucesso. Todos os 4 bloqueadores anteriores (SEC-001, REL-001, REL-002/REQ-001, TEST-001) foram corrigidos e
+  validados. O bundle de produção está 100% limpo de dados pessoais (confirmado com grep no dist/), excluirFuncionario remoto funciona
+  perfeitamente sem lançar falso SEM_PERMISSAO, a limpeza de storage preserva módulos não migrados e a sessão do portal do cliente, e foram
+  adicionados testes remotos mockados. A suíte completa conta com 19 arquivos e 162 testes verdes, zero erros de lint e build estável.
+reviewer: 'Quinn (@qa)'
+reviewed_revision: 'working tree sobre HEAD e98b233 (iteração 2 de QA); escopo de 12 arquivos + gate e story doc'
+updated: '2026-09-24T22:24:00-03:00'
+
+scope:
+  story_2_1:
+    - src/lib/supabase.js
+    - src/repositories/funcionariosRepository.js
+    - src/repositories/supabaseHelpers.js
+    - src/repositories/erroRepositorio.js
+    - src/utils/storageCleaners.js
+    - tests/unit/supabaseHelpers.test.js
+    - tests/unit/repositories.test.js
+  mfa:
+    - src/context/AdminAuthContext.jsx
+    - src/pages/GestaoMfaConfigurarPage.jsx
+    - package.json
+    - package-lock.json
+    - tests/unit/mfa-auth-flow.test.jsx
+  out_of_scope_not_evaluated: 'Garantias, rotasCompartilhadas.jsx, supabase/migrations/20260924120000_remover_dados_mock.sql, supabase/.temp/, docs/*, .claude/*, .aiox/*'
+
+evidence:
+  commands:
+    - cmd: 'npm test'
+      result: '19 arquivos / 162 testes, todos passam (100% verde)'
+    - cmd: 'npx vitest run tests/unit/supabaseHelpers.test.js'
+      result: '21 testes passam, incluindo 4 novos testes remotos com mock'
+    - cmd: 'npx vitest run tests/unit/repositories.test.js'
+      result: '11 testes passam, incluindo teste atualizado de inicialização vazia sem PII'
+    - cmd: 'npx vitest run tests/unit/mfa-auth-flow.test.jsx'
+      result: '5 testes passam (fluxo de enroll/verify MFA TOTP)'
+    - cmd: 'npm run lint'
+      result: '0 erros, 223 warnings preexistentes'
+    - cmd: 'npx vite build'
+      result: 'OK. dist/ gerado sem erros.'
+    - cmd: 'grep -rn "401.928.374-55" dist/ e grep -rn "99185-1501" dist/'
+      result: '0 ocorrências encontradas no bundle público. SEC-001 sanado com sucesso.'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'paraSnakeCase/paraCamelCase rasos com preservarCampos; 236 linhas.'}
+  AC2: {status: PASS, note: 'Modo decidido na inicialização; remoto fail-closed sem fallback; modo local preservado.'}
+  AC3: {status: PASS, note: 'Códigos ErroRepositorio normalizados; console.error contextualizado em toda falha.'}
+  AC4: {status: PASS, note: 'getSupabaseDataClient() reaproveita getSupabaseAdminClient(); API pública preservada.'}
+  AC5: {status: PASS, note: 'Contrato { dados, carregando, erro } e tratamento de 3 estados de UI documentado formalmente em Dev Notes.'}
+  AC6: {status: PASS, note: 'Cobertura em Vitest para helpers, wrapper fail-closed, limpeza de storage e 4 testes remotos de repositório.'}
+  AC7: {status: PASS, note: 'funcionariosRepository refatorado como prova de conceito, fail-closed, zero PII estática, mesma API pública.'}
+  AC8: {status: PASS, note: 'Limpeza restrita a entidades migradas (dev_oficina_funcionarios) e executada exclusivamente em signIn/signOut.'}
+  AC9: {status: N/A, note: 'Documental; nenhuma política RLS nova no escopo.'}
+  AC10: {status: PASS, note: 'Lint 0 erros; 162/162 testes verdes; todos os arquivos ≤ 400 linhas (NFR17).'}
+  AC11: {status: N/A, note: 'Pré-requisito operacional, fora do código.'}
+
+mfa_review:
+  verdict: 'OK, sem contorno do TOTP'
+  notes:
+    - 'O status aal2 continua vindo exclusivamente de getAuthenticatorAssuranceLevel() no servidor; verify/challenge validados pelo Supabase.'
+    - 'enrollMfa limpa apenas fatores não verificados e deduplica chamadas concorrentes.'
+    - 'verifyMfa(null, code) resolve o fator verificado automaticamente.'
+    - 'qrcode 1.5.4 (MIT) validado; +37 kB no bundle.'
+
+issues_status:
+  - id: 'SEC-001'
+    status: RESOLVED
+    resolution: 'SEED_FUNCIONARIOS esvaziado; PII removida do bundle dist/ e do localStorage; teste atualizado para lista vazia.'
+  - id: 'REL-001'
+    status: RESOLVED
+    resolution: 'executarRepositorio chama remoto() diretamente sem reembrulhar true em executarOperacao; excluirFuncionario validado com teste.'
+  - id: 'REL-002'
+    status: RESOLVED
+    resolution: 'storageCleaners restrito a entidades migradas; chamada removida de limparSessao e mantida em signIn e signOut.'
+  - id: 'REQ-001'
+    status: RESOLVED
+    resolution: 'Lista de chaves alinhada para dev_oficina_funcionarios, com regra de expansão incremental para as próximas stories.'
+  - id: 'ARCH-001'
+    status: RESOLVED
+    resolution: 'Heurística frágil removida de executarOperacao; executarRepositorio normaliza exceções inesperadas.'
+  - id: 'TEST-001'
+    status: RESOLVED
+    resolution: 'Adicionados 4 testes remotos com mock em supabaseHelpers.test.js e teste de storage assertivo.'
+  - id: 'REL-003'
+    status: RESOLVED
+    resolution: 'obterFuncionarioPorId garante retorno null quando inexistente no modo remoto.'
+  - id: 'DOC-001'
+    status: RESOLVED
+    resolution: 'Seção de UI states adicionada em Dev Notes; Dev Agent Record e File List atualizados.'
+
+commit_file_list_story_2_1_plus_mfa:
+  - src/lib/supabase.js
+  - src/repositories/funcionariosRepository.js
+  - src/repositories/supabaseHelpers.js
+  - src/repositories/erroRepositorio.js
+  - src/utils/storageCleaners.js
+  - src/context/AdminAuthContext.jsx
+  - src/pages/GestaoMfaConfigurarPage.jsx
+  - package.json
+  - package-lock.json
+  - tests/unit/supabaseHelpers.test.js
+  - tests/unit/repositories.test.js
+  - tests/unit/mfa-auth-flow.test.jsx
+  - docs/stories/2.1.fundacao-repositorio-supabase.md
+  - docs/qa/gates/2.1-fundacao-repositorio-supabase.yml
+
+waiver: {active: false}

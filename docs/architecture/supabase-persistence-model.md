@@ -1,8 +1,13 @@
 # Documento de Arquitetura de Persistência — Supabase Postgres e RLS (Epic 2)
 
 > **Autor:** Aria (@architect, Holistic System Architect)  
-> **Status:** Blueprint de Arquitetura Aprovado  
+> **Status:** Blueprint Inicial Histórico (Desatualizado — ver Alerta abaixo)  
 > **Referência:** Gates G2.1 a G2.7 do PRD v1.2  
+
+> [!CAUTION]
+> **DOCUMENTO HISTÓRICO / DESATUALIZADO (PRD v1.2)**
+> Este documento representa o blueprint inicial da arquitetura de persistência e NÃO reflete as decisões normativas consolidadas nos **ADR-005** (Fail-closed, concorrência, `public.papel_usuario()`), **ADR-006** (Tokens públicos e Storage) e **ADR-007** (Autenticação do cliente por CPF).
+> **Atenção:** É terminantemente proibido utilizar as políticas aqui contidas baseadas em `user_metadata` ou permissões diretas legadas. A fonte soberana de verdade arquitetural do Epic 2 são os ADRs 005, 006 e 007 em `docs/architecture/project-decisions/`. A revisão e consolidação deste arquivo está sob responsabilidade do `@architect`.
 
 ---
 

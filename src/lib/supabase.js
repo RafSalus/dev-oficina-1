@@ -47,6 +47,15 @@ export function getSupabaseAdminClient() {
 export const supabase = isSupabaseConfigured ? getSupabaseAdminClient() : null
 
 /**
+ * Retorna o cliente de dados Supabase para leitura e gravação no PostgREST.
+ * Reaproveita a mesma instância e sessão de autenticação do cliente admin/auth (Story 2.1 AC4).
+ * @returns {import('@supabase/supabase-js').SupabaseClient | null}
+ */
+export function getSupabaseDataClient() {
+  return getSupabaseAdminClient()
+}
+
+/**
  * Realiza teste de conectividade com os serviços em nuvem do Supabase.
  * @returns {Promise<{ ok: boolean, status: string, url: string, detalhe?: string }>}
  */

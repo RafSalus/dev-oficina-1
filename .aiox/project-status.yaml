@@ -1,23 +1,21 @@
 status:
   branch: main
   modifiedFiles:
-    - .env.example
-    - .gitignore
-    - docs/admin/CadastrosBase-Suprimentos.md
-    - docs/admin/VeiculosEstacionados.md
-    - docs/cliente/AprovacaoOrcamento-StepperProgress.md
-  modifiedFilesTotalCount: 22
+    - .aiox/project-status.yaml
+    - .claude/settings.json
+    - docs/architecture/supabase-persistence-model.md
+    - docs/prd.md
+    - docs/stories/2.1.fundacao-repositorio-supabase.md
+  modifiedFilesTotalCount: 54
   recentCommits:
+    - 'docs: fechar Story 2.0 como Done e criar draft da Story 2.0b [Story 2.0]'
     - >-
-      feat: refatorar modulo de OS, alinhar campos do formulario de cliente e
-      melhorias gerais de UI
-    - >-
-      feat: implementa PDV, Kanban de OS e reestrutura ciclo de abertura de
-      ordens
+      fix: preco liquido e marca dos itens no portal mobile (QA REL-002) [Story
+      2.0]
   currentEpic: null
   currentStory: null
-  lastUpdate: '2026-09-21T16:30:13.133Z'
+  lastUpdate: '2026-09-25T01:13:19.976Z'
   isGitRepo: true
-timestamp: 1790008213135
+timestamp: 1790298799978
 ttl: 60
-gitFingerprint: 1789578364132.4602:1790007135851.1084
+gitFingerprint: 1789578364132.4602:1790295247586.5637

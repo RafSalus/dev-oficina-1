@@ -1,0 +1,34 @@
+handoff:
+  version: "1.0"
+  timestamp: "2026-09-24T09:58:00Z"
+  from_agent: "ux-design-expert"
+  to_agent: "dev"
+
+  story_context:
+    story_id: "UX-GARANTIAS"
+    story_path: "docs/stories/2.x.tela-garantias-design.md"
+    story_status: "In Progress"
+    current_task: "Design e prototipagem da tela de Garantias (apenas UI/UX)"
+    branch: "main"
+
+  decisions:
+    - "Atuação estrita em UI/UX para evitar colisão com Story 2.1 do Claude (Supabase/Repositórios)"
+    - "Criados componentes em src/pages/dashboard/garantias/ e src/components/garantias/"
+    - "Criada massa mock em src/constants/mockGarantias.js sem alterar tabelas ou repositórios"
+    - "Conectada rota compartilhada em src/routes/rotasCompartilhadas.jsx"
+
+  files_modified:
+    - ".aiox/handoffs/handoff-ux-to-dev-garantias.yaml"
+    - "src/constants/mockGarantias.js"
+    - "src/components/garantias/GarantiasKPIs.jsx"
+    - "src/components/garantias/GarantiasFiltros.jsx"
+    - "src/components/garantias/GarantiasTabela.jsx"
+    - "src/components/garantias/ModalDetalhesGarantia.jsx"
+    - "src/components/garantias/ModalAcionamentoGarantia.jsx"
+    - "src/pages/dashboard/garantias/GarantiasPage.jsx"
+    - "src/pages/dashboard/garantias/mobile/MobileGarantiasPage.jsx"
+    - "src/routes/rotasCompartilhadas.jsx"
+
+  blockers: []
+
+  next_action: "Claude pode continuar a Story 2.1 em src/repositories/ e migrations sem risco de colisão. Quando o backend de Garantias for priorizado, conectar os mocks aos repositórios Supabase."

@@ -17,6 +17,7 @@ import { ServicosPage } from '../pages/dashboard/suprimentos/ServicosPage'
 import { PecasPage } from '../pages/dashboard/suprimentos/PecasPage'
 import { TerceirosPage } from '../pages/dashboard/suprimentos/TerceirosPage'
 import { FuncionariosPage } from '../pages/dashboard/funcionarios/FuncionariosPage'
+import { GarantiasPage } from '../pages/dashboard/garantias/GarantiasPage'
 
 /**
  * Renderiza o conjunto unificado de rotas operacionais compartilhadas
@@ -42,7 +43,7 @@ export function renderRotasOperacionais(portal = 'gestao') {
       <Route path="estacionados" element={<EstacionadosPage />} />
       <Route path="leva-e-traz" element={<LevaETrazPage />} />
       <Route path="manutencao-preventiva" element={<ManutencaoPreventivaPage />} />
-      <Route path="garantias" element={<DashboardPage />} />
+      <Route path="garantias" element={<GarantiasPage />} />
       <Route path="ferramentas" element={<DashboardPage />} />
       <Route path="pecas-danificadas" element={<DashboardPage />} />
       <Route path="estoque" element={<EstoquePage />} />

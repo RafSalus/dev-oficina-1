@@ -181,16 +181,13 @@ describe('Story 1.5 & Story 1.10: Camada de Repositórios Assíncronos (Async Co
   })
 
   describe('funcionariosRepository (Story 1.10 / Story de login e cadastro)', () => {
-    it('deve auto-semear apenas o administrador real (sem dados mock de equipe)', async () => {
+    it('deve inicializar com lista vazia no modo local (sem seed nem PII estática)', async () => {
       const equipe = await carregarFuncionarios()
       expect(Array.isArray(equipe)).toBe(true)
-      expect(equipe.length).toBeGreaterThanOrEqual(1)
+      expect(equipe.length).toBe(0)
 
-      const admin = await obterFuncionarioPorId('admin-rafael')
-      expect(admin).not.toBeNull()
-      expect(admin.nome).toContain('Rafael Amaral Salustiano')
-      expect(admin.cargo).toBe('analista')
-      expect(admin.authUserId).toBe('b0815410-e82e-4034-aa87-567faf2f6500')
+      const admin = await obterFuncionarioPorId('admin-inexistente')
+      expect(admin).toBeNull()
     })
 
     it('deve filtrar mecânico, aux. mecânico e gerente como elegíveis para escala de trabalho', async () => {

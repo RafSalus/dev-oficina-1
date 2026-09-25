@@ -1,0 +1,1 @@
+- [Seed PII de funcionários](project_seed-pii-funcionarios.md) — seed do admin foi removido de propósito (e7ef8a4); teste "auto-semear" está desatualizado

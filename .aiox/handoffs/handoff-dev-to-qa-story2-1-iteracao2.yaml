@@ -1,0 +1,39 @@
+handoff:
+  version: "1.0"
+  timestamp: "2026-09-24T22:23:00-03:00"
+  from_agent: "dev"
+  to_agent: "qa"
+  pipeline_id: "epic-2-implementacao"
+  consumed: false
+  last_command: "*develop 2.1 (Correções do QA Gate Iteração 1 concluídas)"
+
+  story_context:
+    story_id: "Story 2.1"
+    story_path: "docs/stories/2.1.fundacao-repositorio-supabase.md"
+    story_status: "Ready for Review (Iteration 2)"
+    current_task: "QA gate re-evaluation (*qa-gate 2.1)"
+    branch: "main (working tree com Story 2.1 + MFA TOTP)"
+
+  decisions:
+    - "SEC-001: SEED_FUNCIONARIOS = [] restaurado; PII do proprietário eliminada do código, do localStorage e do bundle dist/ (confirmado com grep no build)"
+    - "REL-001 / ARCH-001: executarRepositorio chama remoto() diretamente no modo remoto sem reembrulhar retorno booleano ou de domínio em executarOperacao; normaliza exceções inesperadas"
+    - "REL-002 / REQ-001: CHAVES_DOMINIO_LIMPEZA restrita às entidades já migradas (dev_oficina_funcionarios); chamada removida de limparSessao e mantida exclusivamente em signIn e signOut"
+    - "TEST-001: 4 testes remotos de funcionariosRepository com mock adicionados a supabaseHelpers.test.js (obter null, salvar sem tocar localStorage, alternar status, excluir lançando SEM_PERMISSAO com 0 linhas)"
+    - "DOC-001: Seção formal de UI states (AC5) documentada em Dev Notes; File List e números do Dev Agent Record atualizados"
+
+  files_modified:
+    - "src/repositories/funcionariosRepository.js"
+    - "src/repositories/supabaseHelpers.js"
+    - "src/utils/storageCleaners.js"
+    - "src/context/AdminAuthContext.jsx"
+    - "tests/unit/repositories.test.js"
+    - "tests/unit/supabaseHelpers.test.js"
+    - "docs/stories/2.1.fundacao-repositorio-supabase.md"
+
+  quality_gates:
+    tests: "19 test suites, 162 passed, 0 failed (100% verde)"
+    lint: "0 errors, 223 warnings preexistentes"
+    file_limits: "Todos os arquivos tocados/novos <= 400 linhas (NFR17)"
+    bundle_pii_check: "grep em dist/assets/ retornou 0 ocorrências de CPF/telefone do admin"
+
+  next_action: "@qa: reavaliar Story 2.1 (iteração 2), atualizar docs/qa/gates/2.1-fundacao-repositorio-supabase.yml para PASS e emitir parecer final para commit/fechamento."

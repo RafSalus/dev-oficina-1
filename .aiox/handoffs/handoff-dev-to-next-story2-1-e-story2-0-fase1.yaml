@@ -1,0 +1,79 @@
+handoff:
+  version: "1.0"
+  timestamp: "2026-09-24T19:35:00-03:00"
+  from_agent: "dev"
+  to_agent: "next-session"
+  pipeline_id: "epic-2-implementacao"
+  consumed: true
+  last_command: "Conclusão da Story 2.1 (In Review) e Fase 1 da Story 2.0 (Saneamento do Portal do Cliente)"
+
+  story_context:
+    completed_stories:
+      - story_id: "Story 2.1"
+        status: "In Review"
+        path: "docs/stories/2.1.fundacao-repositorio-supabase.md"
+        summary: "Fundação Supabase assíncrona fail-closed implementada e testada (17 testes unitários)"
+      - story_id: "Story 2.0 (Fase 1 / Task 1)"
+        status: "In Progress (Task 1 Concluída)"
+        path: "docs/stories/2.0.saneamento-arquitetural-e-decomposicao-monolitos.md"
+        summary: "Decomposição do Portal do Cliente e Aprovação de Orçamento (ClienteServicosPage de 1.375L para 134L)"
+    current_epic: "Epic 2 - Persistência Supabase & Saneamento Arquitetural"
+    epic_index: "docs/stories/epic-2-INDEX.md"
+    branch: "main"
+
+  decisions:
+    - "Story 2.1: Repositório assíncrono fail-closed conforme ADR-005; modo de operação em Vitest com override local automático para testes sem necessidade de mock de rede"
+    - "Story 2.0: Decomposição arquitetural do Portal do Cliente e da tela pública de aprovação de OS seguindo o padrão Container-Presenter & Domain Hooks (ADR-003, NFR17, NFR18)"
+    - "Eliminação de código morto: ClienteServicosPage.jsx deixou de ter mais de 1.300 linhas de dados estáticos legados (#002908) e passou a usar o mesmo hook dinâmico da rota pública"
+    - "Travamento de Itens Essenciais: Itens marcados como segurança/essenciais permanecem travados contra desmarcação pelo cliente no portal digital"
+    - "NFR17: Teto rigoroso de 400 linhas respeitado em 100% dos novos arquivos e arquivos refatorados"
+
+  files_created:
+    - "docs/stories/2.0.saneamento-arquitetural-e-decomposicao-monolitos.md"
+    - "src/repositories/erroRepositorio.js"
+    - "src/repositories/supabaseHelpers.js"
+    - "src/utils/storageCleaners.js"
+    - "src/hooks/useAprovacaoOrcamento.js"
+    - "src/components/aprovacao/AprovacaoHeader.jsx"
+    - "src/components/aprovacao/AprovacaoTabsNav.jsx"
+    - "src/components/aprovacao/AprovacaoItensCategoria.jsx"
+    - "src/components/aprovacao/AprovacaoOrcamentoTab.jsx"
+    - "src/components/aprovacao/AprovacaoLaudoTab.jsx"
+    - "src/components/aprovacao/AprovacaoFotosTab.jsx"
+    - "src/components/aprovacao/AprovacaoFooter.jsx"
+    - "src/components/aprovacao/AprovacaoModalConfirmacao.jsx"
+    - "src/components/aprovacao/AprovacaoModalImpressao.jsx"
+    - "src/components/aprovacao/AprovacaoFotoZoomModal.jsx"
+    - "src/components/aprovacao/index.js"
+    - "src/pages/cliente/mobile/MobileSecaoItens.jsx"
+    - "tests/unit/supabaseHelpers.test.js"
+    - "tests/unit/aprovacao-orcamento.test.jsx"
+
+  files_modified:
+    - "docs/stories/2.1.fundacao-repositorio-supabase.md"
+    - "docs/stories/epic-2-INDEX.md"
+    - "src/lib/supabase.js"
+    - "src/repositories/funcionariosRepository.js"
+    - "src/pages/AprovacaoOrcamentoClientePage.jsx"
+    - "src/pages/cliente/ClienteServicosPage.jsx"
+    - "src/pages/cliente/mobile/MobileClienteServicosPage.jsx"
+
+  protected_uncommitted_files:
+    - "package.json e package-lock.json (dependências externas de MFA)"
+    - "src/context/AdminAuthContext.jsx (fluxo robusto de MFA TOTP)"
+    - "src/pages/GestaoMfaConfigurarPage.jsx"
+    - "tests/unit/repositories.test.js"
+    - "tests/unit/mfa-auth-flow.test.jsx"
+    - "src/components/garantias/ e src/pages/dashboard/garantias/ (módulo de Garantias adiado pelo proprietário)"
+    - "src/constants/mockGarantias.js e tests/unit/garantias-smoke.test.jsx"
+    - "supabase/migrations/20260924120000_remover_dados_mock.sql"
+
+  quality_gates:
+    tests: "11 suites, 102 passed, 0 failed (100% verde)"
+    lint: "0 errors, 18 warnings preexistentes"
+    file_limits: "Todos os arquivos novos/editados <= 400 linhas"
+
+  next_actions:
+    - "Opção 1: Continuar o saneamento arquitetural da Story 2.0 (Task 2: Decomposição de Suprimentos - ComprasPage com 1.967L, CotacaoPage com 1.531L e CotacaoModalForm com 1.401L)"
+    - "Opção 2: Avançar com a migração técnica Supabase da Onda A (Story 2.2: Triggers de Auditoria e updated_at)"
+    - "Revisão formal da Story 2.1 pelo @po (*review-story 2.1)"

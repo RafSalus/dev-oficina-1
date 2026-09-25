@@ -1,4 +1,10 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { isSupabaseConfigured, getSupabaseDataClient } from '../lib/supabase'
+import {
+  executarRepositorio,
+  executarOperacao,
+  paraCamelCase,
+  isModoRemoto,
+} from './supabaseHelpers'
 
 export const STORAGE_KEY_FUNCIONARIOS = 'dev_oficina_funcionarios'
 
@@ -34,10 +40,7 @@ function getStoredFuncionarios() {
       return []
     }
     const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) {
-      return parsed
-    }
-    return []
+    return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }
@@ -54,6 +57,21 @@ function setStoredFuncionarios(lista) {
   }
 }
 
+function normalizarFuncionarioCamel(f) {
+  if (!f) return null
+  const itemCamel = paraCamelCase(f)
+  return {
+    ...itemCamel,
+    cargoLabel: f.cargo_label || itemCamel.cargoLabel || itemCamel.cargo,
+    boxElevador: f.box_elevador || itemCamel.boxElevador || '',
+    comissaoServicos: Number(itemCamel.comissaoServicos ?? 0),
+    comissaoPecas: Number(itemCamel.comissaoPecas ?? 0),
+    dataAdmissao: f.data_admissao || itemCamel.dataAdmissao || '',
+    horarioTrabalho: f.horario_trabalho || itemCamel.horarioTrabalho || '',
+    authUserId: f.auth_user_id || itemCamel.authUserId || null,
+  }
+}
+
 /**
  * Carrega a lista de colaboradores com filtros opcionais.
  * @param {Object} [filtros]
@@ -62,28 +80,19 @@ function setStoredFuncionarios(lista) {
  * @returns {Promise<Array>}
  */
 export async function carregarFuncionarios({ apenasAtivos = false, cargo = null } = {}) {
-  let lista = getStoredFuncionarios()
-
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.from('funcionarios').select('*')
-      if (!error && Array.isArray(data) && data.length > 0) {
-        lista = data.map((f) => ({
-          ...f,
-          cargoLabel: f.cargo_label || f.cargoLabel || f.cargo,
-          boxElevador: f.box_elevador || f.boxElevador || '',
-          comissaoServicos: Number(f.comissao_servicos ?? f.comissaoServicos ?? 0),
-          comissaoPecas: Number(f.comissao_pecas ?? f.comissaoPecas ?? 0),
-          dataAdmissao: f.data_admissao || f.dataAdmissao || '',
-          horarioTrabalho: f.horario_trabalho || f.horarioTrabalho || '',
-          authUserId: f.auth_user_id || f.authUserId || null,
-        }))
-        setStoredFuncionarios(lista)
-      }
-    } catch {
-      // Fallback transparente para cache local
-    }
-  }
+  let lista = await executarRepositorio({
+    remoto: async () => {
+      const client = getSupabaseDataClient()
+      const resposta = await client.from('funcionarios').select('*')
+      const data = await executarOperacao(resposta, {
+        entidade: 'funcionarios',
+        operacao: 'carregarFuncionarios',
+      })
+      return (data || []).map(normalizarFuncionarioCamel)
+    },
+    local: () => getStoredFuncionarios(),
+    contexto: { entidade: 'funcionarios', operacao: 'carregarFuncionarios' },
+  })
 
   if (apenasAtivos) {
     lista = lista.filter((f) => f.ativo)
@@ -91,7 +100,7 @@ export async function carregarFuncionarios({ apenasAtivos = false, cargo = null 
   if (cargo) {
     lista = lista.filter((f) => f.cargo === cargo)
   }
-  return Promise.resolve(lista)
+  return lista
 }
 
 /**
@@ -100,9 +109,23 @@ export async function carregarFuncionarios({ apenasAtivos = false, cargo = null 
  * @returns {Promise<Object|null>}
  */
 export async function obterFuncionarioPorId(id) {
-  const lista = getStoredFuncionarios()
-  const found = lista.find((f) => String(f.id) === String(id))
-  return Promise.resolve(found || null)
+  return executarRepositorio({
+    remoto: async () => {
+      const client = getSupabaseDataClient()
+      const resposta = await client.from('funcionarios').select('*').eq('id', id).maybeSingle()
+      const data = await executarOperacao(resposta, {
+        entidade: 'funcionarios',
+        operacao: 'obterFuncionarioPorId',
+      })
+      return normalizarFuncionarioCamel(data) ?? null
+    },
+    local: () => {
+      const lista = getStoredFuncionarios()
+      const found = lista.find((f) => String(f.id) === String(id))
+      return found || null
+    },
+    contexto: { entidade: 'funcionarios', operacao: 'obterFuncionarioPorId' },
+  })
 }
 
 /**
@@ -110,17 +133,16 @@ export async function obterFuncionarioPorId(id) {
  * @returns {Promise<Array>}
  */
 export async function obterMecanicosAtivos() {
-  const lista = getStoredFuncionarios()
-  const elegiveis = lista
+  const lista = await carregarFuncionarios({ apenasAtivos: true })
+  return lista
     .filter(
-      (f) => f.ativo && (f.cargo === 'mecanico' || f.cargo === 'aux_mecanico' || f.cargo === 'gerente')
+      (f) => f.cargo === 'mecanico' || f.cargo === 'aux_mecanico' || f.cargo === 'gerente'
     )
     .map((f) => ({
       ...f,
       value: f.id,
       label: f.nome,
     }))
-  return Promise.resolve(elegiveis)
 }
 
 /**
@@ -129,63 +151,76 @@ export async function obterMecanicosAtivos() {
  * @returns {Promise<Object>}
  */
 export async function salvarFuncionario(funcionario) {
-  const lista = getStoredFuncionarios()
   const id = funcionario.id || `func-${Date.now()}`
-  const index = lista.findIndex((f) => String(f.id) === String(id))
-
   const cargoItem = CARGOS_FUNCIONARIO_OPCOES.find((c) => c.value === funcionario.cargo)
   const cargoLabel = cargoItem ? cargoItem.label : funcionario.cargo
 
-  // authUserId nunca vem do formulário de cadastro — só é gravado pela Edge Function
-  // criar-login-funcionario. Preserva o valor já existente ao editar, para não perder o
-  // vínculo com a conta de login a cada "Salvar Colaborador".
-  const authUserIdExistente = index >= 0 ? lista[index].authUserId : null
+  return executarRepositorio({
+    remoto: async () => {
+      const client = getSupabaseDataClient()
+      const payloadSnake = {
+        id,
+        nome: funcionario.nome,
+        cpf: funcionario.cpf ? funcionario.cpf.replace(/\D/g, '') : null,
+        telefone: funcionario.telefone || null,
+        cargo: funcionario.cargo,
+        cargo_label: funcionario.cargoLabel || cargoLabel,
+        especialidade: funcionario.especialidade || null,
+        email: funcionario.email ? funcionario.email.trim().toLowerCase() : null,
+        box_elevador: funcionario.boxElevador || null,
+        comissao_servicos: Number(funcionario.comissaoServicos) || 0,
+        comissao_pecas: Number(funcionario.comissaoPecas) || 0,
+        data_admissao: funcionario.dataAdmissao || new Date().toISOString().slice(0, 10),
+        horario_trabalho: funcionario.horarioTrabalho || '08:00 às 19:00',
+        ativo: funcionario.ativo !== false,
+        observacoes: funcionario.observacoes || null,
+      }
+      if (funcionario.authUserId) {
+        payloadSnake.auth_user_id = funcionario.authUserId
+      }
 
-  const atualizado = {
-    ...funcionario,
-    id,
-    cargoLabel: funcionario.cargoLabel || cargoLabel,
-    comissaoServicos: Number(funcionario.comissaoServicos) || 0,
-    comissaoPecas: Number(funcionario.comissaoPecas) || 0,
-    ativo: funcionario.ativo !== false,
-    authUserId: funcionario.authUserId || authUserIdExistente || null,
-    dataAtualizacao: new Date().toISOString(),
-  }
+      const resposta = await client
+        .from('funcionarios')
+        .upsert(payloadSnake)
+        .select()
+        .single()
 
-  if (index >= 0) {
-    lista[index] = atualizado
-  } else {
-    atualizado.dataCadastro = new Date().toISOString()
-    lista.unshift(atualizado)
-  }
+      const data = await executarOperacao(
+        resposta,
+        { entidade: 'funcionarios', operacao: 'salvarFuncionario' },
+        { esperaLinhasAfetadas: true }
+      )
 
-  setStoredFuncionarios(lista)
+      return normalizarFuncionarioCamel(data)
+    },
+    local: () => {
+      const listaLocal = getStoredFuncionarios()
+      const index = listaLocal.findIndex((f) => String(f.id) === String(id))
+      const authUserIdExistente = index >= 0 ? listaLocal[index].authUserId : null
 
-  if (isSupabaseConfigured && supabase) {
-    try {
-      await supabase.from('funcionarios').upsert({
-        id: atualizado.id,
-        nome: atualizado.nome,
-        cpf: atualizado.cpf,
-        telefone: atualizado.telefone,
-        cargo: atualizado.cargo,
-        cargo_label: atualizado.cargoLabel,
-        especialidade: atualizado.especialidade || null,
-        email: atualizado.email || null,
-        box_elevador: atualizado.boxElevador || null,
-        comissao_servicos: atualizado.comissaoServicos,
-        comissao_pecas: atualizado.comissaoPecas,
-        data_admissao: atualizado.dataAdmissao || new Date().toISOString().slice(0, 10),
-        horario_trabalho: atualizado.horarioTrabalho || '08:00 às 19:00',
-        ativo: atualizado.ativo,
-        observacoes: atualizado.observacoes || null,
-      })
-    } catch {
-      // Fallback em caso de offline
-    }
-  }
+      const atualizado = {
+        ...funcionario,
+        id,
+        cargoLabel: funcionario.cargoLabel || cargoLabel,
+        comissaoServicos: Number(funcionario.comissaoServicos) || 0,
+        comissaoPecas: Number(funcionario.comissaoPecas) || 0,
+        ativo: funcionario.ativo !== false,
+        authUserId: funcionario.authUserId || authUserIdExistente || null,
+        dataAtualizacao: new Date().toISOString(),
+      }
 
-  return Promise.resolve(atualizado)
+      if (index >= 0) {
+        listaLocal[index] = atualizado
+      } else {
+        atualizado.dataCadastro = new Date().toISOString()
+        listaLocal.unshift(atualizado)
+      }
+      setStoredFuncionarios(listaLocal)
+      return atualizado
+    },
+    contexto: { entidade: 'funcionarios', operacao: 'salvarFuncionario' },
+    esperaLinhasAfetadas: true,
+  })
 }
 
 /**
@@ -195,25 +230,41 @@ export async function salvarFuncionario(funcionario) {
  * @returns {Promise<Object|null>}
  */
 export async function alternarStatusFuncionario(id, ativo) {
-  const lista = getStoredFuncionarios()
-  const index = lista.findIndex((f) => String(f.id) === String(id))
-  if (index >= 0) {
-    lista[index] = {
-      ...lista[index],
-      ativo: Boolean(ativo),
-      dataAtualizacao: new Date().toISOString(),
-    }
-    setStoredFuncionarios(lista)
+  return executarRepositorio({
+    remoto: async () => {
+      const client = getSupabaseDataClient()
+      const resposta = await client
+        .from('funcionarios')
+        .update({ ativo: Boolean(ativo) })
+        .eq('id', id)
+        .select()
+        .single()
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        await supabase.from('funcionarios').update({ ativo: Boolean(ativo) }).eq('id', id)
-      } catch {}
-    }
+      const data = await executarOperacao(
+        resposta,
+        { entidade: 'funcionarios', operacao: 'alternarStatusFuncionario' },
+        { esperaLinhasAfetadas: true }
+      )
 
-    return Promise.resolve(lista[index])
-  }
-  return Promise.resolve(null)
+      return normalizarFuncionarioCamel(data)
+    },
+    local: () => {
+      const lista = getStoredFuncionarios()
+      const index = lista.findIndex((f) => String(f.id) === String(id))
+      if (index >= 0) {
+        lista[index] = {
+          ...lista[index],
+          ativo: Boolean(ativo),
+          dataAtualizacao: new Date().toISOString(),
+        }
+        setStoredFuncionarios(lista)
+        return lista[index]
+      }
+      return null
+    },
+    contexto: { entidade: 'funcionarios', operacao: 'alternarStatusFuncionario' },
+    esperaLinhasAfetadas: true,
+  })
 }
 
 /**
@@ -222,43 +273,50 @@ export async function alternarStatusFuncionario(id, ativo) {
  * @returns {Promise<boolean>}
  */
 export async function excluirFuncionario(id) {
-  const lista = getStoredFuncionarios()
-  const filtrada = lista.filter((f) => String(f.id) !== String(id))
-  if (filtrada.length !== lista.length) {
-    setStoredFuncionarios(filtrada)
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        await supabase.from('funcionarios').delete().eq('id', id)
-      } catch {}
-    }
-
-    return Promise.resolve(true)
-  }
-  return Promise.resolve(false)
+  return executarRepositorio({
+    remoto: async () => {
+      const client = getSupabaseDataClient()
+      const resposta = await client.from('funcionarios').delete().eq('id', id).select()
+      await executarOperacao(
+        resposta,
+        { entidade: 'funcionarios', operacao: 'excluirFuncionario' },
+        { esperaLinhasAfetadas: true }
+      )
+      return true
+    },
+    local: () => {
+      const lista = getStoredFuncionarios()
+      const filtrada = lista.filter((f) => String(f.id) !== String(id))
+      if (filtrada.length !== lista.length) {
+        setStoredFuncionarios(filtrada)
+        return true
+      }
+      return false
+    },
+    contexto: { entidade: 'funcionarios', operacao: 'excluirFuncionario' },
+    esperaLinhasAfetadas: true,
+  })
 }
 
 /**
  * Provisiona o login real (Supabase Auth) de um colaborador já cadastrado, via Edge Function
- * (única forma segura de usar a service_role key — nunca é exposta ao navegador). O funcionário
- * recebe um e-mail de convite do Supabase para definir a própria senha; o cargo é convertido
- * para o papel de portal correspondente (ver PAPEL_POR_CARGO) e gravado em app_metadata.role.
- *
- * Requer que `funcionario.email` esteja preenchido e que ainda não exista `authUserId`.
+ * (única forma segura de usar a service_role key — nunca é exposta ao navegador).
  * @param {string} funcionarioId
  * @returns {Promise<{ok: boolean, message?: string, authUserId?: string}>}
  */
 export async function criarLoginFuncionario(funcionarioId) {
-  if (!isSupabaseConfigured || !supabase) {
+  const client = getSupabaseDataClient()
+  if (!isSupabaseConfigured || !client) {
     return { ok: false, message: 'Recurso indisponível: Supabase não está configurado neste ambiente.' }
   }
 
   try {
-    const { data, error } = await supabase.functions.invoke('criar-login-funcionario', {
+    const { data, error } = await client.functions.invoke('criar-login-funcionario', {
       body: { funcionarioId },
     })
 
     if (error) {
+      console.error('[funcionariosRepository][criarLoginFuncionario] Erro na Edge Function:', error)
       const mensagem = data?.message || error.message || 'Erro ao criar acesso de login.'
       return { ok: false, message: mensagem }
     }
@@ -266,15 +324,18 @@ export async function criarLoginFuncionario(funcionarioId) {
       return { ok: false, message: data?.message || 'Erro ao criar acesso de login.' }
     }
 
-    const lista = getStoredFuncionarios()
-    const index = lista.findIndex((f) => String(f.id) === String(funcionarioId))
-    if (index >= 0) {
-      lista[index] = { ...lista[index], authUserId: data.authUserId }
-      setStoredFuncionarios(lista)
+    if (!isModoRemoto()) {
+      const lista = getStoredFuncionarios()
+      const index = lista.findIndex((f) => String(f.id) === String(funcionarioId))
+      if (index >= 0) {
+        lista[index] = { ...lista[index], authUserId: data.authUserId }
+        setStoredFuncionarios(lista)
+      }
     }
 
     return { ok: true, authUserId: data.authUserId }
   } catch (err) {
+    console.error('[funcionariosRepository][criarLoginFuncionario] Falha de comunicação:', err)
     return { ok: false, message: err.message || 'Erro ao chamar o serviço de criação de login.' }
   }
 }
