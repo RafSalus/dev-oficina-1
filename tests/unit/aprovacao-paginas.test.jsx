@@ -153,4 +153,13 @@ describe('Página pública /aprovacao/:id — página inteira (Story 2.0 / QA TE
     expect(screen.getByText('Orçamento não localizado')).toBeTruthy()
     expect(screen.queryByText('Pastilha de Freio')).toBeNull()
   })
+
+  it('mobile: preço da linha considera o desconto e mostra a marca da peça', async () => {
+    const { montarServicoMobile } = await import('../../src/utils/aprovacao/aprovacaoMobile')
+    const servico = montarServicoMobile({ numeroOS: '1' }, [
+      { itemId: 'x', categoria: 'peca', nome: 'Disco', marca: 'Fremax', quantidade: 2, precoUnitario: 100, subtotal: 180, classificacao: 'essencial', motivo: '' },
+    ])
+    expect(servico.pecas[0].preco * servico.pecas[0].quantidade).toBe(180)
+    expect(servico.pecas[0].marca).toBe('Fremax')
+  })
 })

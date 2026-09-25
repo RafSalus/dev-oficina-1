@@ -17,9 +17,10 @@ function itemMobile(item) {
     id: item.itemId,
     nome: item.nome,
     codigo: item.codigo,
-    marca: item.parceiroNome || '',
+    marca: item.marca || item.parceiroNome || '',
     quantidade: item.quantidade,
-    preco: item.precoUnitario,
+    // Preço líquido por unidade: a tela mobile exibe preco x quantidade, que precisa bater com o subtotal (já com desconto)
+    preco: item.quantidade > 0 ? item.subtotal / item.quantidade : item.precoUnitario,
     tipo: essencial ? 'essencial' : 'opcional',
     motivoSeguranca: essencial ? item.motivo : '',
     motivoOpcional: essencial ? '' : item.motivo,

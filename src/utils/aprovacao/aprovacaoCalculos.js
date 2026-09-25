@@ -53,6 +53,7 @@ export function normalizarItensAprovaveis(dadosOS, metadataPorItem) {
         categoria,
         nome: item.nome,
         codigo: item.codigo,
+        marca: item.marca || '',
         quantidade: qtd,
         precoUnitario: preco,
         subtotal: Math.max(0, preco * qtd - desconto),
