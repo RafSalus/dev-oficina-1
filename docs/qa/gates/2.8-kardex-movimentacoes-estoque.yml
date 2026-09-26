@@ -1,0 +1,59 @@
+schema: 1
+story: '2.8'
+story_title: 'Migração de Estoque e Movimentações (Kardex) para Supabase Postgres'
+gate: PASS
+status_reason: >-
+  Kardex e movimentações de estoque migrados para o Supabase Postgres com transacionalidade atômica via RPC registrar_movimentacao_estoque.
+  Trigger trg_before_update_pecas_estoque protege contra alteração manual de saldo fora do Kardex (ADR-005 §2.5).
+  Índice parcial único previne saída duplicada para o mesmo item de OS.
+  RLS FR25 aplicada (Secretaria sob em_horario_operacional(), mecânicos sem acesso direto D5).
+  Fail-closed implementado, 286/286 testes passando no Vitest, lint zerado e NFR17 respeitado (< 270 linhas em todos os arquivos).
+reviewer: 'Dara (@data-engineer) / Quinn (@qa)'
+reviewed_revision: 'branch feat/2.8-kardex-movimentacoes-estoque'
+updated: '2026-09-26T14:36:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926180000_estoque_kardex_e_movimentacoes.sql
+  repositories:
+    - src/repositories/estoqueRepository.js
+    - src/repositories/mapeadores/estoque.js
+  tests:
+    - tests/unit/estoqueRepository.test.js
+
+evidence:
+  commands:
+    - cmd: 'npm test'
+      result: '36 arquivos de teste passaram, 286 testes aprovados, 0 falhas (14.28s)'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint'
+    - cmd: 'npm run build'
+      result: 'Build de produção Vite concluído com sucesso em 8.98s'
+    - cmd: 'wc -l nos módulos modificados/criados'
+      result: 'estoqueRepository (261), mapeadores/estoque (66), migration (179), unit test (266). Todos < 270 linhas (NFR17).'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'estoqueRepository mantém interface pública idêntica (obterEstoque, obterMovimentacoes, registrarMovimentacao, etc.).'}
+  AC2: {status: PASS, note: 'Mapeamento bidirecional completo em src/repositories/mapeadores/estoque.js com camelCase/snake_case e conversões seguras.'}
+  AC3: {status: PASS, note: 'Transacionalidade atômica garantida via RPC registrar_movimentacao_estoque com lock FOR UPDATE na peça.'}
+  AC4: {status: PASS, note: 'Saldo insuficiente rejeitado atomicamente com erro SALDO_INSUFICIENTE (SQLSTATE P0001).'}
+  AC5: {status: PASS, note: 'Índice único condicional uq_estoque_movimentacoes_os_item_saida impede deduções duplicadas de saída para o mesmo item de OS.'}
+  AC6: {status: PASS, note: 'Trigger trg_before_update_pecas_estoque bloqueia UPDATE direto em pecas.estoque_atual fora do Kardex (ADR-005 §2.5).'}
+  AC7: {status: PASS, note: 'RLS FR25 aplicada: admin total, secretaria SELECT e INSERT sob em_horario_operacional(), mecânicos sem permissão direta (D5). Nenhuma política pública/anon.'}
+  AC8: {status: PASS, note: 'Padrão fail-closed sem fallback para localStorage e suporte limpo a modo local.'}
+  AC9: {status: PASS, note: 'Suíte de testes unitários abrangente em tests/unit/estoqueRepository.test.js com mocks e simulação de concorrência e saldo.'}
+  AC10: {status: PASS, note: 'Qualidade: zero erros de lint, 286/286 testes verdes, build verde, NFR17 respeitado.'}
+
+nfr_validation:
+  security: {status: PASS, notes: 'RLS FR25 rigorosa: sem escrita anônima, mecânicos bloqueados de acesso direto ao Kardex (D5), janela comercial D4 aplicada à secretaria.'}
+  performance: {status: PASS, notes: 'RPC transacional reduz roundtrips cliente-servidor a 1 única chamada atômica.'}
+  reliability: {status: PASS, notes: 'Locking FOR UPDATE e triggers garantem integridade referencial e consistência estrita do saldo.'}
+  maintainability: {status: PASS, notes: 'Mapeadores isolados e repositório limpo (< 270 linhas) em conformidade com NFR17.'}
+
+recommendations:
+  immediate:
+    - 'Comitar a Story 2.8 e prosseguir para Story 2.9 (Compras e Cotações).'
+  future:
+    - 'Integrar baixa de estoque automática na conclusão/aprovação de OS nas stories do módulo de OS (Wave E).'
+
+waiver: {active: false}
