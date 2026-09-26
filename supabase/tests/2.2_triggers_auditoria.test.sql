@@ -118,22 +118,23 @@ RESET ROLE;
 DO $$
 DECLARE
   v_updated timestamptz;
-  v_log_updated timestamptz;
 BEGIN
   SELECT updated_at INTO v_updated FROM public.clientes WHERE id = 'cli-teste-22';
   IF v_updated IS DISTINCT FROM now() THEN
     RAISE EXCEPTION 'FALHA AC5: updated_at deveria ser now() (%), ficou %', now(), v_updated;
   END IF;
 
-  -- A auditoria (AFTER) registra o valor já corrigido pelo BEFORE UPDATE
-  SELECT (valor_novo ->> 'updated_at')::timestamptz INTO v_log_updated
-  FROM public.audit_logs
-  WHERE tabela = 'clientes' AND registro_id = 'cli-teste-22' AND operacao = 'UPDATE';
-  IF v_log_updated IS DISTINCT FROM now() THEN
-    RAISE EXCEPTION 'FALHA AC5: auditoria registrou updated_at do cliente (%), não do servidor', v_log_updated;
+  -- Desde a Story 2.2b (ADR-008 §3.1) o UPDATE grava só as colunas alteradas, sem updated_at
+  IF NOT EXISTS (
+    SELECT 1 FROM public.audit_logs
+    WHERE tabela = 'clientes' AND registro_id = 'cli-teste-22' AND operacao = 'UPDATE'
+      AND valor_novo ->> 'nome' = 'Cliente Teste 2.2 (editado)'
+      AND NOT (valor_novo ? 'updated_at')
+  ) THEN
+    RAISE EXCEPTION 'FALHA AC5: auditoria do UPDATE deveria conter o nome alterado e não o updated_at';
   END IF;
 
-  RAISE NOTICE 'OK AC5: updated_at sobrescrito pelo servidor e refletido na auditoria';
+  RAISE NOTICE 'OK AC5: updated_at sobrescrito pelo servidor; auditoria registra só o que mudou';
 END;
 $$;
 

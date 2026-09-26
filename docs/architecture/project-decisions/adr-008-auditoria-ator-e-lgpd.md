@@ -72,6 +72,16 @@ A abordagem segue o padrão de mercado para trilhas de auditoria com dados pesso
 
 ---
 
+### 3.6 Emenda de implementação (Story 2.2b, 2026-09-26)
+
+Ajustes feitos pelo `@data-engineer` ao implementar o §3.4, para a anonimização cumprir o objetivo:
+
+- **Nome do titular:** `nome`, `nome_fantasia` e `razao_social` também são anonimizados, **só** quando a tabela é de pessoa (`clientes`, `funcionarios`, `cadastros_clientes`). Em `pecas`/`servicos`, `nome` é o nome do item e fica intacto. Sem isso a "anonimização" deixaria o titular identificável pelo nome.
+- **`telefone_secundario`** (coluna existente em `clientes`) entra na lista.
+- **Snapshot na OS:** ao anonimizar `('clientes', id)`, a função também anonimiza `snapshot_cliente` nas linhas de `ordens_servico` cujo `cliente_id` é o do titular — o snapshot fica nas linhas da OS, cujo `registro_id` é o id da OS.
+- **Quem pode chamar:** além do admin, `service_role` e processos sem JWT (`sistema`), porque os jobs de retenção do ADR-007 §3.9 também chamam a função (§5). Usuário autenticado sem papel admin recebe `insufficient_privilege`.
+- **Linhas legadas (§3.5):** como nenhuma RPC pública por token existia antes desta migration, **todas** as linhas `publico_token` já gravadas são reclassificadas para `sistema` (em produção era 1).
+
 ## 4. Consequências
 
 **Positivas**
@@ -90,7 +100,7 @@ A abordagem segue o padrão de mercado para trilhas de auditoria com dados pesso
 
 | Story | Impacto |
 |---|---|
-| **2.2b (nova)** | Implementa §2 e §3: colunas `db_usuario` e `token_acesso_id`; nova versão de `fn_audit_trigger()` (classificação por claim, diff no `UPDATE`); `expurgar_audit_logs()` + agendamento `pg_cron`; `anonimizar_titular_auditoria()`; reclassificação da linha legada. |
+| **2.2b** | Implementa §2 e §3 (com a emenda do §3.6): colunas `db_usuario` e `token_acesso_id`; nova versão de `fn_audit_trigger()` (classificação por claim, diff no `UPDATE`); `expurgar_audit_logs()` + agendamento `pg_cron`; `anonimizar_titular_auditoria()`; reclassificação da linha legada. |
 | 2.5, 2.6, 2.7 | Dependem da 2.2b; colunas pessoais novas entram na lista do §3.4. |
 | 2.17 | RPCs públicas fazem `set_config('app.token_acesso_id', ...)` antes de escrever. |
 | 2.20a/2.20c | O job de retenção de 3 anos chama `anonimizar_titular_auditoria('cadastros_clientes', id)` antes de excluir o cadastro. |
