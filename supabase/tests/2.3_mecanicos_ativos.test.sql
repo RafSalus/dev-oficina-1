@@ -1,7 +1,9 @@
 -- ==============================================================================
 -- Verificação da Story 2.3 — obter_mecanicos_ativos() e funcionario_atual_id()
 --
--- Transacional com ROLLBACK no final: seguro em banco local/dev/produção.
+-- Transacional com ROLLBACK no final: nada persiste. Prefira banco local/dev: dentro da
+-- transação o teste escreve em auth.users (cria uma conta sintética ou vincula por instantes
+-- uma conta sem funcionário), o que em produção deve ser uma decisão consciente.
 -- Uso: supabase db query --linked -f supabase/tests/2.3_mecanicos_ativos.test.sql
 --  ou: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/2.3_mecanicos_ativos.test.sql
 -- Qualquer asserção falha interrompe com RAISE EXCEPTION 'FALHA ...'.
@@ -79,6 +81,10 @@ SET LOCAL ROLE authenticated;
 INSERT INTO t23_resultado SELECT 'mecanico_rpc', to_jsonb(count(*)) FROM public.obter_mecanicos_ativos() WHERE id LIKE 't23-%';
 
 SELECT set_config('request.jwt.claims',
+  '{"sub":"66666666-6666-6666-6666-666666666666","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+INSERT INTO t23_resultado SELECT 'admin_rpc', to_jsonb(count(*)) FROM public.obter_mecanicos_ativos() WHERE id LIKE 't23-%';
+
+SELECT set_config('request.jwt.claims',
   '{"sub":"44444444-4444-4444-4444-444444444444","role":"authenticated","app_metadata":{}}', true);
 INSERT INTO t23_resultado SELECT 'sem_papel_rpc', to_jsonb(count(*)) FROM public.obter_mecanicos_ativos();
 RESET ROLE;
@@ -88,10 +94,13 @@ BEGIN
   IF (SELECT valor FROM t23_resultado WHERE caso = 'mecanico_rpc') <> to_jsonb(3) THEN
     RAISE EXCEPTION 'FALHA AC2: mecânico deveria ver 3 elegíveis de teste';
   END IF;
+  IF (SELECT valor FROM t23_resultado WHERE caso = 'admin_rpc') <> to_jsonb(3) THEN
+    RAISE EXCEPTION 'FALHA AC2: admin deveria ver 3 elegíveis de teste';
+  END IF;
   IF (SELECT valor FROM t23_resultado WHERE caso = 'sem_papel_rpc') <> to_jsonb(0) THEN
     RAISE EXCEPTION 'FALHA AC2: usuário sem papel não deveria receber mecânicos';
   END IF;
-  RAISE NOTICE 'OK AC2: mecânico lista; autenticado sem papel recebe lista vazia';
+  RAISE NOTICE 'OK AC2: mecânico e admin listam; autenticado sem papel recebe lista vazia';
 END;
 $$;
 

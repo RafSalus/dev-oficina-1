@@ -1,1 +1,2 @@
-- [Seed PII de funcionários](project_seed-pii-funcionarios.md) — seed do admin foi removido de propósito (e7ef8a4); teste "auto-semear" está desatualizado
+- [Seed PII de funcionários](project_seed-pii-funcionarios.md) — SEED_FUNCIONARIOS deve ficar []; teste "auto-semear" já removido (2026-09-26)
+- [Supabase CLI = produção](project_supabase-prod-qa-policy.md) — CLI vinculada à prod "Oficina": só leitura/contagens e testes com ROLLBACK, sem PII

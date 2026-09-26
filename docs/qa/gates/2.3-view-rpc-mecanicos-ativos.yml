@@ -1,0 +1,160 @@
+schema: 1
+story: '2.3'
+story_title: 'View/RPC de Mecânicos Ativos (Regra 14) + funcionario_atual_id()'
+gate: CONCERNS
+status_reason: >-
+  Os ACs 1 a 8 foram verificados de forma independente: no harness PostgreSQL 17 (6/6 cenários do dev e 4 de 6 mutações extras do QA
+  mortas; as 2 que sobreviveram são lacunas de teste de baixo risco) e no Supabase de produção (teste transacional com exit 0, sem
+  resíduos; grants e estado da conta conferidos só com contagens). Nenhum achado bloqueia. O veredito é CONCERNS porque o teste SQL
+  escreve em auth.users de produção dentro da transação e a correção de dados em produção não tem script versionado.
+reviewer: 'Quinn (@qa)'
+reviewed_revision: 'commit:f42aa96 (branch feat/2.3-mecanicos-ativos), diff main...HEAD'
+updated: '2026-09-26T11:20:00-03:00'
+
+scope:
+  migration:
+    - supabase/migrations/20260926130000_view_mecanicos_ativos.sql
+  source:
+    - src/repositories/funcionariosRepository.js
+  tests:
+    - supabase/tests/2.3_mecanicos_ativos.test.sql
+    - tests/unit/funcionariosRepository.mecanicosAtivos.test.js
+  docs:
+    - docs/stories/2.3.view-rpc-mecanicos-ativos.md
+    - docs/stories/epic-2-INDEX.md
+
+evidence:
+  environment: >-
+    Harness PGlite (PostgreSQL 17 em WASM) no scratchpad da sessão, com stub de auth e todas as migrations. Supabase CLI v2.117.0
+    vinculada ao projeto de produção "Oficina", usada só para leitura (contagens e booleanos) e para o teste transacional que termina
+    em ROLLBACK. Nenhum dado pessoal foi consultado nem exibido.
+  commands:
+    - cmd: 'node run23.mjs (stub, migrations base, 2.3 aplicada duas vezes, teste 2.3, 5 mutações do dev)'
+      result: >-
+        Migration aplicada 2x: o teste passou. As 5 mutações fazem o teste falhar: sem a migration ("function ... does not exist"); RPC
+        expondo telefone ("FALHA AC1 ... expôs {cargo,id,nome,telefone}"); sem filtro de papel ("FALHA AC2"); funcionario_atual_id sem
+        ativo ("FALHA AC4"); anon com EXECUTE ("FALHA: anon não deveria executar").
+    - cmd: 'node qa23.mjs (mutações e sondas extras do QA)'
+      result: >-
+        Mortas: M6 RPC sem ativo=true ("FALHA AC1 ... t23-ina"); M7 cargo secretaria elegível ("FALHA AC1 ... t23-sec"); M8 política
+        lateral dando SELECT à secretaria ("FALHA AC6: secretaria leu 6 linhas"); M11 funcionario_atual_id SECURITY INVOKER ("FALHA AC4
+        ... retornou <NULL>"). Sobreviveram: M9 (admin fora do filtro de papel da RPC) e M10 (sem GRANT explícito de funcionario_atual_id
+        a authenticated). A M10 é equivalente, porque os default privileges do schema public já concedem EXECUTE a authenticated.
+        Sondas: admin/secretaria/mecanico recebem da RPC a linha elegível, e papel vazio ou role só em user_metadata recebe 0 linhas.
+        No SELECT direto em funcionarios, o admin leu 2 linhas e os demais 0. anon: "permission denied for function obter_mecanicos_ativos".
+        A RPC retorna só (id, nome, cargo).
+    - cmd: 'npx supabase db query --linked -f supabase/tests/2.3_mecanicos_ativos.test.sql'
+      result: >-
+        exit 0, sem FALHA. A sonda de controle com RAISE EXCEPTION pelo mesmo caminho retorna exit 1, então o exit 0 é significativo.
+        Antes e depois: audit_logs 1/1, auth.users 1/1, funcionarios t23-* 0, contas vinculadas 1/1, conta 5555... 0. Não há triggers
+        em auth.users.
+    - cmd: 'consultas somente leitura no remoto (pg_proc, pg_policies, pg_depend, contagens)'
+      result: >-
+        As duas funções são SECURITY DEFINER, com search_path="", dono postgres, anon_exec=false, authenticated_exec=true e
+        public_exec=false. funcionarios tem uma única política ("Admin total funcionarios", ALL, papel_usuario()='admin'). Nenhuma view
+        depende de funcionarios, e as únicas funções SECURITY DEFINER que citam a tabela são as duas desta story. Migration 20260926130000
+        registrada. Estado da conta: total 1, com app_metadata.role=admin 1, com role em user_metadata 0, vinculada 1 (admin-rafael,
+        ativo, cargo analista). O único audit_log de funcionarios é UPDATE, publico_token, sem vínculo antes e com vínculo depois, em
+        2026-09-26 14:08 UTC. Elegíveis para a RPC em produção: 0.
+    - cmd: 'npx eslint --quiet src/ tests/'
+      result: '0 erros (exit 0).'
+    - cmd: 'npm test'
+      result: '29 arquivos / 204 testes, todos passam.'
+    - cmd: 'wc -l'
+      result: 'migration 81, teste SQL 174, funcionariosRepository.js 363, teste Vitest 108. Todos com até 400 linhas.'
+    - cmd: 'coderabbit'
+      result: 'CLI ausente (~/.local/bin/coderabbit não existe). Revisão automatizada não executada.'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'RPC com projeção fixa (id, nome, cargo), filtro ativo e cargos mecanico/aux_mecanico/gerente, iguais ao código anterior. A decisão RPC x VIEW está correta e justificada no cabeçalho da migration e no Dev Agent Record: uma VIEW security_invoker exigiria SELECT na tabela, e o RLS filtra linhas, não colunas.'}
+  AC2: {status: PASS, note: 'papel_usuario() IN (admin, secretaria, mecanico), lido de app_metadata. Qualquer outro papel recebe lista vazia. A política "Admin total funcionarios" está intacta em produção e não há view nem outra função SECURITY DEFINER que exponha a tabela. anon sem EXECUTE. O caso admin não é testado no SQL (TEST-002).'}
+  AC3: {status: PASS, note: 'executarRepositorio + client.rpc + executarOperacao, sem fallback. O erro vira ErroRepositorio (testado com localStorage populado). Retorna Promise<Array> com value/label, e a projeção mínima vale nos dois modos.'}
+  AC4: {status: PASS, note: 'Corpo idêntico ao ADR-005 §2.8, com REVOKE de PUBLIC/anon e GRANT a authenticated (§2.9 regra 2). auth_user_id é UNIQUE, então o resultado escalar é determinístico. Retorna NULL para sessão sem vínculo, funcionário inativo e sessão sem sub (testado no harness e em produção).'}
+  AC5: {status: PASS, note: '5 testes Vitest: RPC em vez de from(), remoção de CPF/telefone/e-mail/comissão mesmo quando vêm na resposta, fail-closed, lista vazia e modo local com a mesma projeção.'}
+  AC6: {status: PASS, note: 'Coberto por teste SQL automatizado, e não só documentado: a secretaria lê 0 linhas de funcionarios. Executado em produção com ROLLBACK. A mutação M8 prova que o teste detecta uma porta lateral. Ver TEST-001 sobre o risco de rodar em produção.'}
+  AC7: {status: PASS, note: 'Nenhum arquivo de UI no diff. Os consumidores só renderizam id/nome: SeletorMecanicosGrade (mec.nome), AgendaGradeSemanal/MobileAbaGrade (mecanicoAtivo.nome), opções com value/label e empenho com mec.nome. telefone/comissaoServicos/especialidade/boxElevador/cargoLabel ficam undefined em AbaItensAtribuicao.jsx:26-30 e MobileSecaoCliente.jsx:79, mas não são exibidos. A única mudança perceptível é a ordem (MNT-001). A regressão manual de UI prevista em Testing não foi executada (REQ-001).'}
+  AC8: {status: PASS, note: 'lint com 0 erros, 204/204 testes, todos os arquivos com até 400 linhas.'}
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    category: tests
+    refs: ['supabase/tests/2.3_mecanicos_ativos.test.sql:4', 'supabase/tests/2.3_mecanicos_ativos.test.sql:104-115']
+    description: >-
+      O teste SQL se declara "seguro em produção" e foi rodado em produção. Hoje, como a única conta já está vinculada, ele insere dentro da
+      transação uma conta sintética (5555...) em auth.users. Se houver uma conta real sem vínculo, ele vincula temporariamente essa conta
+      real a t23-mec. Também escreve em funcionarios e dispara a trigger de auditoria. Tudo é desfeito pelo ROLLBACK (verificado: 0
+      resíduos, audit_logs e auth.users inalterados), mas ainda são escritas no schema auth de produção, com locks e dependência de que
+      nenhuma coluna ou trigger futura do GoTrue tenha efeito fora da transação.
+    recommendation: >-
+      Tirar "produção" do cabeçalho e rodar este teste em Supabase local ou em uma branch/preview do projeto. Se for preciso manter
+      em produção, simular a sessão sem tocar auth.users (por exemplo, vincular t23-mec a um uuid inexistente com a FK adiada, ou apenas
+      checar funcionario_atual_id() por claims) e registrar essa política de execução na Story 2.4 (CI).
+  - id: 'PROC-001'
+    severity: medium
+    category: requirements
+    refs: ['docs/stories/2.3.view-rpc-mecanicos-ativos.md (Dev Agent Record, "Achado em produção")']
+    description: >-
+      O registro da correção de dados em produção é fiel. Confirmado por contagens: 1 conta, app_metadata.role=admin, nenhum role em
+      user_metadata, vinculada a admin-rafael (ativo, cargo analista), e um audit_log UPDATE publico_token com o vínculo passando de nulo
+      para preenchido em 14:08 UTC. Não houve efeito colateral além desse audit_log. Porém: (a) a alteração em auth.users não deixa trilha
+      no banco, porque não há trigger em auth.users; (b) não existe script versionado da correção, então outro ambiente (local, preview,
+      restore) volta ao estado quebrado; (c) o audit_log guarda o snapshot completo da linha, com PII (SEC-003 do gate 2.2), e aparece como
+      chamada pública (SEC-001 do gate 2.2).
+    recommendation: >-
+      Registrar o procedimento como runbook ou script idempotente em docs/ ou scripts/ (sem ids/PII hardcoded, com as guardas de 1 linha).
+      Considerar que a Edge Function criar-login-funcionario/cadastro de admin já garanta papel e vínculo. Tratar a atribuição do
+      publico_token junto com o SEC-001 da 2.2.
+  - id: 'TEST-002'
+    severity: low
+    category: tests
+    refs: ['supabase/tests/2.3_mecanicos_ativos.test.sql:74-95', 'supabase/migrations/20260926130000_view_mecanicos_ativos.sql:36']
+    description: 'O AC2 exige leitura para admin, mas o teste SQL só exercita secretaria, mecânico e sem papel. A mutação que retira admin do filtro sobrevive (M9).'
+    recommendation: 'Adicionar o caso admin (espera 3 elegíveis t23-*) ao bloco 2 do teste.'
+  - id: 'REQ-001'
+    severity: low
+    category: requirements
+    refs: ['docs/stories/2.3.view-rpc-mecanicos-ativos.md (Testing, "Regressão de UI")']
+    description: >-
+      A regressão manual de UI (Agenda e Nova OS como secretaria com Supabase configurado) não foi executada. Em produção há 0
+      funcionários elegíveis (o único cadastro é o analista/admin), então a Agenda e a Nova OS continuam com a lista vazia até haver
+      mecânicos cadastrados. Isso não é defeito da story, mas a "correção de comportamento real" ainda não pode ser observada.
+    recommendation: 'Depois de cadastrar o primeiro mecânico, abrir Agenda e Nova OS como secretaria e anexar a evidência. Pode entrar no roteiro da Story 2.4.'
+  - id: 'MNT-001'
+    severity: low
+    category: code
+    refs: ['supabase/migrations/20260926130000_view_mecanicos_ativos.sql:37', 'src/repositories/funcionariosRepository.js:162-165', 'src/hooks/useAgendaWorkflow.js:150-154']
+    description: >-
+      O modo remoto ordena por nome (ORDER BY f.nome), e o modo local mantém a ordem de inserção. Como a Agenda seleciona por padrão
+      mecanicosLista[0], o mecânico pré-selecionado pode mudar em relação ao comportamento anterior e diferir entre os modos. A lista de
+      cargos elegíveis também está duplicada: CARGOS_ELEGIVEIS_ATRIBUICAO (JS, linha 131) e o IN do SQL (linha 35).
+    recommendation: 'Ordenar também no modo local (localeCompare em nome) e comentar nos dois pontos que a lista deve ser mantida em sincronia.'
+  - id: 'MNT-002'
+    severity: low
+    category: code
+    refs: ['src/pages/dashboard/nova-os/components/abas/AbaItensAtribuicao.jsx:26-30', 'src/pages/dashboard/nova-os/mobile/components/MobileSecaoCliente.jsx:79']
+    description: 'Campos mortos: cargoLabel, especialidade, boxElevador, comissaoServicos e telefone continuam sendo copiados para o estado, mas agora são sempre undefined. Não há efeito visual (verificado), só ruído que sugere que esses dados existem no fluxo da secretaria.'
+    recommendation: 'Remover esses campos numa story de UI futura. Fora do escopo da 2.3 (AC7 proíbe alteração de UI).'
+  - id: 'DOC-001'
+    severity: low
+    category: docs
+    refs: ['docs/stories/2.3.view-rpc-mecanicos-ativos.md:118-123']
+    description: 'Os checkboxes da Definition of Done estão todos desmarcados, embora Tasks e Dev Agent Record indiquem conclusão. Repete o DOC-002 da 2.2.'
+    recommendation: '@dev/@po marcarem a DoD refletindo o estado real.'
+
+nfr_validation:
+  security: {status: CONCERNS, notes: 'RPC com projeção hardcoded, filtro de papel via app_metadata, search_path vazio, objetos qualificados, anon/PUBLIC sem EXECUTE, nenhuma porta lateral para funcionarios (verificado em produção). As ressalvas são operacionais (TEST-001, PROC-001).'}
+  performance: {status: PASS, notes: 'Funções SQL STABLE simples sobre uma tabela pequena; auth_user_id UNIQUE já é indexado. Uma chamada RPC substitui o select * anterior (menos bytes trafegados).'}
+  reliability: {status: PASS, notes: 'Idempotente (aplicada 2x), transacional, fail-closed no repositório; NULL seguro em funcionario_atual_id().'}
+  maintainability: {status: PASS, notes: 'Migration coesa de 81 linhas com decisão e rollback no cabeçalho; repositório segue o wrapper da 2.1. Ver MNT-001/002.'}
+
+recommendations:
+  immediate: []
+  future:
+    - 'TEST-001: executar o teste 2.3 fora de produção e remover a escrita em auth.users (Story 2.4).'
+    - 'PROC-001: versionar o procedimento de papel/vínculo do admin como runbook/script idempotente.'
+    - 'TEST-002: adicionar o caso admin ao teste SQL.'
+    - 'REQ-001: regressão de UI como secretaria depois de cadastrar o primeiro mecânico.'
+    - 'MNT-001/MNT-002/DOC-001: ordenação consistente, limpeza dos campos mortos e DoD.'
+
+waiver: {active: false}
