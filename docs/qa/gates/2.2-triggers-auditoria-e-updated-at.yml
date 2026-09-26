@@ -1,0 +1,141 @@
+schema: 1
+story: '2.2'
+story_title: 'Triggers de Auditoria Imutável e updated_at Automático'
+gate: CONCERNS
+status_reason: >-
+  A implementação atende aos ACs 1 a 6 e 8, verificados de forma independente em PostgreSQL 17 real (PGlite). A migration aplica duas
+  vezes sem erro e instala 19 triggers; o teste SQL passa; as 4 mutações do dev e mais 3 do QA fazem o teste falhar; o rollback do cabeçalho
+  funciona. Nenhum achado bloqueia. O veredito é CONCERNS, e não PASS, por três motivos: o AC7 não foi verificado em Supabase real; escritas
+  com service_role (a Edge Function criar-login-funcionario, que já existe) serão registradas como 'publico_token', o que mistura a trilha do
+  vetor anônimo; e o stub de auth está dentro de supabase/tests/, pasta que `supabase test db` provavelmente executa.
+reviewer: 'Quinn (@qa)'
+reviewed_revision: 'commit:2a9724a (branch feat/2.2-triggers-auditoria), diff main...HEAD'
+updated: '2026-09-26T10:50:00-03:00'
+
+scope:
+  migration:
+    - supabase/migrations/20260926120000_triggers_auditoria_updated_at.sql
+  tests:
+    - supabase/tests/2.2_triggers_auditoria.test.sql
+    - supabase/tests/support/stub_supabase_auth.sql
+  docs:
+    - docs/stories/2.2.triggers-auditoria-e-updated-at.md
+    - docs/stories/epic-2-INDEX.md
+
+evidence:
+  environment: 'Sem Supabase CLI, psql ou Docker. Harness PGlite (PostgreSQL 17 em WASM) no scratchpad da sessão; nada instalado no repo.'
+  commands:
+    - cmd: 'node run.mjs (stub → 5 migrations base → 2.2 duas vezes → teste 2.2)'
+      result: 'Todas as etapas OK; triggers instaladas: 19; teste 2.2 passou; audit_logs com 0 linhas após o ROLLBACK do teste; exit 0.'
+    - cmd: 'node neg.mjs (4 mutações do dev)'
+      result: >-
+        As 4 falham como esperado. Sem a 2.2: "FALHA AC1: esperados 3 logs ... encontrados 0". Sem REVOKE: "FALHA AC4: UPDATE em audit_logs
+        foi permitido". Sem o marcador: "FALHA AC2: ... veio <NULL> / <NULL>". Sem o now(): "FALHA AC5: ... ficou 2000-01-01".
+    - cmd: 'node extra.mjs / extra2.mjs (cenários extras do QA)'
+      result: >-
+        Rollback do cabeçalho (sem os marcadores de comentário): executa OK, restam 0 triggers e 0 funções, e a migration reaplicada passa no
+        teste. Chamada direta SELECT public.fn_audit_trigger() como anon: "trigger functions can only be called as triggers". Mutação sem
+        SECURITY DEFINER: "permission denied for table audit_logs". Mutação sem search_path vazio: "FALHA AC1: fn_audit_trigger deve ser
+        SECURITY DEFINER com search_path vazio". Secretaria: grava papel 'secretaria' com o próprio uid e lê 0 linhas de audit_logs. JWT sem
+        app_metadata.role: usuario_papel NULL com uid preenchido. DELETE de peça em cascata gera 5 logs, incluindo os de estoque_movimentacoes.
+        Mutação que inclui estoque_movimentacoes no updated_at: "record \"new\" has no field \"updated_at\"". O dono da tabela (postgres) ainda
+        faz UPDATE e TRUNCATE em audit_logs.
+    - cmd: 'npx eslint --quiet src/ tests/'
+      result: '0 erros (exit 0).'
+    - cmd: 'npm test'
+      result: '28 arquivos / 199 testes, todos passam.'
+    - cmd: 'wc -l supabase/**/*.sql'
+      result: 'Maior .sql novo: teste com 269 linhas; migration com 151; stub com 51. Todos ≤ 400.'
+    - cmd: 'which coderabbit'
+      result: 'CLI ausente. Revisão automatizada não executada.'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'SECURITY DEFINER, proconfig search_path="" e dono postgres confirmados em pg_proc. Objetos qualificados (public.audit_logs, public.papel_usuario(), auth.uid()). OLD só em UPDATE/DELETE e NEW só em INSERT/UPDATE (linhas 54-59), confirmados pelo teste nas 3 operações.'}
+  AC2: {status: PASS, note: 'uid nulo grava usuario_id NULL e o marcador publico_token (linhas 69-72); há teste com RPC SECURITY DEFINER chamada por anon. Segue o texto do AC ao pé da letra. Ver SEC-001 (service_role cai no mesmo marcador) e REQ-001 (id do token do ADR-006).'}
+  AC3: {status: PASS, note: 'As 10 tabelas batem exatamente com o AC3 (linhas 106-109), e o teste confere todas em pg_trigger.'}
+  AC4: {status: PASS, note: 'Não há política de escrita; o REVOKE de INSERT/UPDATE/DELETE/TRUNCATE para anon/authenticated é correto e necessário, porque TRUNCATE ignora o RLS e com só RLS o UPDATE/DELETE passaria em silêncio com 0 linhas. A rejeição vem do GRANT, mais forte que o RLS pedido no texto. A leitura do admin continua funcionando (testado). Continuam com escrita: o dono (postgres/SQL Editor) e o service_role, fora de "perfis autenticados" (SEC-002).'}
+  AC5: {status: PASS, note: 'As 9 tabelas batem com o AC5. estoque_movimentacoes não tem updated_at (initial_schema.sql:134-142, nenhuma migration adiciona a coluna), então ficou fora corretamente; a mutação prova que incluí-la quebraria o UPDATE. BEFORE UPDATE sobrescreve o valor enviado pelo cliente, e o log AFTER registra o valor do servidor.'}
+  AC6: {status: PASS, note: 'Idempotência comprovada com a aplicação dupla. O rollback do cabeçalho funciona no harness, mas só enquanto nenhuma outra story anexar as funções (DOC-001). Os grants revogados não voltam, por decisão documentada.'}
+  AC7: {status: CONCERNS, note: 'Coberto por teste SQL automatizado com asserções, só que em PostgreSQL 17 + stub, não em Supabase local/dev. A subtask ficou desmarcada, e o registro é fiel (PROC-001).'}
+  AC8: {status: PASS, note: 'Nenhum JS alterado; lint 0 erros; 199/199; todos os .sql ≤ 400 linhas.'}
+
+top_issues:
+  - id: 'SEC-001'
+    severity: medium
+    category: security
+    refs: ['supabase/migrations/20260926120000_triggers_auditoria_updated_at.sql:69-72', 'supabase/functions/criar-login-funcionario/index.ts:153-156']
+    description: >-
+      Qualquer escrita sem sub no JWT recebe usuario_papel = 'publico_token': service_role (Edge Functions), SQL Editor, migrations e jobs.
+      Isso já acontece hoje: a Edge Function criar-login-funcionario faz UPDATE em funcionarios com service_role, e esse UPDATE, disparado por
+      um admin, entra na trilha como chamada pública anônima. A implementação segue o AC2 ao pé da letra, então não é desvio. O risco é
+      forense: o marcador do "vetor de maior risco" (Dev Notes) fica poluído por operações privilegiadas.
+    recommendation: >-
+      @architect/@po decidem. Sugestão: na próxima story que tocar a função (ou na primeira RPC pública), gravar publico_token só quando
+      auth.jwt() ->> 'role' = 'anon'; usar 'service_role' quando o papel do JWT for service_role e 'sistema' quando não houver claims.
+  - id: 'PROC-001'
+    severity: medium
+    category: requirements
+    refs: ['docs/stories/2.2.triggers-auditoria-e-updated-at.md:65']
+    description: 'O AC7 pede verificação no Supabase local/dev e ela não foi feita (sem CLI/Docker, nem no ambiente do QA). O harness usa um stub de auth.uid()/auth.jwt() e não tem o papel service_role, então diferenças do Supabase real (dono supabase_auth_admin nas funções auth, grants padrão do service_role) não foram exercitadas.'
+    recommendation: 'Depois de aplicar a migration no projeto alvo, rodar psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/2.2_triggers_auditoria.test.sql e anexar a saída na story. Pré-requisito antes da 2.5/2.7 dependerem da trilha.'
+  - id: 'TEST-001'
+    severity: medium
+    category: tests
+    refs: ['supabase/tests/support/stub_supabase_auth.sql:1-51', 'supabase/tests/2.2_triggers_auditoria.test.sql:1-9']
+    description: >-
+      supabase/tests/ é o diretório padrão do `supabase test db`, que (pelo comportamento conhecido do CLI, não verificável aqui) roda
+      pg_prove recursivo sobre os .sql. Ali o stub seria executado contra o Supabase local: ele faz CREATE OR REPLACE em auth.uid()/auth.jwt()
+      e insere uma linha em auth.users, fora de transação. E o teste 2.2 não emite TAP, então o pg_prove o daria como falha ("no plan").
+      O AC7 cita `supabase test db` como caminho de verificação.
+    recommendation: 'Mover o stub para fora de supabase/tests (ex.: supabase/test-support/ ou scripts/) e converter o teste para pgTAP (plan/ok/finish) ou também movê-lo. Fazer isso junto com a Story 2.4 (gate de CI do Epic 2).'
+  - id: 'REQ-001'
+    severity: low
+    category: requirements
+    refs: ['docs/architecture/project-decisions/adr-006-tokens-publicos-e-storage.md:74', 'supabase/migrations/20260926120000_triggers_auditoria_updated_at.sql:61-75']
+    description: 'O ADR-006 §2.3 item 7 pede gravar também o id do token (nunca o token) nas escritas públicas. A função não tem esse campo, e audit_logs não tem coluna para ele. Fora do AC2 desta story, pois a tabela de tokens ainda não existe.'
+    recommendation: 'A story que cria tokens públicos deve estender fn_audit_trigger(), por exemplo lendo um GUC transacional (set_config(''app.token_id'', ..., true)) definido pela RPC, e acrescentar o campo em audit_logs ou em valor_novo.'
+  - id: 'SEC-002'
+    severity: low
+    category: security
+    refs: ['supabase/migrations/20260926120000_triggers_auditoria_updated_at.sql:140-149']
+    description: 'A imutabilidade vale para anon/authenticated. O dono (postgres, SQL Editor) e o service_role (BYPASSRLS + grants padrão) ainda fazem UPDATE/DELETE/TRUNCATE em audit_logs; o harness confirmou para o dono. Está dentro do texto do AC4 ("perfis autenticados"), mas é um vetor para uma chave vazada da Edge Function.'
+    recommendation: 'Avaliar REVOKE UPDATE, DELETE, TRUNCATE ON public.audit_logs FROM service_role e uma trigger BEFORE UPDATE/DELETE/TRUNCATE que rejeite alterações, para cobrir também o dono. Decisão do @architect.'
+  - id: 'SEC-003'
+    severity: low
+    category: security
+    refs: ['supabase/migrations/20260926120000_triggers_auditoria_updated_at.sql:55-58']
+    description: >-
+      LGPD: valor_anterior/valor_novo copiam a linha inteira, com CPF, telefone e e-mail de clientes e funcionarios, e o log é imutável. Não há
+      vazamento novo: só o admin lê audit_logs e ele já lê as tabelas de origem; secretaria e anon leem 0 linhas (testado). Mas o dado apagado
+      da tabela continua na trilha. Isso conflita em potencial com a retenção de 3 anos e a exclusão definidas no ADR-007 §3.9 para cadastros
+      de cliente. Tamanho medido: cerca de 0,8 KB por lado numa OS vazia.
+    recommendation: 'Levar ao gate G2.7 (@architect): política de retenção/expurgo de audit_logs, ou mascaramento/omissão de colunas de PII na serialização, antes das stories 2.20a-c.'
+  - id: 'DOC-001'
+    severity: low
+    category: docs
+    refs: ['supabase/migrations/20260926120000_triggers_auditoria_updated_at.sql:22-37']
+    description: 'O rollback funciona hoje, mas o DROP FUNCTION (sem CASCADE) vai falhar quando as stories 2.10+ anexarem as funções a novas tabelas. O script também só lista as 10 tabelas desta story.'
+    recommendation: 'Anotar no cabeçalho que o rollback exige remover antes as triggers das tabelas criadas depois, ou usar pg_trigger para localizar todas as triggers que usam as funções.'
+  - id: 'DOC-002'
+    severity: low
+    category: docs
+    refs: ['docs/stories/2.2.triggers-auditoria-e-updated-at.md:115-122']
+    description: 'Os checkboxes da Definition of Done ficaram todos desmarcados, embora Tasks e Dev Agent Record indiquem conclusão (menos a execução em Supabase real).'
+    recommendation: '@dev/@po marcarem a DoD refletindo o estado real (o item de evidência em Supabase continua pendente).'
+
+nfr_validation:
+  security: {status: CONCERNS, notes: 'search_path vazio, objetos qualificados; chamada direta da função é bloqueada pelo próprio Postgres; o REVOKE fecha o TRUNCATE sem RLS. Atenção a SEC-001/002/003.'}
+  performance: {status: PASS, notes: 'Função enxuta (uma serialização por lado, um INSERT). Sem índice novo em audit_logs; crescimento aceito nas Dev Notes.'}
+  reliability: {status: PASS, notes: 'Idempotente; transacional (BEGIN/COMMIT); falha na auditoria aborta a escrita de origem, que é o comportamento desejado para uma trilha obrigatória.'}
+  maintainability: {status: PASS, notes: 'Uma migration coesa de 151 linhas, laço com format(%I), padrão de anexação documentado no cabeçalho para as próximas stories.'}
+
+recommendations:
+  immediate:
+    - 'PROC-001: aplicar no Supabase alvo e rodar o teste via psql, anexando a evidência.'
+  future:
+    - 'SEC-001 + REQ-001: distinguir anon/service_role/sistema e gravar o id do token (story de tokens públicos).'
+    - 'TEST-001: tirar o stub de supabase/tests e converter para pgTAP (Story 2.4).'
+    - 'SEC-002/SEC-003: endurecer contra service_role/dono e definir retenção de PII na trilha (G2.7).'
+    - 'DOC-001/DOC-002: ajustar o rollback para dependências futuras e marcar a DoD.'
+
+waiver: {active: false}
