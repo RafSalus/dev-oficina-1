@@ -1,0 +1,113 @@
+schema: 1
+story: '2.0e'
+story_title: 'Decomposição da Agenda Dinâmica e Fila de Espera (Lote 3 de Arquitetura)'
+gate: CONCERNS
+status_reason: >-
+  Refatoração comportamentalmente neutra confirmada por revisão linha a linha contra main (7 arquivos originais x 34 arquivos novos):
+  mesmas validações e mensagens de toast, mesma ordem de campos, mesmo reset de formulário ao abrir, mesmas keys, cascata de atrasos
+  e envio do 1º da fila idênticos, e nenhum texto visível perdido (comparação automática de literais). Todos os ACs atendidos; 199/199
+  testes, lint 0 erros e build ok. O veredito é CONCERNS, e não PASS, porque a verificação ficou incompleta: a cascata de atrasos,
+  apontada como risco nas Dev Notes, não tem teste nem verificação manual; o roteiro manual não foi executado (login Supabase + MFA) e o
+  CodeRabbit não rodou (CLI ausente também no ambiente do QA). Nenhum achado bloqueia o fechamento.
+reviewer: 'Quinn (@qa)'
+reviewed_revision: 'commit:08bc066 (branch feat/2.0e-decomposicao-agenda-fila), diff main...HEAD'
+updated: '2026-09-26T10:40:00-03:00'
+
+scope:
+  hooks:
+    - src/hooks/useAgendaWorkflow.js
+    - src/hooks/useAgendamentoFormWorkflow.js
+    - src/hooks/useFilaEsperaWorkflow.js
+    - src/hooks/useGradeMecanico.js
+  containers:
+    - src/pages/dashboard/agenda/AgendaPage.jsx
+    - src/pages/dashboard/agenda/mobile/MobileAgendaPage.jsx
+    - src/components/agenda/AgendaAgendamentoModal.jsx
+    - src/pages/dashboard/agenda/mobile/MobileAgendaAgendamentoModal.jsx
+    - src/components/agenda/AgendaFilaDedicada.jsx
+    - src/components/agenda/AgendaGradeSemanal.jsx
+    - src/pages/dashboard/agenda/mobile/MobileAgendaFilaFormModal.jsx
+  presenters: '23 subcomponentes novos em components/agenda/{agendamento-form,fila,grade}/, pages/dashboard/agenda/components/ e mobile/{components,agendamento-form}/'
+  tests:
+    - tests/unit/agenda-workflow.test.jsx
+
+evidence:
+  commands:
+    - cmd: 'npm test'
+      result: '28 arquivos / 199 testes, todos passam (baseline 185 + 14 novos). O Debug Log da story registra 197 / +12, número desatualizado.'
+    - cmd: 'npx vitest run tests/unit/agenda-workflow.test.jsx tests/unit/patio-smoke.test.jsx'
+      result: '2 arquivos / 21 testes passam (regressão do patio-smoke, que renderiza AgendaPage, continua verde).'
+    - cmd: 'npx eslint --quiet src/ tests/'
+      result: '0 erros (exit 0).'
+    - cmd: 'npm run build'
+      result: 'OK em 8.78s. Aviso de chunk > 1000 kB já existia antes da story.'
+    - cmd: 'wc -l (39 arquivos do diff)'
+      result: 'Maior arquivo: useAgendaWorkflow.js com 310 linhas. Todos ≤ 400 (NFR17).'
+    - cmd: 'comparação automática de literais JSX/strings (main x HEAD) nos 7 arquivos originais'
+      result: 'Nenhum texto visível perdido; as únicas diferenças são textos que passaram de nó JSX para prop/array de configuração.'
+    - cmd: 'which coderabbit; ls ~/.local/bin/coderabbit'
+      result: 'CLI ausente. Revisão automatizada não executada.'
+
+behavioral_neutrality:
+  AgendaPage: 'Estado, listeners (agenda/fila/storage/funcionarios), mecanicoAtivo, busca, navegação semanal, salvar/excluir, salvarAtrasoTratado com recalcularCascataDeAtrasos e preencherHorarioAutomatico (payload ag-fila, toasts) idênticos. Instância única do hook passada ao mobile, que preserva o estado ao alternar desktop/mobile, como antes.'
+  MobileAgendaPage: 'Filtro estrito por mecanicoId, cascata, blocos do dia, keys (dado.id / livre-horario), busca "Ocupado • não corresponde à busca", fluxo confirmar/cancelar envio e primeiroFila da fila ordenada preservados. FilaCard recebe mecanicosAgenda por prop (mesmos dados; elimina N buscas).'
+  AgendaAgendamentoModal_e_Mobile: 'Hook único reproduz o useEffect de reset com as mesmas deps (mecanicosAgenda fora de propósito, como no original), as mesmas validações na mesma ordem, os mesmos textos de toast e o mesmo payload. Seções mantêm ordem, placeholders, required e máscaras (IMask).'
+  AgendaGradeSemanal: 'montarBlocosDoDia idêntico a processarBlocosDia (clamp HORARIOS_GRADE.length = 10, igual ao literal). primeiroFila continua sendo fila[0] sem reordenar, como no original. Modal de confirmação equivalente (retorno null em vez de render condicional).'
+  AgendaFilaDedicada: 'Ordenação, filtros, métricas, toast de remoção, Abrir OS (navigate + state) e formulário de inserção (padrões "Veículo do Cliente"/"Atendimento presencial na oficina", limpeza sem resetar tempoEstimadoMinutos) idênticos. Rascunho do modal preservado entre aberturas.'
+  MobileAgendaFilaFormModal: 'Troca apenas a montagem do item por construirItemFila/inserirNaFila sem padrões, o que gera um item igual ao do original.'
+  rotas: 'src/routes/ fora do diff; default export de AgendaPage mantido.'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'Todos os arquivos tocados ≤ 400 linhas (máx. 310). Os 6 monólitos ficaram entre 63 e 111 linhas.'}
+  AC2: {status: PASS, note: 'Formulário de agendamento, conflito, ordenação/filtro/métricas da fila, blocos da grade e carga/persistência têm fonte única. Resta duplicação menor no formulário de inserção na fila (MNT-001), que não consta na lista do AC.'}
+  AC3: {status: PASS, note: 'Neutralidade confirmada por revisão estática e pelos testes de interação em jsdom. Não houve verificação manual no app (PROC-001).'}
+  AC4: {status: PASS, note: 'Leitura/escrita só em useAgendaWorkflow via agendaData.js; nenhum acesso direto a localStorage nos arquivos tocados.'}
+  AC5: {status: PASS, note: 'Cobre carga/persistência, conflito + ignorarConflito, ordenação por prioridade/chegada e filtros. A cascata de atrasos, risco citado nas Dev Notes, ficou sem teste (TEST-001).'}
+  AC6: {status: PASS, note: 'Lint 0 erros; 199/199 testes; build ok; sem regressão sobre a baseline de 185.'}
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    category: tests
+    refs: ['src/hooks/useGradeMecanico.js:74-79', 'src/hooks/useAgendaWorkflow.js:232-241', 'tests/unit/agenda-workflow.test.jsx']
+    description: 'As Dev Notes pedem cobrir com teste ou verificação manual explícita a cascata de atrasos (agendamentosComCascata/salvarAtrasoTratado). Não há teste nem roteiro manual executado. O código é cópia fiel do original, então o risco residual é baixo, mas a regressão não está protegida.'
+    recommendation: 'Adicionar teste de salvarAtrasoTratado (agendamento emAtraso empurra o subsequente: foiEmpurradoCascata/horarioInicio ajustado, persistido no storage) e de useGradeMecanico com atraso.'
+  - id: 'PROC-001'
+    severity: medium
+    category: requirements
+    refs: ['docs/stories/2.0e.decomposicao-agenda-e-fila.md:94', 'docs/stories/2.0e.decomposicao-agenda-e-fila.md:213-214']
+    description: 'Teste manual (Task 8) e CodeRabbit não executados. O QA também não conseguiu rodar nenhum dos dois: login Supabase + MFA exigido e CLI ausente.'
+    recommendation: 'Rodar o roteiro da seção Testing (/agenda em desktop e mobile: criar agendamento, gerar conflito, incluir e enviar item da fila para slot) com usuário real antes ou logo após o merge, e o CodeRabbit quando o CLI estiver disponível.'
+  - id: 'MNT-001'
+    severity: low
+    category: code
+    refs: ['src/components/agenda/fila/ModalInserirFila.jsx:23-60', 'src/pages/dashboard/agenda/mobile/MobileAgendaFilaFormModal.jsx:41-62']
+    description: 'Estado do formulário de inserção na fila (8 useState), opcoesClientes e handleSelecionarClienteCadastrado continuam duplicados entre desktop e mobile. Só a montagem do item foi unificada. As validações divergem de propósito (registrado no Debug Log).'
+    recommendation: 'Extrair useFilaFormWorkflow na Story 2.10 ou num lote futuro, parametrizando validação e padrões.'
+  - id: 'PERF-001'
+    severity: low
+    category: performance
+    refs: ['src/pages/dashboard/agenda/mobile/components/MobileAbaGrade.jsx:132', 'src/hooks/useGradeMecanico.js:84-85']
+    description: 'blocosDoDia do mobile era useMemo e agora é recalculado a cada render via grade.montarBlocos. O custo é desprezível (10 slots) e o desktop já recalculava assim.'
+    recommendation: 'Opcional: memoizar por diaChave se a grade crescer.'
+  - id: 'DOC-001'
+    severity: low
+    category: docs
+    refs: ['docs/stories/2.0e.decomposicao-agenda-e-fila.md:206', 'docs/stories/2.0e.decomposicao-agenda-e-fila.md:225']
+    description: 'O Debug Log e o Change Log informam 197 testes (+12), mas o resultado real é 199 (+14), coerente com a File List (14 testes).'
+    recommendation: '@dev corrigir os números no próximo toque na story.'
+
+nfr_validation:
+  security: {status: PASS, notes: 'Sem superfície nova; nenhuma mudança de acesso a dados ou rotas.'}
+  performance: {status: PASS, notes: 'Neutro; FilaCard deixou de disparar uma busca de mecânicos por item. PERF-001 é irrelevante na prática.'}
+  reliability: {status: PASS, notes: 'Listeners e cleanup preservados; deps de useEffect idênticas às do original.'}
+  maintainability: {status: PASS, notes: '3.856 → 523 linhas nos monólitos; hooks puros exportados e testáveis.'}
+
+recommendations:
+  immediate: []
+  future:
+    - 'TEST-001: teste de cascata de atrasos e de pré-preenchimento em modo edição do formulário.'
+    - 'PROC-001: roteiro manual com login real + CodeRabbit.'
+    - 'MNT-001: unificar o formulário de inserção na fila.'
+
+waiver: {active: false}
