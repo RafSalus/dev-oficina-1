@@ -1,0 +1,63 @@
+schema: 1
+story: '2.10'
+story_title: 'Migração da Agenda Dinâmica e Fila de Espera para Supabase Postgres'
+gate: PASS
+status_reason: >-
+  Módulo de Agenda Dinâmica e Fila de Espera migrado com sucesso para Supabase Postgres.
+  Novas tabelas public.agenda_agendamentos e public.agenda_fila_espera criadas com integridade referencial via FKs (funcionarios, clientes, veiculos).
+  Mutações por linha implementadas com controle de concorrência otimista (updated_at lido) e emissão de CONFLITO_EDICAO se 0 linhas afetadas.
+  RPC transacional aplicar_cascata_atrasos_agenda assegura atomicidade "tudo ou nada" em recálculos de cascata com pessimistic lock.
+  RLS FR25 aplicada (admin total, secretaria e mecanico SELECT/INSERT/UPDATE sob em_horario_operacional(), DELETE para secretaria e admin).
+  Triggers trg_set_updated_at e trg_audit vinculadas.
+  25/25 testes passando na suíte de agenda, 310/310 testes no projeto, lint zerado, build Vite verde e NFR17 respeitado (todos os arquivos <= 376 linhas).
+reviewer: 'Dara (@data-engineer) / Quinn (@qa)'
+reviewed_revision: 'branch feat/2.10-agenda-fila-espera-schema-repositorio'
+updated: '2026-09-26T14:55:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926200000_agenda_e_fila_espera.sql
+  repositories:
+    - src/repositories/agendaRepository.js
+    - src/repositories/mapeadores/agenda.js
+  hooks:
+    - src/hooks/useAgendaWorkflow.js
+  tests:
+    - tests/unit/agendaRepository.test.js
+    - tests/unit/agenda-workflow.test.jsx
+
+evidence:
+  commands:
+    - cmd: 'npm test'
+      result: '38 arquivos de teste passaram, 310 testes aprovados, 0 falhas (15.61s)'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint'
+    - cmd: 'npm run build'
+      result: 'Build de produção Vite concluído com sucesso em 9.62s'
+    - cmd: 'wc -l nos módulos modificados/criados'
+      result: 'agendaRepository (309), mapeadores/agenda (134), migration (252), useAgendaWorkflow (376), unit test (315). Todos <= 376 linhas (NFR17).'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'Tabelas public.agenda_agendamentos e public.agenda_fila_espera criadas com schema alinhado a agendaData.js.'}
+  AC2: {status: PASS, note: 'IDs gerados pelo banco gen_random_uuid()::text, FKs reais com funcionarios(id), clientes(id), veiculos(id).'}
+  AC3: {status: PASS, note: 'agendaRepository.js criado com métodos assíncronos por linha, mantendo funções de regra puras em agendaData.js.'}
+  AC4: {status: PASS, note: 'useAgendaWorkflow atualizado consumindo agendaRepository de forma fail-closed sem corrupção no modo local.'}
+  AC5: {status: PASS, note: 'Concorrência otimista com updated_at em todo UPDATE individual, lançando CONFLITO_EDICAO se 0 linhas afetadas.'}
+  AC6: {status: PASS, note: 'RPC transacional aplicar_cascata_atrasos_agenda executa atualização atômica de todos os itens com conferência de updated_at.'}
+  AC7: {status: PASS, note: 'RLS FR25 aplicada com em_horario_operacional() para secretaria e mecanico.'}
+  AC8: {status: PASS, note: 'Triggers trg_set_updated_at e trg_audit anexadas na migration.'}
+  AC9: {status: PASS, note: 'Testes unitários cobrem CRUD, CONFLITO_EDICAO, RPC cascata e fail-closed em agendaRepository.test.js.'}
+  AC10: {status: PASS, note: 'Par mobile testado e validado em tests/unit/agenda-workflow.test.jsx (alocação de slot e navegação).'}
+  AC11: {status: PASS, note: 'Qualidade: zero erros de lint, 310/310 testes verdes, build verde, NFR17 respeitado.'}
+
+nfr_validation:
+  security: {status: PASS, notes: 'RLS FR25 rigorosa, sem acesso anônimo, UPDATE restrito ao horário operacional.'}
+  performance: {status: PASS, notes: 'Índices parciais criados para agendamentos por mecânico, dia e fila de prioridade.'}
+  reliability: {status: PASS, notes: 'Concorrência otimista e RPC transacional previnem inconsistências e sobrescritas acidentais.'}
+  maintainability: {status: PASS, notes: 'Separação modular rigorosa entre repositório, mapeadores e hook de visualização.'}
+
+recommendations:
+  immediate:
+    - 'Comitar a Story 2.10 localmente e avançar para a Story 2.11 (Veículos Estacionados / Pátio).'
+
+waiver: {active: false}

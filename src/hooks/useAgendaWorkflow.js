@@ -4,13 +4,23 @@ import {
   MECANICOS_AGENDA,
   MECANICO_VAZIO,
   obterDatasDaSemana,
-  carregarAgendamentos,
-  salvarAgendamentos,
-  carregarFilaEspera,
-  salvarFilaEspera,
   recalcularCascataDeAtrasos,
+  carregarAgendamentos as carregarAgendamentosLocal,
+  salvarAgendamentos as salvarAgendamentosLocal,
+  carregarFilaEspera as carregarFilaEsperaLocal,
+  salvarFilaEspera as salvarFilaEsperaLocal,
 } from '../constants/agendaData'
+import {
+  carregarAgendamentos,
+  criarAgendamento,
+  atualizarAgendamento,
+  excluirAgendamento,
+  carregarFilaEspera,
+  excluirItemFilaEspera,
+  aplicarCascataAtrasos,
+} from '../repositories/agendaRepository'
 import { obterMecanicosAtivos } from '../repositories/funcionariosRepository'
+import { isModoRemoto } from '../repositories/supabaseHelpers'
 
 /**
  * Casamento flexível de IDs de mecânico (prefixos `mec-` ou `func-`).
@@ -125,20 +135,45 @@ export function useAgendaWorkflow() {
 
   // Carregar dados e sincronizar com storage/eventos
   useEffect(() => {
+    let cancelado = false
     const recarregarDados = () => {
-      setAgendamentos(carregarAgendamentos())
-      setFilaEspera(carregarFilaEspera())
+      setAgendamentos(carregarAgendamentosLocal())
+      setFilaEspera(carregarFilaEsperaLocal())
+
+      if (isModoRemoto()) {
+        carregarAgendamentos()
+          .then((ags) => {
+            if (!cancelado && ags) setAgendamentos(ags)
+          })
+          .catch(() => {})
+
+        carregarFilaEspera()
+          .then((fila) => {
+            if (!cancelado && fila) setFilaEspera(fila)
+          })
+          .catch(() => {})
+      }
     }
 
     recarregarDados()
 
-    const handleFilaUpdate = () => setFilaEspera(carregarFilaEspera())
+    const handleFilaUpdate = () => {
+      setFilaEspera(carregarFilaEsperaLocal())
+      if (isModoRemoto()) {
+        carregarFilaEspera()
+          .then((fila) => {
+            if (!cancelado && fila) setFilaEspera(fila)
+          })
+          .catch(() => {})
+      }
+    }
 
     window.addEventListener('dev_oficina_agenda_updated', recarregarDados)
     window.addEventListener('dev_oficina_fila_updated', handleFilaUpdate)
     window.addEventListener('storage', recarregarDados)
 
     return () => {
+      cancelado = true
       window.removeEventListener('dev_oficina_agenda_updated', recarregarDados)
       window.removeEventListener('dev_oficina_fila_updated', handleFilaUpdate)
       window.removeEventListener('storage', recarregarDados)
@@ -207,16 +242,34 @@ export function useAgendaWorkflow() {
     const novaLista = existe
       ? agendamentos.map((a) => (a.id === agendamentoSalvo.id ? agendamentoSalvo : a))
       : [agendamentoSalvo, ...agendamentos]
-    salvarAgendamentos(novaLista)
+    salvarAgendamentosLocal(novaLista)
     setAgendamentos(novaLista)
     setIsModalAgendamentoAberto(false)
+
+    if (isModoRemoto()) {
+      if (existe) {
+        atualizarAgendamento(agendamentoSalvo.id, agendamentoSalvo, agendamentoSalvo.updatedAt).catch((err) => {
+          toast.error(err.message || 'Erro ao atualizar agendamento')
+        })
+      } else {
+        criarAgendamento(agendamentoSalvo).catch((err) => {
+          toast.error(err.message || 'Erro ao criar agendamento')
+        })
+      }
+    }
   }
 
-  const excluirAgendamento = (id) => {
+  const excluirAgendamentoAcao = (id) => {
     const novaLista = agendamentos.filter((a) => a.id !== id)
-    salvarAgendamentos(novaLista)
+    salvarAgendamentosLocal(novaLista)
     setAgendamentos(novaLista)
     setIsModalAgendamentoAberto(false)
+
+    if (isModoRemoto()) {
+      excluirAgendamento(id).catch((err) => {
+        toast.error(err.message || 'Erro ao excluir agendamento')
+      })
+    }
   }
 
   const abrirTratarAtraso = (agendamento) => {
@@ -233,19 +286,24 @@ export function useAgendaWorkflow() {
     const novaLista = agendamentos.map((a) =>
       a.id === agendamentoAtualizado.id ? agendamentoAtualizado : a
     )
-    // Aplica o empurrão dinâmico em cascata para os agendamentos subsequentes
     const listaCascata = recalcularCascataDeAtrasos(novaLista, agendamentoAtualizado.mecanicoId)
-    salvarAgendamentos(listaCascata)
+    salvarAgendamentosLocal(listaCascata)
     setAgendamentos(listaCascata)
     setIsModalAtrasoAberto(false)
+
+    if (isModoRemoto()) {
+      aplicarCascataAtrasos(listaCascata).catch((err) => {
+        toast.error(err.message || 'Erro ao aplicar cascata de atrasos')
+      })
+    }
   }
 
   const atualizarFila = (novaFila) => {
-    salvarFilaEspera(novaFila)
+    salvarFilaEsperaLocal(novaFila)
     setFilaEspera(novaFila)
   }
 
-  // Preenchimento Automático do Horário a partir do 1º Cliente da Fila (Sem preencher nada!)
+  // Preenchimento Automático do Horário a partir do 1º Cliente da Fila
   const preencherHorarioAutomatico = (diaChave, horario, clienteFila) => {
     if (!clienteFila) return
     if (!mecanicoAtivo.id) {
@@ -262,11 +320,18 @@ export function useAgendaWorkflow() {
 
     // 1. Adiciona na grade de agendamentos
     const novaListaAg = [novoAgendamento, ...agendamentos]
-    salvarAgendamentos(novaListaAg)
+    salvarAgendamentosLocal(novaListaAg)
     setAgendamentos(novaListaAg)
 
     // 2. Remove o cliente da fila de espera
-    atualizarFila(filaEspera.filter((f) => f.id !== clienteFila.id))
+    const novaFila = filaEspera.filter((f) => f.id !== clienteFila.id)
+    salvarFilaEsperaLocal(novaFila)
+    setFilaEspera(novaFila)
+
+    if (isModoRemoto()) {
+      criarAgendamento(novoAgendamento).catch(() => {})
+      excluirItemFilaEspera(clienteFila.id).catch(() => {})
+    }
 
     toast.success(
       `Slot preenchido automaticamente! ${clienteFila.clienteNome} foi agendado(a) com ${mecanicoAtivo.nome} às ${horario}.`
@@ -298,7 +363,7 @@ export function useAgendaWorkflow() {
     editarAgendamento,
     fecharModalAgendamento,
     salvarAgendamento,
-    excluirAgendamento,
+    excluirAgendamento: excluirAgendamentoAcao,
     isModalAtrasoAberto,
     agendamentoAtrasadoAlvo,
     abrirTratarAtraso,
