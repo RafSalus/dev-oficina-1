@@ -40,7 +40,7 @@
 
 | Story | Título | Executor / QG | Dependências | Status |
 |---|---|---|---|---|
-| [2.5](2.5.migracao-clientes-supabase.md) | Clientes e Veículos: schema alinhado ao modelo real + repositórios assíncronos (reescrita 2026-09-26) | @data-engineer + @dev / @architect | 2.1, 2.2, 2.2b, 2.3 | **Ready** |
+| [2.5](2.5.migracao-clientes-supabase.md) | Clientes e Veículos: schema alinhado ao modelo real + repositórios assíncronos (reescrita 2026-09-26) | @data-engineer + @dev / @architect | 2.1, 2.2, 2.2b, 2.3 | **InReview** |
 | [2.6](2.6.migracao-veiculos-supabase.md) | Clientes e Veículos: troca atômica das telas para os repositórios (reescrita 2026-09-26) | @dev / @qa | 2.5 | **Ready** |
 | [2.7](2.7.migracao-catalogos-pecas-servicos-terceiros.md) | Migração de Catálogos: Peças, Serviços e Terceiros (RLS FR25) | @dev / @data-engineer | 2.1, 2.2 | Draft |
 
