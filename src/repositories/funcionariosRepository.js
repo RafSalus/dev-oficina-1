@@ -128,21 +128,43 @@ export async function obterFuncionarioPorId(id) {
   })
 }
 
+export const CARGOS_ELEGIVEIS_ATRIBUICAO = ['mecanico', 'aux_mecanico', 'gerente']
+
+// Exposição mínima (Regra 14): só identificação, nunca CPF, telefone, comissão ou e-mail.
+function projetarMecanicoAtivo(f) {
+  return {
+    id: f.id,
+    nome: f.nome,
+    cargo: f.cargo,
+    ativo: true,
+    value: f.id,
+    label: f.nome,
+  }
+}
+
 /**
- * Retorna os mecânicos e eletricistas ativos elegíveis para atribuição de OS e Agenda.
- * @returns {Promise<Array>}
+ * Retorna os mecânicos ativos elegíveis para atribuição de OS e Agenda, com exposição mínima
+ * (id, nome, cargo). No Supabase usa a RPC `obter_mecanicos_ativos()` (Story 2.3), acessível à
+ * secretaria sem abrir a tabela `funcionarios`.
+ * @returns {Promise<Array<{id: string, nome: string, cargo: string, ativo: boolean, value: string, label: string}>>}
  */
 export async function obterMecanicosAtivos() {
-  const lista = await carregarFuncionarios({ apenasAtivos: true })
-  return lista
-    .filter(
-      (f) => f.cargo === 'mecanico' || f.cargo === 'aux_mecanico' || f.cargo === 'gerente'
-    )
-    .map((f) => ({
-      ...f,
-      value: f.id,
-      label: f.nome,
-    }))
+  return executarRepositorio({
+    remoto: async () => {
+      const client = getSupabaseDataClient()
+      const resposta = await client.rpc('obter_mecanicos_ativos')
+      const data = await executarOperacao(resposta, {
+        entidade: 'funcionarios',
+        operacao: 'obterMecanicosAtivos',
+      })
+      return (data || []).map(projetarMecanicoAtivo)
+    },
+    local: () =>
+      getStoredFuncionarios()
+        .filter((f) => f.ativo && CARGOS_ELEGIVEIS_ATRIBUICAO.includes(f.cargo))
+        .map(projetarMecanicoAtivo),
+    contexto: { entidade: 'funcionarios', operacao: 'obterMecanicosAtivos' },
+  })
 }
 
 /**
