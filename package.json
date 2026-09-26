@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "auth:role": "node scripts/definir-papel-usuario.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

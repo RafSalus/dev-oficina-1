@@ -46,7 +46,18 @@ export function GestaoEntrarPage() {
         navigate(returnUrl || '/mecanico/dashboard', { replace: true })
         return
       }
-      navigate(returnUrl || '/gestao/dashboard', { replace: true })
+      if (role === 'admin') {
+        navigate(returnUrl || '/gestao/dashboard', { replace: true })
+        return
+      }
+
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[Auth Gestão] Usuário autenticado com sucesso (aal2), mas sem papel de administrador em app_metadata.role. ' +
+          'Redirecionando para /gestao/acesso-negado.'
+        )
+      }
+      navigate('/gestao/acesso-negado', { replace: true })
       return
     }
     if (status === 'mfa_setup_required') {

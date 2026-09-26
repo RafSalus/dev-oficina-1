@@ -294,6 +294,24 @@ export function AdminAuthProvider({ children }) {
     [refreshSession]
   )
 
+  const forceRefreshSession = useCallback(async () => {
+    const client = getSupabaseAdminClient()
+    if (!client) {
+      return { ok: false, message: MESSAGES.serviceUnavailable }
+    }
+
+    try {
+      const { data, error } = await client.auth.refreshSession()
+      if (error) {
+        return { ok: false, message: error.message }
+      }
+      await refreshSession()
+      return { ok: true, session: data.session }
+    } catch (err) {
+      return { ok: false, message: err.message || 'Falha ao renovar sessão.' }
+    }
+  }, [refreshSession])
+
   const value = useMemo(
     () => ({
       status,
@@ -302,6 +320,7 @@ export function AdminAuthProvider({ children }) {
       role,
       isRealSession: status === 'aal2',
       refresh: refreshSession,
+      forceRefreshSession,
       signIn,
       signOut,
       requestRecovery,
@@ -310,7 +329,7 @@ export function AdminAuthProvider({ children }) {
       verifyMfa,
       unenrollMfa,
     }),
-    [status, isLoading, user, role, refreshSession, signIn, signOut, requestRecovery, updatePassword, enrollMfa, verifyMfa, unenrollMfa]
+    [status, isLoading, user, role, refreshSession, forceRefreshSession, signIn, signOut, requestRecovery, updatePassword, enrollMfa, verifyMfa, unenrollMfa]
   )
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>
