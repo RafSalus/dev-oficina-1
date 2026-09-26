@@ -1,0 +1,64 @@
+schema: 1
+story: '2.12'
+story_title: 'Migração de Leva e Traz + Frota de Apoio para Supabase Postgres'
+gate: PASS
+status_reason: >-
+  Módulo de Leva e Traz e Frota de Apoio migrado com sucesso para Supabase Postgres.
+  Tabelas public.frota_apoio e public.leva_e_traz_deslocamentos criadas com chaves estrangeiras para veiculos, clientes, funcionarios e frota_apoio.
+  Sequences dedicadas seq_frota_apoio_codigo e seq_deslocamento_codigo criadas no Postgres gerando códigos visuais APOIO-01 e LOG-0001 via triggers.
+  Concorrência otimista (CONFLITO_EDICAO) com checagem de updated_at implementada para transições de status simultâneas campo/balcão.
+  RLS FR25 implementada: admin total, secretaria e mecânico com SELECT/INSERT/UPDATE, com checagem de dupla para mecânico via public.funcionario_atual_id().
+  Triggers trg_set_updated_at e trg_audit vinculadas a ambas as tabelas.
+  Todos os testes unitários passando, lint com zero erros e arquivos <= 400 linhas (NFR17).
+reviewer: 'Dara (@data-engineer) / Quinn (@qa)'
+reviewed_revision: 'branch feat/2.12-leva-e-traz-frota-apoio-schema-repositorio'
+updated: '2026-09-26T15:10:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926220000_leva_e_traz_e_frota_apoio.sql
+  repositories:
+    - src/repositories/levaETrazRepository.js
+    - src/repositories/mapeadores/levaETraz.js
+  hooks:
+    - src/hooks/useLevaETrazWorkflow.js
+  components:
+    - src/components/leva-e-traz/ModalNovoDeslocamento.jsx
+    - src/components/leva-e-traz/ModalFinalizarDeslocamento.jsx
+    - src/components/leva-e-traz/ModalVeiculoApoio.jsx
+  pages:
+    - src/pages/dashboard/leva-e-traz/LevaETrazPage.jsx
+    - src/pages/dashboard/leva-e-traz/mobile/MobileLevaETrazPage.jsx
+    - src/pages/mecanico/components/MecanicoLevaETraz.jsx
+  tests:
+    - tests/unit/levaETrazRepository.test.js
+    - tests/unit/leva-e-traz-workflow.test.jsx
+
+evidence:
+  commands:
+    - cmd: 'npm test -- tests/unit/levaETrazRepository.test.js tests/unit/leva-e-traz-workflow.test.jsx'
+      result: '2 arquivos de teste passaram, 11 testes aprovados, 0 falhas'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint'
+    - cmd: 'wc -l nos módulos modificados/criados'
+      result: 'Todos os arquivos <= 368 linhas (NFR17).'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'Tabelas public.frota_apoio e public.leva_e_traz_deslocamentos criadas com id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text.'}
+  AC2: {status: PASS, note: 'leva_e_traz_deslocamentos referencia funcionarios (motorista_principal_id, auxiliar_id), clientes, veiculos e frota_apoio.'}
+  AC3: {status: PASS, note: 'Máquina de estados preservada fielmente (agendado, em_deslocamento, concluido, cancelado).'}
+  AC4: {status: PASS, note: 'levaETrazRepository.js criado com métodos assíncronos e sequences Postgres seq_frota_apoio_codigo e seq_deslocamento_codigo.'}
+  AC5: {status: PASS, note: 'useLevaETrazWorkflow e modais consomem levaETrazRepository.'}
+  AC6: {status: PASS, note: 'Checagem de updated_at em transições de status disparando CONFLITO_EDICAO quando há concorrência simultânea.'}
+  AC7: {status: PASS, note: 'RLS FR25 aplicada: admin total; secretaria e mecânico com SELECT/INSERT/UPDATE; mecânico restrito a deslocamentos da sua dupla via funcionario_atual_id().'}
+  AC8: {status: PASS, note: 'Triggers trg_set_updated_at e trg_audit vinculadas a ambas as tabelas.'}
+  AC9: {status: PASS, note: 'Testes automatizados cobrem ciclo completo, fail-closed, concorrência otimista e sequenciamento de códigos.'}
+  AC10: {status: PASS, note: 'Par mobile (MobileLevaETrazPage.jsx) e componente de mecânico validados.'}
+  AC11: {status: PASS, note: 'Qualidade: zero erros de lint, testes verdes, arquivos <= 400 linhas.'}
+
+nfr_validation:
+  NFR1: {status: PASS, note: 'Migração com schema e tipos consistentes.'}
+  NFR10: {status: PASS, note: 'Sequences dedicadas evitam colisão de códigos visuais.'}
+  NFR17: {status: PASS, note: 'Todos os arquivos <= 368 linhas (limite 400).'}
+  NFR18: {status: PASS, note: 'Paridade desktop/mobile mantida.'}
+  NFR20: {status: PASS, note: 'Concorrência otimista implementada e testada.'}

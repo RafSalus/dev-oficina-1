@@ -5,7 +5,7 @@ import {
   carregarVeiculosDeApoio,
   iniciarDeslocamento,
   excluirDeslocamento,
-} from '../constants/mockLevaETraz'
+} from '../repositories/levaETrazRepository'
 
 export const FILTRO_EQUIPE_OPCOES = [
   { value: 'TODOS', label: 'Todas as Equipes' },
@@ -35,14 +35,30 @@ export function useLevaETrazWorkflow() {
   const [veiculoApoioEditando, setVeiculoApoioEditando] = useState(null)
 
   const recarregarDados = useCallback(() => {
-    setDeslocamentos(carregarDeslocamentos())
-    setVeiculosApoio(carregarVeiculosDeApoio())
+    let cancelado = false
+    Promise.all([carregarDeslocamentos(), carregarVeiculosDeApoio()])
+      .then(([deslocs, apoios]) => {
+        if (!cancelado) {
+          if (Array.isArray(deslocs)) setDeslocamentos(deslocs)
+          if (Array.isArray(apoios)) setVeiculosApoio(apoios)
+        }
+      })
+      .catch((err) => {
+        console.error('Erro ao carregar dados de leva e traz:', err)
+      })
+    return () => {
+      cancelado = true
+    }
   }, [])
 
   useEffect(() => {
-    recarregarDados()
-    window.addEventListener('storage', recarregarDados)
-    return () => window.removeEventListener('storage', recarregarDados)
+    const cleanup = recarregarDados()
+    const handleStorage = () => recarregarDados()
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      if (cleanup) cleanup()
+      window.removeEventListener('storage', handleStorage)
+    }
   }, [recarregarDados])
 
   // Métricas e Indicadores do Dia
@@ -137,10 +153,14 @@ export function useLevaETrazWorkflow() {
 
   // Ações de Fluxo
   const handleIniciarViagem = useCallback(
-    (d) => {
-      iniciarDeslocamento(d.id)
-      recarregarDados()
-      toast.success(`Deslocamento #${d.codigo} iniciado! Veículo de apoio em rota.`)
+    async (d) => {
+      try {
+        await iniciarDeslocamento(d.id, d.updatedAt)
+        recarregarDados()
+        toast.success(`Deslocamento #${d.codigo} iniciado! Veículo de apoio em rota.`)
+      } catch (err) {
+        toast.error(err.message || 'Erro ao iniciar deslocamento.')
+      }
     },
     [recarregarDados]
   )
@@ -156,10 +176,14 @@ export function useLevaETrazWorkflow() {
   }, [])
 
   const handleExcluir = useCallback(
-    (d) => {
-      excluirDeslocamento(d.id)
-      recarregarDados()
-      toast.success(`Deslocamento #${d.codigo} removido com sucesso.`)
+    async (d) => {
+      try {
+        await excluirDeslocamento(d.id)
+        recarregarDados()
+        toast.success(`Deslocamento #${d.codigo} removido com sucesso.`)
+      } catch (err) {
+        toast.error(err.message || 'Erro ao excluir deslocamento.')
+      }
     },
     [recarregarDados]
   )

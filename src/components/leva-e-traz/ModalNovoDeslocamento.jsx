@@ -10,9 +10,11 @@ import { calcularEstimativaTrajeto } from '../../utils/googleMapsRouting'
 import {
   VEICULOS_APOIO_PADRAO,
   MOTORISTAS_PADRAO,
+} from '../../constants/mockLevaETraz'
+import {
   criarNovoDeslocamento,
   carregarVeiculosDeApoio,
-} from '../../constants/mockLevaETraz'
+} from '../../repositories/levaETrazRepository'
 import { useClientesCadastrados } from '../../hooks/useClientesCadastrados'
 import { SecaoTipoServico } from './novo-deslocamento/SecaoTipoServico'
 import { SecaoClienteVeiculo } from './novo-deslocamento/SecaoClienteVeiculo'
@@ -83,13 +85,17 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
 
   useEffect(() => {
     if (isOpen) {
-      const listaApoio = carregarVeiculosDeApoio()
-      setVeiculosApoioDisponiveis(listaApoio.length > 0 ? listaApoio : VEICULOS_APOIO_PADRAO)
-      if (listaApoio.length > 0) {
-        setVeiculoApoio(listaApoio[0])
-      } else if (VEICULOS_APOIO_PADRAO.length > 0) {
-        setVeiculoApoio(VEICULOS_APOIO_PADRAO[0])
-      }
+      carregarVeiculosDeApoio()
+        .then((listaApoio) => {
+          const lista = Array.isArray(listaApoio) ? listaApoio : []
+          setVeiculosApoioDisponiveis(lista.length > 0 ? lista : VEICULOS_APOIO_PADRAO)
+          if (lista.length > 0) {
+            setVeiculoApoio(lista[0])
+          } else if (VEICULOS_APOIO_PADRAO.length > 0) {
+            setVeiculoApoio(VEICULOS_APOIO_PADRAO[0])
+          }
+        })
+        .catch(() => {})
 
       setMotoristaPrincipal(MOTORISTAS_PADRAO[0] || null)
       setAuxiliar(MOTORISTAS_PADRAO[1] || null)
@@ -155,7 +161,7 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
     }
   }
 
-  const handleSalvar = (e) => {
+  const handleSalvar = async (e) => {
     e.preventDefault()
 
     if (!enderecoDestino.trim()) {
@@ -220,7 +226,7 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
         observacoes: observacoes.trim(),
       }
 
-      criarNovoDeslocamento(dados)
+      await criarNovoDeslocamento(dados)
       toast.success('Deslocamento agendado com sucesso na escala de logística!')
 
       if (onSalvo) {

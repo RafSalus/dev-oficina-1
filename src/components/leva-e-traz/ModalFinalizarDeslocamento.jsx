@@ -12,7 +12,7 @@ import {
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
-import { finalizarDeslocamento } from '../../constants/mockLevaETraz'
+import { finalizarDeslocamento } from '../../repositories/levaETrazRepository'
 
 export function ModalFinalizarDeslocamento({
   isOpen,
@@ -60,20 +60,24 @@ export function ModalFinalizarDeslocamento({
     }
   }
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!horarioRetornoReal.trim()) {
       toast.error('Informe o horário de retorno.')
       return
     }
 
     try {
-      finalizarDeslocamento(deslocamento.id, {
-        horarioRetornoReal,
-        kmFinal,
-        kmRealizado: kmRealizado || deslocamento.kmEstimado || '',
-        tempoRealMinutos: parseInt(tempoRealMinutos, 10) || deslocamento.tempoEstimadoMinutos || 45,
-        observacoesRetorno,
-      })
+      await finalizarDeslocamento(
+        deslocamento.id,
+        {
+          horarioRetornoReal,
+          kmFinal,
+          kmRealizado: kmRealizado || deslocamento.kmEstimado || '',
+          tempoRealMinutos: parseInt(tempoRealMinutos, 10) || deslocamento.tempoEstimadoMinutos || 45,
+          observacoesRetorno,
+        },
+        deslocamento.updatedAt
+      )
 
       toast.success(
         `Deslocamento #${deslocamento.codigo} concluído com sucesso! Veículo de apoio liberado.`
@@ -84,7 +88,7 @@ export function ModalFinalizarDeslocamento({
       }
       onClose()
     } catch (err) {
-      toast.error('Erro ao finalizar deslocamento.')
+      toast.error(err.message || 'Erro ao finalizar deslocamento.')
     }
   }
 

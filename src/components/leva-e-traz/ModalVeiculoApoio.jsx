@@ -15,7 +15,7 @@ import {
   criarVeiculoApoio,
   atualizarVeiculoApoio,
   excluirVeiculoApoio,
-} from '../../constants/mockLevaETraz'
+} from '../../repositories/levaETrazRepository'
 
 const OPCOES_TIPO = [
   { value: 'Furgão Utilitário', label: 'Furgão Utilitário' },
@@ -67,7 +67,7 @@ export function ModalVeiculoApoio({ isOpen, onClose, onSalvo, veiculo = null }) 
     }
   }, [isOpen, veiculo])
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!nome.trim()) {
       toast.error('Informe o nome do veículo.')
       return
@@ -88,27 +88,27 @@ export function ModalVeiculoApoio({ isOpen, onClose, onSalvo, veiculo = null }) 
 
     try {
       if (modoEdicao) {
-        atualizarVeiculoApoio({ id: veiculo.id, ...dados })
+        await atualizarVeiculoApoio({ id: veiculo.id, ...dados, updatedAt: veiculo.updatedAt })
         toast.success(`Veículo ${dados.placa} atualizado com sucesso!`)
       } else {
-        criarVeiculoApoio(dados)
+        await criarVeiculoApoio(dados)
         toast.success(`Veículo ${dados.placa} cadastrado na frota de apoio!`)
       }
       if (onSalvo) onSalvo()
       onClose()
     } catch (err) {
-      toast.error('Erro ao salvar veículo de apoio.')
+      toast.error(err.message || 'Erro ao salvar veículo de apoio.')
     }
   }
 
-  const handleExcluir = () => {
+  const handleExcluir = async () => {
     try {
-      excluirVeiculoApoio(veiculo.id)
+      await excluirVeiculoApoio(veiculo.id)
       toast.success(`Veículo ${veiculo.placa} removido da frota de apoio.`)
       if (onSalvo) onSalvo()
       onClose()
     } catch (err) {
-      toast.error('Erro ao excluir veículo de apoio.')
+      toast.error(err.message || 'Erro ao excluir veículo de apoio.')
     }
   }
 
