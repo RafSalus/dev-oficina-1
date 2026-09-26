@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { X, Notebook, CheckCircle, Trash } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { gerarProximoCodigoCliente } from '../../../../constants/mockClientesVeiculos'
 import { consultarCepApi } from '../../../../services/cepService'
 import {
   validarCPF,
@@ -55,8 +54,7 @@ export function MobileClienteFormModal({
     if (clienteParaEditar) {
       setFormData({
         ...clienteParaEditar,
-        codigoCliente:
-          clienteParaEditar.codigoCliente || gerarProximoCodigoCliente(),
+        codigoCliente: clienteParaEditar.codigoCliente || '',
         tipoPessoa:
           clienteParaEditar.tipoPessoa ||
           (clienteParaEditar.documento?.length > 14 ? 'J' : 'F'),
@@ -81,7 +79,7 @@ export function MobileClienteFormModal({
           : [],
       })
     } else {
-      setFormData({ ...FORM_INICIAL, codigoCliente: gerarProximoCodigoCliente() })
+      setFormData({ ...FORM_INICIAL, codigoCliente: '' })
     }
   }, [clienteParaEditar, isOpen])
 
@@ -138,7 +136,7 @@ export function MobileClienteFormModal({
 
   if (!isOpen) return null
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!formData.nome?.trim())
       return toast.warning('O nome do cliente é obrigatório.')
     if (!formData.documento?.trim())
@@ -154,35 +152,40 @@ export function MobileClienteFormModal({
     if (!formData.telefone?.trim())
       return toast.warning('Informe o telefone celular ou WhatsApp para contato.')
 
-    const codigoFinal = formData.codigoCliente || gerarProximoCodigoCliente()
+    const codigoFinal = formData.codigoCliente || ''
 
-    onSalvar({
-      ...formData,
-      codigoCliente: codigoFinal,
-      value: clienteParaEditar?.value || `cli-${Date.now()}`,
-      id: clienteParaEditar?.id || `cli-${Date.now()}`,
-      label: `${codigoFinal ? `${codigoFinal} - ` : ''}${formData.nome.trim()} - ${formData.telefone.trim()}`,
-      nome: formData.nome.trim(),
-      nomeFantasia: formData.nomeFantasia?.trim() || formData.nome.trim(),
-      documento: formData.documento.trim(),
-      rgIe: formData.rgIe?.trim() || '',
-      telefone: formData.telefone.trim(),
-      telefoneFixo: formData.telefoneFixo?.trim() || '',
-      email: formData.email?.trim() || '',
-      cep: formData.cep?.trim() || '',
-      logradouro: formData.logradouro?.trim() || '',
-      numero: formData.numero?.trim() || '',
-      complemento: formData.complemento?.trim() || '',
-      bairro: formData.bairro?.trim() || '',
-      cidade: formData.cidade?.trim() || '',
-      uf: formData.uf || 'PR',
-      endereco: `${formData.logradouro || ''}, ${formData.numero || 'S/N'}${
-        formData.complemento ? ` (${formData.complemento})` : ''
-      } - ${formData.bairro || ''}, ${formData.cidade || ''} - ${formData.uf || ''}`.trim(),
-      observacoes: formData.observacoes?.trim() || '',
-      ativo: Boolean(formData.ativo),
-      veiculos: formData.veiculos || [],
-    })
+    try {
+      await onSalvar({
+        ...formData,
+        codigoCliente: codigoFinal,
+        value: clienteParaEditar?.value || `cli-${Date.now()}`,
+        id: clienteParaEditar?.id || `cli-${Date.now()}`,
+        label: `${codigoFinal ? `${codigoFinal} - ` : ''}${formData.nome.trim()} - ${formData.telefone.trim()}`,
+        nome: formData.nome.trim(),
+        nomeFantasia: formData.nomeFantasia?.trim() || formData.nome.trim(),
+        documento: formData.documento.trim(),
+        rgIe: formData.rgIe?.trim() || '',
+        telefone: formData.telefone.trim(),
+        telefoneFixo: formData.telefoneFixo?.trim() || '',
+        email: formData.email?.trim() || '',
+        cep: formData.cep?.trim() || '',
+        logradouro: formData.logradouro?.trim() || '',
+        numero: formData.numero?.trim() || '',
+        complemento: formData.complemento?.trim() || '',
+        bairro: formData.bairro?.trim() || '',
+        cidade: formData.cidade?.trim() || '',
+        uf: formData.uf || 'PR',
+        endereco: `${formData.logradouro || ''}, ${formData.numero || 'S/N'}${
+          formData.complemento ? ` (${formData.complemento})` : ''
+        } - ${formData.bairro || ''}, ${formData.cidade || ''} - ${formData.uf || ''}`.trim(),
+        observacoes: formData.observacoes?.trim() || '',
+        ativo: Boolean(formData.ativo),
+        veiculos: formData.veiculos || [],
+      })
+      onClose()
+    } catch {
+      // Falhas reportadas pelo repositório. Mantém o modal aberto (AC6).
+    }
   }
 
   return (

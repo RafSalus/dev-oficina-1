@@ -173,6 +173,9 @@ export function MobileClientesPage() {
     fecharFrota,
     salvarCliente,
     excluirDireto,
+    carregando,
+    erro,
+    recarregar,
   } = workflow
 
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
@@ -261,7 +264,24 @@ export function MobileClientesPage() {
         </div>
       )}
 
-      {clientesFiltrados.length === 0 ? (
+      {carregando ? (
+        <div className="flex flex-col items-center justify-center text-center py-14">
+          <div className="inline-block animate-spin rounded-full h-7 w-7 border-3 border-slate-200 border-t-sky-600 mb-3" />
+          <p className="text-xs text-[#667085]">Carregando clientes...</p>
+        </div>
+      ) : erro ? (
+        <div className="flex flex-col items-center justify-center text-center py-14 bg-white rounded-2xl border border-rose-200 p-4">
+          <p className="text-sm font-bold text-rose-600 mb-1">Falha ao carregar clientes</p>
+          <p className="text-xs text-[#667085] mb-3">{erro.message || 'Erro de conexão com o banco de dados.'}</p>
+          <button
+            type="button"
+            onClick={recarregar}
+            className="px-3.5 py-2 text-xs font-bold text-white bg-[#0284c7] rounded-xl cursor-pointer"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : clientesFiltrados.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-center py-14">
           <div className="w-12 h-12 rounded-2xl bg-[#f2f4f7] border border-[#e4e7ec] flex items-center justify-center text-[#98a2b3] mb-3">
             <Users size={22} weight="duotone" />

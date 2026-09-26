@@ -21,12 +21,17 @@ function getStoredVeiculos() {
   }
 }
 
+function notificarAtualizacaoCadastros() {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('dev_oficina_cadastros_updated'))
+    window.dispatchEvent(new Event('dev_oficina_veiculos_v2_updated'))
+  }
+}
+
 function setStoredVeiculos(veiculos) {
   try {
     localStorage.setItem(STORAGE_KEY_VEICULOS, JSON.stringify(veiculos))
-    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-      window.dispatchEvent(new Event('dev_oficina_veiculos_v2_updated'))
-    }
+    notificarAtualizacaoCadastros()
   } catch (err) {
     console.error('Erro ao gravar veículos no storage:', err)
   }
@@ -222,6 +227,7 @@ export async function salvarVeiculo(veiculo) {
             return await tratarErroMutacaoVeiculo({ code: '42501' }, client, contexto)
           }
 
+          notificarAtualizacaoCadastros()
           return linhaParaVeiculo(resposta.data)
         } else {
           delete payloadLinha.id
@@ -231,6 +237,7 @@ export async function salvarVeiculo(veiculo) {
           if (resposta.error) {
             return await tratarErroMutacaoVeiculo(resposta.error, client, contexto)
           }
+          notificarAtualizacaoCadastros()
           return linhaParaVeiculo(resposta.data)
         }
       } catch (err) {
@@ -249,7 +256,7 @@ export async function salvarVeiculo(veiculo) {
         if (duplicado) throw new ErroRepositorio(CODIGOS_ERRO.DUPLICADO, 'Placa já cadastrada')
       }
 
-      const id = veiculo.id || veiculo.value || `veic-${Date.now()}`
+      const id = veiculo.id || veiculo.value || `veic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
       const index = lista.findIndex((v) => String(v.id) === String(id) || String(v.value) === String(id))
       const codigoFinal = veiculo.codigoVeiculo || gerarProximoCodigoLocal(lista)
       const marca = (veiculo.marca || '').trim()
@@ -297,6 +304,7 @@ export async function excluirVeiculo(id) {
       try {
         const resposta = await client.from('veiculos').delete().eq('id', id).select('id')
         await executarOperacao(resposta, contexto, { esperaLinhasAfetadas: true })
+        notificarAtualizacaoCadastros()
         return true
       } catch (err) {
         if (err instanceof ErroRepositorio) throw err

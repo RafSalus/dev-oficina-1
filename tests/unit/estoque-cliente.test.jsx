@@ -125,13 +125,14 @@ describe('ClienteModalForm decomposto (Story 2.0 / Task 4)', () => {
     expect(onSalvar).not.toHaveBeenCalled()
   })
 
-  it('salva o cliente em edição com os campos normalizados', () => {
-    const onSalvar = vi.fn()
+  it('salva o cliente em edição com os campos normalizados', async () => {
+    const onSalvar = vi.fn().mockResolvedValue(true)
     const onClose = vi.fn()
     render(<ClienteModalForm isOpen onClose={onClose} onSalvar={onSalvar} clienteParaEditar={CLIENTE_EXISTENTE} />)
     expect(screen.getByText('CPF validado oficialmente')).toBeTruthy()
 
     fireEvent.submit(screen.getByText('Salvar Cliente').closest('form'))
+    await waitFor(() => expect(onSalvar).toHaveBeenCalled())
     const payload = onSalvar.mock.calls[0][0]
     expect(payload).toMatchObject({
       id: 'cli-1',
@@ -141,7 +142,7 @@ describe('ClienteModalForm decomposto (Story 2.0 / Task 4)', () => {
       label: '0000007 - Maria Souza - (43) 99999-0000',
       endereco: 'Rua A, 10 - Centro, Apucarana - PR',
     })
-    expect(onClose).toHaveBeenCalled()
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
   it('filtra e remove veículos da frota e pede confirmação para descartar', () => {

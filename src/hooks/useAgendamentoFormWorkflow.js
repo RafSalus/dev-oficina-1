@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
-import { carregarClientesCadastrados } from '../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from './useClientesCadastrados'
 import { HORARIOS_GRADE, DIAS_SEMANA_NOMES, verificarConflitoGrade } from '../constants/agendaData'
 import { useMecanicosAgenda } from './useMecanicosAgenda'
 
@@ -34,7 +34,7 @@ export function validarAgendamento({ clienteNome, veiculoModelo, servicoDescrica
 
 /**
  * Estado e regras do formulário de agendamento (novo/edição), compartilhado entre o
- * modal desktop e o modal mobile (ADR-003 / NFR18).
+ * modal desktop e o modal mobile (ADR-003 / NFR18 / Story 2.6).
  */
 export function useAgendamentoFormWorkflow({
   isOpen,
@@ -48,7 +48,7 @@ export function useAgendamentoFormWorkflow({
   agendamentosExistentes = [],
 }) {
   const mecanicosAgenda = useMecanicosAgenda()
-  const [listaClientes, setListaClientes] = useState([])
+  const { clientes: listaClientes, carregando: carregandoClientes } = useClientesCadastrados({ incluirVeiculos: true })
 
   // Cliente selecionado
   const [clienteSelecionadoId, setClienteSelecionadoId] = useState('')
@@ -78,10 +78,9 @@ export function useAgendamentoFormWorkflow({
   const [ignorarConflito, setIgnorarConflito] = useState(false)
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
 
-  // Carregar clientes cadastrados e (re)inicializar o formulário ao abrir
+  // (Re)inicializar o formulário ao abrir
   useEffect(() => {
     if (!isOpen) return
-    setListaClientes(carregarClientesCadastrados())
     setConfirmandoExclusao(false)
 
     const ag = agendamentoParaEditar
@@ -281,6 +280,7 @@ export function useAgendamentoFormWorkflow({
     setIgnorarConflito,
     confirmandoExclusao,
     setConfirmandoExclusao,
+    carregandoClientes,
     opcoesClientes,
     opcoesVeiculosCliente,
     opcoesMecanicos,

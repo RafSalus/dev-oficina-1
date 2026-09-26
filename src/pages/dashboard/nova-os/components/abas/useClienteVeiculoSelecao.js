@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { carregarClientesCadastrados } from '../../../../../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from '../../../../../hooks/useClientesCadastrados'
+import * as clientesRepository from '../../../../../repositories/clientesRepository'
+import * as veiculosRepository from '../../../../../repositories/veiculosRepository'
 import { obterMarcaModeloSeparados } from '../formularioAberturaShared'
 
 export function useClienteVeiculoSelecao(formData, updateFormData) {
   const [modalNovoClienteAberto, setModalNovoClienteAberto] = useState(false)
   const [modalNovoVeiculoAberto, setModalNovoVeiculoAberto] = useState(false)
 
-  const listaClientes = useMemo(() => carregarClientesCadastrados(), [modalNovoClienteAberto])
+  const { clientes: listaClientes, carregando: carregandoClientes } = useClientesCadastrados({ incluirVeiculos: true })
 
   const clientesOptions = useMemo(() => {
     return listaClientes.map((c) => {
@@ -145,53 +147,79 @@ export function useClienteVeiculoSelecao(formData, updateFormData) {
     })
   }
 
-  const handleSalvarNovoCliente = (clienteCriado) => {
+  const handleSalvarNovoCliente = async (clienteCriado) => {
     if (!clienteCriado) return
-    const primeiroVeic =
-      Array.isArray(clienteCriado.veiculos) && clienteCriado.veiculos.length > 0
-        ? clienteCriado.veiculos[0]
-        : null
+    try {
+      const salvo = await clientesRepository.salvarCliente(clienteCriado)
+      if (Array.isArray(clienteCriado.veiculos) && clienteCriado.veiculos.length > 0) {
+        for (const v of clienteCriado.veiculos) {
+          try {
+            await veiculosRepository.salvarVeiculo({ ...v, clienteId: salvo.id })
+          } catch (errV) {
+            console.error('Erro ao salvar veículo do cliente:', errV)
+          }
+        }
+      }
+      const primeiroVeic =
+        Array.isArray(clienteCriado.veiculos) && clienteCriado.veiculos.length > 0
+          ? clienteCriado.veiculos[0]
+          : null
 
-    updateFormData({
-      clienteId: clienteCriado.value || clienteCriado.id,
-      cliente: clienteCriado.nome,
-      telefone: clienteCriado.telefone || '',
-      documento: clienteCriado.documento || '',
-      email: clienteCriado.email || '',
-      endereco: clienteCriado.endereco || '',
-      cidade: clienteCriado.cidade || '',
-      uf: clienteCriado.uf || 'PR',
-      veiculoId: primeiroVeic ? primeiroVeic.value || primeiroVeic.id : '',
-      placa: primeiroVeic ? primeiroVeic.placa : '',
-      marcaModelo: primeiroVeic
-        ? primeiroVeic.marcaModelo || `${primeiroVeic.marca || ''} ${primeiroVeic.modelo || ''}`.trim()
-        : '',
-      ano: primeiroVeic ? primeiroVeic.ano : '',
-      cor: primeiroVeic ? primeiroVeic.cor : '',
-      combustivel: primeiroVeic ? primeiroVeic.combustivel || 'FLEX' : 'FLEX',
-      km: primeiroVeic ? primeiroVeic.kmPadrao || primeiroVeic.kmAtual || '' : '',
-    })
+      updateFormData({
+        clienteId: salvo.value || salvo.id,
+        cliente: salvo.nome,
+        telefone: salvo.telefone || '',
+        documento: salvo.documento || '',
+        email: salvo.email || '',
+        endereco: salvo.endereco || '',
+        cidade: salvo.cidade || '',
+        uf: salvo.uf || 'PR',
+        veiculoId: primeiroVeic ? primeiroVeic.value || primeiroVeic.id : '',
+        placa: primeiroVeic ? primeiroVeic.placa : '',
+        marcaModelo: primeiroVeic
+          ? primeiroVeic.marcaModelo || `${primeiroVeic.marca || ''} ${primeiroVeic.modelo || ''}`.trim()
+          : '',
+        ano: primeiroVeic ? primeiroVeic.ano : '',
+        cor: primeiroVeic ? primeiroVeic.cor : '',
+        combustivel: primeiroVeic ? primeiroVeic.combustivel || 'FLEX' : 'FLEX',
+        km: primeiroVeic ? primeiroVeic.kmPadrao || primeiroVeic.kmAtual || '' : '',
+      })
 
-    setModalNovoClienteAberto(false)
-    toast.success(`Cliente ${clienteCriado.nome} cadastrado e vinculado a esta OS!`)
+      setModalNovoClienteAberto(false)
+      toast.success(`Cliente ${salvo.nome} cadastrado e vinculado a esta OS!`)
+      return salvo
+    } catch (err) {
+      toast.error(err.message || 'Erro ao cadastrar cliente.')
+      throw err
+    }
   }
 
-  const handleSalvarNovoVeiculo = (veicCriado) => {
+  const handleSalvarNovoVeiculo = async (veicCriado, clienteIdOriginal) => {
     if (!veicCriado) return
-    const { marca, modelo } = obterMarcaModeloSeparados(veicCriado)
-    updateFormData({
-      veiculoId: veicCriado.value || veicCriado.id,
-      placa: veicCriado.placa || '',
-      marca,
-      modelo,
-      marcaModelo: veicCriado.marcaModelo || `${marca} ${modelo}`.trim(),
-      ano: veicCriado.ano || '',
-      cor: veicCriado.cor || '',
-      combustivel: veicCriado.combustivel || 'FLEX',
-      km: veicCriado.kmAtual || veicCriado.kmPadrao || '',
-    })
-    setModalNovoVeiculoAberto(false)
-    toast.success(`Veiculo placa ${veicCriado.placa} vinculado com sucesso!`)
+    try {
+      const salvo = await veiculosRepository.salvarVeiculo(
+        { ...veicCriado, clienteId: formData.clienteId || veicCriado.clienteId },
+        clienteIdOriginal
+      )
+      const { marca, modelo } = obterMarcaModeloSeparados(salvo)
+      updateFormData({
+        veiculoId: salvo.value || salvo.id,
+        placa: salvo.placa || '',
+        marca,
+        modelo,
+        marcaModelo: salvo.marcaModelo || `${marca} ${modelo}`.trim(),
+        ano: salvo.ano || '',
+        cor: salvo.cor || '',
+        combustivel: salvo.combustivel || 'FLEX',
+        km: salvo.kmAtual || salvo.kmPadrao || '',
+      })
+      setModalNovoVeiculoAberto(false)
+      toast.success(`Veículo placa ${salvo.placa} cadastrado e vinculado com sucesso!`)
+      return salvo
+    } catch (err) {
+      toast.error(err.message || 'Erro ao cadastrar veículo.')
+      throw err
+    }
   }
 
   const somarDias = (dias) => {
@@ -220,5 +248,6 @@ export function useClienteVeiculoSelecao(formData, updateFormData) {
     handleSalvarNovoVeiculo,
     somarDias,
     foneLimpo,
+    carregandoClientes,
   }
 }

@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
-import {
-  carregarClientesCadastrados,
-  salvarClientesCadastrados,
-} from '../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from './useClientesCadastrados'
+import * as clientesRepository from '../repositories/clientesRepository'
+import * as veiculosRepository from '../repositories/veiculosRepository'
 
 export const FILTRO_TIPO_OPCOES = [
   { value: 'TODOS', label: 'Todos os Tipos (PF e PJ)' },
@@ -24,12 +23,13 @@ export const FILTRO_VEICULOS_OPCOES = [
 ]
 
 /**
- * Domain Hook para o fluxo de Clientes e Frotistas (ADR-003 / NFR18).
- * Unifica a lógica de estado, filtros, sincronização localStorage e métricas
+ * Domain Hook para o fluxo de Clientes e Frotistas (ADR-003 / NFR18 / Story 2.6).
+ * Unifica a lógica de estado, filtros, integração assíncrona com Supabase e métricas
  * entre as versões Desktop e Mobile.
  */
 export function useClientesWorkflow() {
-  const [clientes, setClientes] = useState(() => carregarClientesCadastrados())
+  const { clientes, carregando, erro, recarregar } = useClientesCadastrados({ incluirVeiculos: true })
+
   const [busca, setBusca] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('TODOS')
   const [filtroStatus, setFiltroStatus] = useState('TODOS')
@@ -39,16 +39,6 @@ export function useClientesWorkflow() {
   const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
   const [clienteFrotaModal, setClienteFrotaModal] = useState(null)
   const [clienteParaExcluir, setClienteParaExcluir] = useState(null)
-
-  const recarregarClientes = useCallback(() => {
-    setClientes(carregarClientesCadastrados())
-  }, [])
-
-  useEffect(() => {
-    recarregarClientes()
-    window.addEventListener('storage', recarregarClientes)
-    return () => window.removeEventListener('storage', recarregarClientes)
-  }, [recarregarClientes])
 
   const metricas = useMemo(() => {
     const total = clientes.length
@@ -144,48 +134,55 @@ export function useClientesWorkflow() {
   }, [])
 
   const salvarCliente = useCallback(
-    (dadosCliente) => {
-      let novaLista
-      const existe = clientes.some(
-        (c) => c.value === dadosCliente.value || c.id === dadosCliente.id
-      )
-
-      if (existe) {
-        novaLista = clientes.map((c) =>
-          c.value === dadosCliente.value || c.id === dadosCliente.id
-            ? dadosCliente
-            : c
-        )
-        toast.success(`Cliente "${dadosCliente.nome}" atualizado com sucesso!`)
-      } else {
-        novaLista = [dadosCliente, ...clientes]
-        toast.success(`Cliente "${dadosCliente.nome}" cadastrado com sucesso!`)
+    async (dadosCliente) => {
+      try {
+        const salvo = await clientesRepository.salvarCliente(dadosCliente)
+        // Se houver veículos pendentes para salvar no cliente
+        if (Array.isArray(dadosCliente.veiculos) && dadosCliente.veiculos.length > 0) {
+          for (const v of dadosCliente.veiculos) {
+            try {
+              await veiculosRepository.salvarVeiculo({
+                ...v,
+                clienteId: salvo.id,
+              })
+            } catch (errV) {
+              console.error('Erro ao salvar veículo do cliente:', errV)
+              toast.error(errV.message || 'Erro ao salvar veículo do cliente.')
+            }
+          }
+        }
+        toast.success(`Cliente "${salvo.nome}" salvo com sucesso!`)
+        setModalAberto(false)
+        setClienteEmEdicao(null)
+        await recarregar()
+        return salvo
+      } catch (err) {
+        toast.error(err.message || 'Erro ao salvar cliente.')
+        throw err
       }
-
-      setClientes(novaLista)
-      salvarClientesCadastrados(novaLista)
-      setModalAberto(false)
-      setClienteEmEdicao(null)
     },
-    [clientes]
+    [recarregar]
   )
 
   const alternarStatus = useCallback(
-    (val) => {
-      const novaLista = clientes.map((c) => {
-        if (c.value === val || c.id === val) {
-          const novoStatus = !(c.ativo !== false)
-          toast.info(
-            `Status do cliente alterado para ${novoStatus ? 'Ativo' : 'Inativo'}.`
-          )
-          return { ...c, ativo: novoStatus }
-        }
-        return c
-      })
-      setClientes(novaLista)
-      salvarClientesCadastrados(novaLista)
+    async (val) => {
+      const cli = clientes.find((c) => c.value === val || c.id === val)
+      if (!cli) return
+      const novoStatus = !(cli.ativo !== false)
+      try {
+        await clientesRepository.salvarCliente({
+          ...cli,
+          ativo: novoStatus,
+        })
+        toast.info(
+          `Status do cliente alterado para ${novoStatus ? 'Ativo' : 'Inativo'}.`
+        )
+        await recarregar()
+      } catch (err) {
+        toast.error(err.message || 'Erro ao alternar status do cliente.')
+      }
     },
-    [clientes]
+    [clientes, recarregar]
   )
 
   const iniciarExclusao = useCallback((val, nome) => {
@@ -196,28 +193,32 @@ export function useClientesWorkflow() {
     setClienteParaExcluir(null)
   }, [])
 
-  const confirmarExclusao = useCallback(() => {
+  const confirmarExclusao = useCallback(async () => {
     if (!clienteParaExcluir) return
     const { val, nome } = clienteParaExcluir
-    setClientes((prev) => {
-      const novaLista = prev.filter((c) => c.value !== val && c.id !== val)
-      salvarClientesCadastrados(novaLista)
-      return novaLista
-    })
-    setClienteParaExcluir(null)
-    toast.success(`Cliente "${nome}" excluído com sucesso.`)
-  }, [clienteParaExcluir])
+    try {
+      await clientesRepository.excluirCliente(val)
+      toast.success(`Cliente "${nome}" excluído com sucesso.`)
+      setClienteParaExcluir(null)
+      await recarregar()
+    } catch (err) {
+      toast.error(err.message || 'Erro ao excluir cliente.')
+    }
+  }, [clienteParaExcluir, recarregar])
 
   const excluirDireto = useCallback(
-    (val) => {
-      const novaLista = clientes.filter((c) => c.value !== val && c.id !== val)
-      setClientes(novaLista)
-      salvarClientesCadastrados(novaLista)
-      toast.success('Cliente excluído com sucesso.')
-      setModalAberto(false)
-      setClienteEmEdicao(null)
+    async (val) => {
+      try {
+        await clientesRepository.excluirCliente(val)
+        toast.success('Cliente excluído com sucesso.')
+        setModalAberto(false)
+        setClienteEmEdicao(null)
+        await recarregar()
+      } catch (err) {
+        toast.error(err.message || 'Erro ao excluir cliente.')
+      }
     },
-    [clientes]
+    [recarregar]
   )
 
   const limparFiltros = useCallback(() => {
@@ -229,6 +230,10 @@ export function useClientesWorkflow() {
 
   return {
     clientes,
+    carregando,
+    erro,
+    recarregar,
+    recarregarClientes: recarregar,
     metricas,
     busca,
     setBusca,

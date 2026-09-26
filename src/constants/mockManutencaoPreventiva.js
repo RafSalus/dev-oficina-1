@@ -2,12 +2,7 @@
 // Regras do Sistema: Sem uso do caractere proibido ('&'), apenas 'e'
 // Foco em retenção de clientes, garantia de serviços e geração ativa de receita
 
-import {
-  carregarTodosVeiculosDaFrota,
-  salvarVeiculoNaFrota,
-  carregarClientesCadastrados,
-  salvarClientesCadastrados,
-} from './mockClientesVeiculos'
+import * as veiculosRepository from '../repositories/veiculosRepository'
 import { carregarVeiculosEstacionados } from './mockVeiculosEstacionados'
 import { obterHistoricoCompletoVeiculo } from './mockVeiculosEstacionados'
 
@@ -101,8 +96,13 @@ export function salvarManutencoesPreventivas(lista) {
 /**
  * Carrega veículos ativos da oficina (exclui veículos que estão na tela Estacionados)
  */
-export function carregarVeiculosAtivosPreventiva() {
-  const todosVeiculos = carregarTodosVeiculosDaFrota()
+export async function carregarVeiculosAtivosPreventiva() {
+  let todosVeiculos = []
+  try {
+    todosVeiculos = await veiculosRepository.carregarVeiculos()
+  } catch (e) {
+    console.error('Erro ao carregar veículos para preventiva:', e)
+  }
   const estacionados = carregarVeiculosEstacionados()
   const placasEstacionadas = new Set(
     estacionados.map((e) => (e.placa || '').toUpperCase().trim()).filter(Boolean)
@@ -255,34 +255,24 @@ export function calcularSaudeVeiculo(veiculo, todasPreventivas = null) {
 /**
  * Atualiza o odômetro de um veículo ativo e recalcula toda a frota
  */
-export function atualizarHodometroVeiculo(placa, novoKm) {
+export async function atualizarHodometroVeiculo(placa, novoKm) {
   const placaLimpa = (placa || '').toUpperCase().trim()
   const kmFormatado = String(novoKm).trim()
 
-  const clientes = carregarClientesCadastrados()
-  let veiculoAtualizado = null
-
-  const novosClientes = clientes.map((cli) => {
-    if (!Array.isArray(cli.veiculos)) return cli
-    const veiculosAtualizados = cli.veiculos.map((v) => {
-      if ((v.placa || '').toUpperCase().trim() === placaLimpa) {
-        veiculoAtualizado = {
-          ...v,
-          kmPadrao: kmFormatado,
-          kmAtual: kmFormatado,
-        }
-        return veiculoAtualizado
-      }
-      return v
-    })
-    return {
-      ...cli,
-      veiculos: veiculosAtualizados,
+  try {
+    const veiculo = await veiculosRepository.obterVeiculoPorPlaca(placaLimpa)
+    if (veiculo) {
+      const atualizado = await veiculosRepository.salvarVeiculo({
+        ...veiculo,
+        kmPadrao: kmFormatado,
+        kmAtual: kmFormatado,
+      })
+      return atualizado
     }
-  })
-
-  salvarClientesCadastrados(novosClientes)
-  return veiculoAtualizado
+  } catch (err) {
+    console.error('Erro ao atualizar hodômetro do veículo no repositório:', err)
+  }
+  return null
 }
 
 /**
@@ -317,7 +307,7 @@ export function registrarExecucaoPreventiva(dados) {
 
   // Se o KM da execução for superior ao atual do veículo, atualiza o hodômetro do veículo
   if (dados.atualizarKmVeiculo && dados.km) {
-    atualizarHodometroVeiculo(placaLimpa, dados.km)
+    atualizarHodometroVeiculo(placaLimpa, dados.km).catch(() => {})
   }
 
   return novoRegistro

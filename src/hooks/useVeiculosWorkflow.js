@@ -1,11 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
-import {
-  carregarTodosVeiculosDaFrota,
-  salvarVeiculoNaFrota,
-  excluirVeiculoDaFrota,
-} from '../constants/mockClientesVeiculos'
+import { useFrotaVeiculos } from './useFrotaVeiculos'
+import * as veiculosRepository from '../repositories/veiculosRepository'
 
 export const FILTRO_PROPRIETARIO_OPCOES = [
   { value: 'TODOS', label: 'Todos os Proprietários' },
@@ -30,7 +27,7 @@ export const FILTRO_STATUS_OPCOES = [
 ]
 
 /**
- * Domain Hook para Gestão da Frota de Veículos (ADR-003 / NFR18).
+ * Domain Hook para Gestão da Frota de Veículos (ADR-003 / NFR18 / Story 2.6).
  * Unifica listagem, filtros avançados, métricas da frota e ações operacionais
  * (estacionar, vincular OS, alternar status, salvar e excluir) entre Desktop e Mobile.
  */
@@ -38,7 +35,7 @@ export function useVeiculosWorkflow() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [veiculos, setVeiculos] = useState(() => carregarTodosVeiculosDaFrota())
+  const { veiculos, carregando, erro, recarregar } = useFrotaVeiculos()
   const [busca, setBusca] = useState('')
   const [filtroProprietario, setFiltroProprietario] = useState('TODOS')
   const [filtroCombustivel, setFiltroCombustivel] = useState('TODOS')
@@ -51,15 +48,7 @@ export function useVeiculosWorkflow() {
   const [veiculoParaEstacionar, setVeiculoParaEstacionar] = useState(null)
   const [veiculoParaExcluir, setVeiculoParaExcluir] = useState(null)
 
-  const recarregarFrota = useCallback(() => {
-    setVeiculos(carregarTodosVeiculosDaFrota())
-  }, [])
-
-  useEffect(() => {
-    recarregarFrota()
-    window.addEventListener('storage', recarregarFrota)
-    return () => window.removeEventListener('storage', recarregarFrota)
-  }, [recarregarFrota])
+  const recarregarFrota = recarregar
 
   const opcoesMarcas = useMemo(() => {
     const marcasSet = new Set()
@@ -173,10 +162,10 @@ export function useVeiculosWorkflow() {
   }, [])
 
   const salvarVeiculo = useCallback(
-    (veiculoData, clienteIdOriginal) => {
+    async (veiculoData, clienteIdOriginal) => {
       try {
-        salvarVeiculoNaFrota(veiculoData, clienteIdOriginal)
-        recarregarFrota()
+        const salvo = await veiculosRepository.salvarVeiculo(veiculoData, clienteIdOriginal)
+        await recarregarFrota()
         toast.success(
           veiculoEmEdicao
             ? `Veículo placa ${veiculoData.placa} atualizado com sucesso!`
@@ -184,29 +173,31 @@ export function useVeiculosWorkflow() {
         )
         setModalAberto(false)
         setVeiculoEmEdicao(null)
-      } catch {
-        toast.error('Erro ao salvar veículo na frota.')
+        return salvo
+      } catch (err) {
+        toast.error(err.message || 'Erro ao salvar veículo na frota.')
+        throw err
       }
     },
     [veiculoEmEdicao, recarregarFrota]
   )
 
   const alternarStatus = useCallback(
-    (veiculo) => {
+    async (veiculo) => {
       try {
         const novoStatus = !veiculo.ativo
-        salvarVeiculoNaFrota({
+        await veiculosRepository.salvarVeiculo({
           ...veiculo,
           ativo: novoStatus,
         })
-        recarregarFrota()
+        await recarregarFrota()
         toast.success(
           `Veículo ${veiculo.placa} marcado como ${
             novoStatus ? 'Ativo na Frota' : 'Inativo'
           }.`
         )
-      } catch {
-        toast.error('Erro ao alternar status do veículo.')
+      } catch (err) {
+        toast.error(err.message || 'Erro ao alternar status do veículo.')
       }
     },
     [recarregarFrota]
@@ -220,35 +211,37 @@ export function useVeiculosWorkflow() {
     setVeiculoParaExcluir(null)
   }, [])
 
-  const confirmarExclusao = useCallback(() => {
+  const confirmarExclusao = useCallback(async () => {
     if (!veiculoParaExcluir) return
     try {
-      excluirVeiculoDaFrota(
-        veiculoParaExcluir.placa ||
-          veiculoParaExcluir.id ||
-          veiculoParaExcluir.value
+      await veiculosRepository.excluirVeiculo(
+        veiculoParaExcluir.id ||
+          veiculoParaExcluir.value ||
+          veiculoParaExcluir.placa
       )
-      recarregarFrota()
+      await recarregarFrota()
       toast.success(
         `Veículo ${veiculoParaExcluir.placa} removido da frota com sucesso.`
       )
-    } catch {
-      toast.error('Erro ao excluir veículo.')
+    } catch (err) {
+      toast.error(err.message || 'Erro ao excluir veículo.')
     } finally {
       setVeiculoParaExcluir(null)
     }
   }, [veiculoParaExcluir, recarregarFrota])
 
   const excluirDireto = useCallback(
-    (veiculo) => {
+    async (veiculo) => {
       try {
-        excluirVeiculoDaFrota(veiculo.placa || veiculo.id || veiculo.value)
-        recarregarFrota()
+        await veiculosRepository.excluirVeiculo(
+          veiculo.id || veiculo.value || veiculo.placa
+        )
+        await recarregarFrota()
         toast.success(`Veículo ${veiculo.placa} removido da frota.`)
         setModalAberto(false)
         setVeiculoEmEdicao(null)
-      } catch {
-        toast.error('Erro ao excluir veículo.')
+      } catch (err) {
+        toast.error(err.message || 'Erro ao excluir veículo.')
       }
     },
     [recarregarFrota]
@@ -282,6 +275,9 @@ export function useVeiculosWorkflow() {
 
   return {
     veiculos,
+    carregando,
+    erro,
+    recarregar,
     recarregarFrota,
     metricas,
     busca,

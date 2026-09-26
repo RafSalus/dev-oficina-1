@@ -3,7 +3,7 @@ import Select from 'react-select'
 import { IMaskInput } from 'react-imask'
 import { X, ShieldCheck, CheckCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { carregarClientesCadastrados } from '../../../../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from '../../../../hooks/useClientesCadastrados'
 import { construirItemFila, inserirNaFila } from '../../../../hooks/useFilaEsperaWorkflow'
 import {
   mobileSelectStyles,
@@ -22,7 +22,7 @@ const OPCOES_PRIORIDADE = [
 
 export function MobileAgendaFilaFormModal({ isOpen, onClose, fila = [], onAtualizarFila }) {
   const mecanicosAgenda = useMecanicosAgenda()
-  const listaClientesCadastrados = useMemo(() => carregarClientesCadastrados(), [])
+  const { clientes: listaClientesCadastrados, carregando: carregandoClientes } = useClientesCadastrados({ incluirVeiculos: true })
   const opcoesClientes = useMemo(
     () =>
       listaClientesCadastrados.map((c) => ({
@@ -138,7 +138,8 @@ export function MobileAgendaFilaFormModal({ isOpen, onClose, fila = [], onAtuali
               options={opcoesClientes}
               onChange={handleSelecionarClienteCadastrado}
               styles={mobileSelectStyles}
-              placeholder="Buscar por nome ou telefone..."
+              isLoading={carregandoClientes}
+              placeholder={carregandoClientes ? 'Carregando clientes...' : 'Buscar por nome ou telefone...'}
               isClearable
             />
           </div>

@@ -4,7 +4,6 @@ import CreatableSelect from 'react-select/creatable'
 import { IMaskInput } from 'react-imask'
 import { Plus } from '@phosphor-icons/react'
 import { toast } from 'sonner'
-import { gerarProximoCodigoVeiculo } from '../../../../../constants/mockClientesVeiculos'
 import {
   buscarMarcasFipe,
   buscarModelosFipe,
@@ -43,13 +42,13 @@ const NOVO_VEICULO_INICIAL = {
 }
 
 export function MobileFormularioInclusaoVeiculo({
-  veiculos,
+  _veiculos,
   onConfirmar,
   onCancelar,
 }) {
   const [novoVeiculo, setNovoVeiculo] = useState(() => ({
     ...NOVO_VEICULO_INICIAL,
-    codigoVeiculo: gerarProximoCodigoVeiculo(veiculos),
+    codigoVeiculo: '',
   }))
 
   const [marcasFipe, setMarcasFipe] = useState([])
@@ -180,8 +179,7 @@ export function MobileFormularioInclusaoVeiculo({
     const marcaFormatada = novoVeiculo.marca.trim()
     const modeloFormatado = novoVeiculo.modelo.trim()
     const marcaModeloCompleto = `${marcaFormatada} ${modeloFormatado}`.trim()
-    const codigoFinal =
-      novoVeiculo.codigoVeiculo || gerarProximoCodigoVeiculo(veiculos)
+    const codigoFinal = novoVeiculo.codigoVeiculo || ''
 
     const veiculoItem = {
       value: `veic-${Date.now()}`,

@@ -19,12 +19,32 @@ export function TabelaClientes({ workflow }) {
     abrirFrota,
     alternarStatus,
     iniciarExclusao,
+    carregando,
+    erro,
+    recarregar,
   } = workflow
 
   return (
     <div className="flex-1 overflow-auto no-scrollbar p-6">
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        {clientesFiltrados.length === 0 ? (
+        {carregando ? (
+          <div className="py-16 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-sky-600 mb-3" />
+            <p className="text-xs text-slate-500">Carregando clientes...</p>
+          </div>
+        ) : erro ? (
+          <div className="py-16 text-center">
+            <p className="text-sm font-semibold text-rose-600 mb-1">Não foi possível carregar os clientes.</p>
+            <p className="text-xs text-slate-500 mb-3">{erro.message || 'Erro ao sincronizar com o banco de dados.'}</p>
+            <button
+              type="button"
+              onClick={recarregar}
+              className="px-3 py-1.5 text-xs font-semibold text-white bg-sky-600 rounded-lg hover:bg-sky-700 cursor-pointer"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : clientesFiltrados.length === 0 ? (
           <div className="py-16 text-center">
             <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
               <Users size={24} />

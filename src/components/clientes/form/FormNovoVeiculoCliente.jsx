@@ -45,7 +45,7 @@ export function FormNovoVeiculoCliente({ veiculos }) {
           <div className="relative">
             <input
               type="text"
-              value={veiculo.codigoVeiculo || ''}
+              value={veiculo.codigoVeiculo || 'Gerado ao salvar'}
               readOnly
               tabIndex={-1}
               className="w-full h-9 px-2 text-xs bg-slate-100 border border-slate-300 rounded-md text-slate-600 font-mono font-bold cursor-not-allowed select-none"

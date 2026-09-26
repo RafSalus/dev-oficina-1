@@ -4,7 +4,7 @@ import { CheckCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { customSelectStyles } from '../../suprimentos/customSelectStyles'
 import { ModalRedimensionavel } from '../../suprimentos/ModalRedimensionavel'
-import { carregarClientesCadastrados } from '../../../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from '../../../hooks/useClientesCadastrados'
 import { construirItemFila, inserirNaFila } from '../../../hooks/useFilaEsperaWorkflow'
 import { inputClass, inputPlacaClass, labelClass } from '../agendamento-form/estilosAgendamentoForm'
 
@@ -16,7 +16,7 @@ const OPCOES_PRIORIDADE = [
 ]
 
 /**
- * Modal desktop para inserir um cliente na fila de atendimento.
+ * Modal desktop para inserir um cliente na fila de atendimento (ADR-003 / Story 2.6).
  * Fica sempre montado para preservar o rascunho entre aberturas (como no original).
  */
 export function ModalInserirFila({ isOpen, onClose, fila, onAtualizarFila, mecanicosAgenda }) {
@@ -30,7 +30,7 @@ export function ModalInserirFila({ isOpen, onClose, fila, onAtualizarFila, mecan
   const [tempoEstimadoMinutos, setTempoEstimadoMinutos] = useState(45)
 
   // Clientes cadastrados para autocompletar na fila se desejar
-  const listaClientesCadastrados = useMemo(() => carregarClientesCadastrados(), [])
+  const { clientes: listaClientesCadastrados, carregando: carregandoClientes } = useClientesCadastrados({ incluirVeiculos: true })
   const opcoesClientes = useMemo(
     () =>
       listaClientesCadastrados.map((c) => ({
@@ -131,7 +131,8 @@ export function ModalInserirFila({ isOpen, onClose, fila, onAtualizarFila, mecan
               options={opcoesClientes}
               onChange={handleSelecionarClienteCadastrado}
               styles={customSelectStyles}
-              placeholder="Pesquise por nome ou telefone..."
+              isLoading={carregandoClientes}
+              placeholder={carregandoClientes ? 'Carregando clientes...' : 'Pesquise por nome ou telefone...'}
               isClearable
             />
           </div>

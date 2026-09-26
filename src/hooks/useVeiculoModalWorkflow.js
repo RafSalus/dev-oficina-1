@@ -1,9 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
-import {
-  carregarClientesCadastrados,
-  gerarProximoCodigoVeiculo,
-} from '../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from './useClientesCadastrados'
 import {
   buscarMarcasFipe,
   buscarModelosFipe,
@@ -41,7 +38,7 @@ export const FORM_VEICULO_INICIAL = {
 }
 
 /**
- * Domain Hook para o formulário de cadastro e edição de veículos (ADR-003 / NFR18).
+ * Domain Hook para o formulário de cadastro e edição de veículos (ADR-003 / NFR18 / Story 2.6).
  * Compartilhado entre Desktop (VeiculoModalForm) e Mobile (MobileVeiculoFormModal).
  */
 export function useVeiculoModalWorkflow({
@@ -53,7 +50,7 @@ export function useVeiculoModalWorkflow({
   clientePredefinidoId,
 }) {
   const [formData, setFormData] = useState(FORM_VEICULO_INICIAL)
-  const [clientes, setClientes] = useState([])
+  const { clientes } = useClientesCadastrados()
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
 
   const [marcasFipe, setMarcasFipe] = useState([])
@@ -62,13 +59,6 @@ export function useVeiculoModalWorkflow({
   const [carregandoModelos, setCarregandoModelos] = useState(false)
   const [anosFipe, setAnosFipe] = useState([])
   const [carregandoAnos, setCarregandoAnos] = useState(false)
-
-  // Carrega clientes para o select ao abrir o modal
-  useEffect(() => {
-    if (isOpen) {
-      setClientes(carregarClientesCadastrados())
-    }
-  }, [isOpen])
 
   // Carrega marcas da FIPE ao abrir o modal
   useEffect(() => {
@@ -116,7 +106,7 @@ export function useVeiculoModalWorkflow({
     } else {
       setFormData({
         ...FORM_VEICULO_INICIAL,
-        codigoVeiculo: gerarProximoCodigoVeiculo(),
+        codigoVeiculo: '',
         clienteId: clientePredefinidoId || '',
       })
       setModelosFipe([])
@@ -261,7 +251,7 @@ export function useVeiculoModalWorkflow({
   }, [])
 
   const salvar = useCallback(
-    (e) => {
+    async (e) => {
       if (e && e.preventDefault) e.preventDefault()
 
       if (!formData.clienteId) {
@@ -298,7 +288,7 @@ export function useVeiculoModalWorkflow({
       const marcaFormatada = formData.marca.trim()
       const modeloFormatado = formData.modelo.trim()
       const marcaModeloCompleto = `${marcaFormatada} ${modeloFormatado}`.trim()
-      const codigoFinal = formData.codigoVeiculo || gerarProximoCodigoVeiculo()
+      const codigoFinal = formData.codigoVeiculo || ''
 
       const payload = {
         ...formData,
@@ -329,9 +319,14 @@ export function useVeiculoModalWorkflow({
       }
 
       const clienteOriginalId = veiculoParaEditar?.clienteId || null
-      onSalvar(payload, clienteOriginalId)
-      if (onClose) onClose()
-      return true
+      try {
+        await onSalvar(payload, clienteOriginalId)
+        if (onClose) onClose()
+        return true
+      } catch {
+        // Mantém formulário aberto para correção (AC6)
+        return false
+      }
     },
     [formData, veiculoParaEditar, onSalvar, onClose]
   )

@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
+import { useFrotaVeiculos } from './useFrotaVeiculos'
+import { carregarVeiculosEstacionados } from '../constants/mockVeiculosEstacionados'
 import {
-  carregarVeiculosAtivosPreventiva,
   calcularSaudeVeiculo,
   carregarManutencoesPreventivas,
   ITENS_PREVENTIVOS_CATALOGO,
@@ -21,7 +22,7 @@ export function usePreventivaWorkflow() {
   const location = useLocation()
   const basePath = location.pathname.startsWith('/secretaria') ? '/secretaria' : '/gestao'
 
-  const [veiculosAtivos, setVeiculosAtivos] = useState([])
+  const { veiculos: frotaVeiculos, carregando: carregandoFrota, erro: erroFrota, recarregar: recarregarFrota } = useFrotaVeiculos()
   const [preventivas, setPreventivas] = useState([])
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('TODOS')
@@ -35,9 +36,7 @@ export function usePreventivaWorkflow() {
   const [veiculoParaAtualizar, setVeiculoParaAtualizar] = useState(null)
 
   const recarregarDados = useCallback(() => {
-    const frotaAtiva = carregarVeiculosAtivosPreventiva()
     const listaPrev = carregarManutencoesPreventivas()
-    setVeiculosAtivos(frotaAtiva)
     setPreventivas(listaPrev)
   }, [])
 
@@ -46,6 +45,17 @@ export function usePreventivaWorkflow() {
     window.addEventListener('storage', recarregarDados)
     return () => window.removeEventListener('storage', recarregarDados)
   }, [recarregarDados])
+
+  const veiculosAtivos = useMemo(() => {
+    const estacionados = carregarVeiculosEstacionados()
+    const placasEstacionadas = new Set(
+      estacionados.map((e) => (e.placa || '').toUpperCase().trim()).filter(Boolean)
+    )
+    return frotaVeiculos.filter((v) => {
+      const placa = (v.placa || '').toUpperCase().trim()
+      return v.ativo !== false && !placasEstacionadas.has(placa)
+    })
+  }, [frotaVeiculos])
 
   // Avaliação da saúde de cada veículo ativo
   const veiculosAvaliados = useMemo(() => {
@@ -253,5 +263,8 @@ export function usePreventivaWorkflow() {
     handleEnviarWhatsAppCliente,
     handleAbrirFicha,
     handleAbrirAtualizarKm,
+    carregando: carregandoFrota,
+    erro: erroFrota,
+    recarregarFrota,
   }
 }

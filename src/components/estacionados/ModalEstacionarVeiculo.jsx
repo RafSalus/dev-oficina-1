@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
 import { customSelectStyles } from '../suprimentos/customSelectStyles'
-import { carregarTodosVeiculosDaFrota } from '../../constants/mockClientesVeiculos'
+import { useFrotaVeiculos } from '../../hooks/useFrotaVeiculos'
 import { estacionarVeiculo } from '../../constants/mockVeiculosEstacionados'
 
 export function ModalEstacionarVeiculo({
@@ -24,7 +24,7 @@ export function ModalEstacionarVeiculo({
   veiculoInicial = null,
   onEstacionadoConcluido,
 }) {
-  const [frotaAtiva, setFrotaAtiva] = useState([])
+  const { veiculos: frotaAtiva, carregando: carregandoFrota } = useFrotaVeiculos()
   const [veiculoSelecionado, setVeiculoSelecionado] = useState(null)
 
   const [dadosVenda, setDadosVenda] = useState({
@@ -37,14 +37,11 @@ export function ModalEstacionarVeiculo({
     observacoes: '',
   })
 
-  // Carrega a frota de veículos ativos
+  // Sincroniza veículo pré-selecionado se fornecido
   useEffect(() => {
     if (isOpen) {
-      const lista = carregarTodosVeiculosDaFrota()
-      setFrotaAtiva(lista)
-
-      if (veiculoInicial) {
-        const encontrado = lista.find(
+      if (veiculoInicial && frotaAtiva.length > 0) {
+        const encontrado = frotaAtiva.find(
           (v) => (v.placa || '').toUpperCase() === (veiculoInicial.placa || '').toUpperCase()
         )
         if (encontrado) {
@@ -58,11 +55,11 @@ export function ModalEstacionarVeiculo({
             kmNaVenda: encontrado.kmPadrao || encontrado.km || '',
           }))
         }
-      } else {
+      } else if (!veiculoInicial) {
         setVeiculoSelecionado(null)
       }
     }
-  }, [isOpen, veiculoInicial])
+  }, [isOpen, veiculoInicial, frotaAtiva])
 
   // Opções para o react-select
   const opcoesVeiculos = useMemo(() => {
@@ -85,7 +82,7 @@ export function ModalEstacionarVeiculo({
     }
   }
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!veiculoSelecionado || !veiculoSelecionado.veiculo) {
       toast.error('Selecione um veículo da frota ativa para estacionar.')
       return
@@ -93,7 +90,7 @@ export function ModalEstacionarVeiculo({
 
     try {
       const veic = veiculoSelecionado.veiculo
-      estacionarVeiculo({
+      await estacionarVeiculo({
         veiculo: veic,
         dadosVenda,
       })
@@ -163,9 +160,10 @@ export function ModalEstacionarVeiculo({
             onChange={handleSelectVeiculo}
             options={opcoesVeiculos}
             styles={customSelectStyles}
-            placeholder="Pesquise por placa, marca, modelo ou cliente..."
+            isLoading={carregandoFrota}
+            placeholder={carregandoFrota ? 'Carregando frota...' : 'Pesquise por placa, marca, modelo ou cliente...'}
             isSearchable
-            noOptionsMessage={() => 'Nenhum veículo encontrado na frota ativa'}
+            noOptionsMessage={() => (carregandoFrota ? 'Carregando frota...' : 'Nenhum veículo encontrado na frota ativa')}
           />
 
           {veiculoSelecionado?.veiculo && (

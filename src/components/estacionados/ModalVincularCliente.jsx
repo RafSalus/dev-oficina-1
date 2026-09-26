@@ -17,12 +17,12 @@ import {
 import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
 import { customSelectStyles } from '../suprimentos/customSelectStyles'
-import { carregarClientesCadastrados } from '../../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from '../../hooks/useClientesCadastrados'
 import { vincularVeiculoEstacionadoAoCliente } from '../../constants/mockVeiculosEstacionados'
 
 export function ModalVincularCliente({ isOpen, onClose, veiculo, onVinculoConcluido }) {
   const [abaAtiva, setAbaAtiva] = useState('existente') // 'existente' ou 'novo'
-  const [clientesDisponiveis, setClientesDisponiveis] = useState([])
+  const { clientes: clientesDisponiveis, carregando: carregandoClientes } = useClientesCadastrados()
   const [clienteSelecionado, setClienteSelecionado] = useState(null)
 
   // Dados do formulário para novo cliente
@@ -42,11 +42,9 @@ export function ModalVincularCliente({ isOpen, onClose, veiculo, onVinculoConclu
     uf: 'PR',
   })
 
-  // Carrega clientes da oficina para o select
+  // Preenche dados provisórios caso o veículo tenha
   useEffect(() => {
     if (isOpen) {
-      const lista = carregarClientesCadastrados()
-      setClientesDisponiveis(lista)
 
       // Se o veículo já possui nome/telefone do novo dono provisório, inicializa os campos
       if (veiculo) {
@@ -87,7 +85,7 @@ export function ModalVincularCliente({ isOpen, onClose, veiculo, onVinculoConclu
 
   if (!isOpen || !veiculo) return null
 
-  const handleConfirmarVinculo = () => {
+  const handleConfirmarVinculo = async () => {
     try {
       if (abaAtiva === 'existente') {
         if (!clienteSelecionado) {
@@ -95,7 +93,7 @@ export function ModalVincularCliente({ isOpen, onClose, veiculo, onVinculoConclu
           return
         }
 
-        const resultado = vincularVeiculoEstacionadoAoCliente({
+        const resultado = await vincularVeiculoEstacionadoAoCliente({
           veiculoEstacionadoId: veiculo.id,
           clienteDestinoId: clienteSelecionado.value,
         })
@@ -113,7 +111,7 @@ export function ModalVincularCliente({ isOpen, onClose, veiculo, onVinculoConclu
           return
         }
 
-        const resultado = vincularVeiculoEstacionadoAoCliente({
+        const resultado = await vincularVeiculoEstacionadoAoCliente({
           veiculoEstacionadoId: veiculo.id,
           novoClienteData: novoCliente,
         })
@@ -238,9 +236,10 @@ export function ModalVincularCliente({ isOpen, onClose, veiculo, onVinculoConclu
                 onChange={setClienteSelecionado}
                 options={opcoesClientes}
                 styles={customSelectStyles}
-                placeholder="Pesquise por nome, telefone ou código de cliente..."
+                isLoading={carregandoClientes}
+                placeholder={carregandoClientes ? 'Carregando clientes...' : 'Pesquise por nome, telefone ou código de cliente...'}
                 isSearchable
-                noOptionsMessage={() => 'Nenhum cliente encontrado'}
+                noOptionsMessage={() => (carregandoClientes ? 'Carregando clientes...' : 'Nenhum cliente encontrado')}
               />
             </div>
 

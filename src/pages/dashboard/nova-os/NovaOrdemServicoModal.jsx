@@ -9,13 +9,12 @@ import { OsRodapeAcoes } from './components/OsRodapeAcoes'
 import { ModalImpressaoOS } from '../orcamento/ModalImpressaoOS'
 import { MobileNovaOrdemDeServicoPage } from './mobile/MobileNovaOrdemDeServicoPage'
 import { adicionarOuAtualizarOrdem } from '../orcamento/mockOrdensAbertas'
-import { carregarClientesCadastrados } from '../../../constants/mockClientesVeiculos'
+import * as clientesRepository from '../../../repositories/clientesRepository'
 import { carregarFilaEspera, salvarFilaEspera } from '../../../constants/agendaData'
+import { resolverPrefillOs } from './prefillOsHelper'
 
 // Abertura de Ordem de Servico como um formulario/modal, igual aos demais cadastros do
-// sistema (Cliente, Veiculo, etc.) — sem tela ou rota dedicada. `dadosIniciais` aceita tanto
-// um item da Fila de Espera da Agenda (clienteNome/veiculoPlaca/motivo/...) quanto uma OS ja
-// existente sendo reaberta para edicao (mesmo formato salvo em mockOrdensAbertas).
+// sistema (Cliente, Veiculo, etc.) — sem tela ou rota dedicada (Story 2.6).
 export function NovaOrdemServicoModal({ isOpen, onClose, dadosIniciais, onSalvo }) {
   const isMobile = useIsMobile()
   const { formData, updateFormData, clearDraft, resetDraft } = useOsDraft()
@@ -33,95 +32,31 @@ export function NovaOrdemServicoModal({ isOpen, onClose, dadosIniciais, onSalvo 
     if (dadosAplicadosRef.current || !dadosIniciais) return
     dadosAplicadosRef.current = true
 
-    const state = dadosIniciais
-    const listaClientes = carregarClientesCadastrados()
-    const veiculoParam = state.veiculo || {}
-    const placaAlvo = (state.veiculoPlaca || state.placa || veiculoParam.placa || '').toUpperCase().trim()
-    const clienteIdAlvo = state.clienteId || veiculoParam.clienteId
-    const clienteNomeAlvo = state.clienteNome || veiculoParam.clienteNome
+    let cancelado = false
+    const aplicarPrefill = async () => {
+      let listaClientes = []
+      try {
+        listaClientes = await clientesRepository.carregarClientes({ incluirVeiculos: true })
+      } catch (err) {
+        console.error('Erro ao carregar clientes para prefill de OS:', err)
+      }
+      if (cancelado) return
 
-    let clienteEncontrado = null
-    if (clienteIdAlvo) {
-      clienteEncontrado = listaClientes.find((c) => c.value === clienteIdAlvo || c.id === clienteIdAlvo)
-    }
-    if (!clienteEncontrado && placaAlvo) {
-      clienteEncontrado = listaClientes.find(
-        (c) => Array.isArray(c.veiculos) && c.veiculos.some((v) => (v.placa || '').toUpperCase().trim() === placaAlvo)
+      const { patch, ehOsExistente } = resolverPrefillOs(dadosIniciais, listaClientes)
+      updateFormData(patch)
+
+      const nomeCurto = (patch.cliente || '').split(' ')[0] || 'Cliente'
+      toast.success(
+        ehOsExistente
+          ? `OS #${dadosIniciais.numeroOS} carregada para edicao!`
+          : `Dados de ${nomeCurto} carregados nesta Ordem de Servico!`
       )
     }
-    if (!clienteEncontrado && clienteNomeAlvo) {
-      clienteEncontrado = listaClientes.find((c) => c.nome?.toLowerCase().trim() === clienteNomeAlvo.toLowerCase().trim())
+
+    aplicarPrefill()
+    return () => {
+      cancelado = true
     }
-
-    let veiculoEncontrado = null
-    if (clienteEncontrado && Array.isArray(clienteEncontrado.veiculos)) {
-      if (state.veiculoId) {
-        veiculoEncontrado = clienteEncontrado.veiculos.find((v) => v.value === state.veiculoId || v.id === state.veiculoId)
-      }
-      if (!veiculoEncontrado && placaAlvo) {
-        veiculoEncontrado = clienteEncontrado.veiculos.find((v) => (v.placa || '').toUpperCase().trim() === placaAlvo)
-      }
-      if (!veiculoEncontrado && clienteEncontrado.veiculos.length > 0) {
-        veiculoEncontrado = clienteEncontrado.veiculos[0]
-      }
-    }
-
-    // Reabrindo uma OS ja existente (Editar OS): usa os dados dela quase inteiros
-    const ehOsExistente = Boolean(state.numeroOS)
-
-    const itens = state.itensPreventivosSugeridos || []
-    let relatoTexto = state.relatoCliente || state.relatoPreventivo || state.motivo || ''
-
-    if (!ehOsExistente && !relatoTexto && Array.isArray(itens) && itens.length > 0) {
-      const linhas = itens
-        .map((item) => {
-          const nome = item.nome || item.itemNome || 'Item Preventivo'
-          const motivo = item.motivoAlerta ? ` - ${item.motivoAlerta}` : ''
-          return `• ${nome}${motivo}`
-        })
-        .join('\n')
-
-      relatoTexto = [
-        'REVISAO PREVENTIVA E PONTOS DE ATENCAO:',
-        linhas,
-        '',
-        'Veiculo recepcionado para inspecao preventiva geral.',
-      ].join('\n')
-    }
-
-    const patch = ehOsExistente
-      ? { ...state }
-      : {
-          clienteId: clienteEncontrado ? clienteEncontrado.value || clienteEncontrado.id : clienteIdAlvo || '',
-          cliente: clienteEncontrado ? clienteEncontrado.nome : clienteNomeAlvo || '',
-          telefone: clienteEncontrado ? clienteEncontrado.telefone || '' : state.clienteTelefone || veiculoParam.clienteTelefone || '',
-          documento: clienteEncontrado ? clienteEncontrado.documento || '' : veiculoParam.clienteDocumento || '',
-          email: clienteEncontrado ? clienteEncontrado.email || '' : '',
-          endereco: clienteEncontrado ? clienteEncontrado.endereco || '' : veiculoParam.clienteCidade || '',
-
-          veiculoId: veiculoEncontrado ? veiculoEncontrado.value || veiculoEncontrado.id : state.veiculoId || veiculoParam.id || veiculoParam.value || '',
-          placa: veiculoEncontrado ? veiculoEncontrado.placa : placaAlvo || veiculoParam.placa || '',
-          marcaModelo: veiculoEncontrado
-            ? veiculoEncontrado.marcaModelo || `${veiculoEncontrado.marca || ''} ${veiculoEncontrado.modelo || ''}`.trim()
-            : state.veiculoModelo || veiculoParam.marcaModelo || `${veiculoParam.marca || ''} ${veiculoParam.modelo || ''}`.trim(),
-          ano: veiculoEncontrado ? veiculoEncontrado.ano : veiculoParam.ano || '',
-          cor: veiculoEncontrado ? veiculoEncontrado.cor : veiculoParam.cor || '',
-          km: veiculoEncontrado ? veiculoEncontrado.kmPadrao || veiculoEncontrado.kmAtual || '' : veiculoParam.kmPadrao || veiculoParam.kmAtual || '',
-
-          tipoAtendimento: state.tipoAtendimento || (itens.length > 0 ? 'preventiva' : 'orcamento'),
-          relatoCliente: relatoTexto,
-          filaEsperaId: state.filaEsperaId || '',
-          mecanicoId: state.mecanicoPreferencialId || '',
-        }
-
-    updateFormData(patch)
-
-    const nomeCurto = (patch.cliente || '').split(' ')[0] || 'Cliente'
-    toast.success(
-      ehOsExistente
-        ? `OS #${state.numeroOS} carregada para edicao!`
-        : `Dados de ${nomeCurto} carregados nesta Ordem de Servico!`
-    )
   }, [isOpen, dadosIniciais])
 
   const validarDadosMinimos = () => {

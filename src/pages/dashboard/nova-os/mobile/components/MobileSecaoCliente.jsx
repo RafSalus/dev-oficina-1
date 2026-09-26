@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import Select from 'react-select'
 import { IMaskInput } from 'react-imask'
-import { carregarClientesCadastrados } from '../../../../../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from '../../../../../hooks/useClientesCadastrados'
 import { obterMecanicosAtivos } from '../../../../../repositories/funcionariosRepository'
 import { formatarTelefone } from '../../../../../utils/fiscalValidators'
 import { mobileSelectStyles, inputBaseClass, labelBaseClass } from '../mobileSelectStyles'
@@ -15,7 +15,7 @@ export const NIVEIS_COMBUSTIVEL = [
 ]
 
 export function MobileSecaoCliente({ formData, updateFormData }) {
-  const listaClientes = useMemo(() => carregarClientesCadastrados(), [])
+  const { clientes: listaClientes, carregando: carregandoClientes } = useClientesCadastrados({ incluirVeiculos: true })
 
   const clientesOptions = useMemo(() => {
     return listaClientes.map((c) => ({
@@ -145,7 +145,8 @@ export function MobileSecaoCliente({ formData, updateFormData }) {
           options={clientesOptions}
           value={selectedClienteOption}
           onChange={handleSelectCliente}
-          placeholder="Pesquise o cliente..."
+          isLoading={carregandoClientes}
+          placeholder={carregandoClientes ? 'Carregando clientes...' : 'Pesquise o cliente...'}
           styles={mobileSelectStyles}
           isSearchable
         />

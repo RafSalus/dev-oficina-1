@@ -32,7 +32,7 @@ describe('Veículos da Frota Decompostos e Workflow (Story 2.0d / ADR-003)', () 
     expect(screen.getByText('Montadoras Atendidas')).toBeDefined()
   })
 
-  it('filtra veículos pelo campo de busca rápida no desktop', () => {
+  it('filtra veículos pelo campo de busca rápida no desktop', async () => {
     render(
       <MemoryRouter>
         <VeiculosPage />
@@ -44,7 +44,7 @@ describe('Veículos da Frota Decompostos e Workflow (Story 2.0d / ADR-003)', () 
     )
     fireEvent.change(inputBusca, { target: { value: 'PLACA9999XYZ' } })
 
-    expect(screen.getByText('Nenhum veículo encontrado')).toBeDefined()
+    expect(await screen.findByText('Nenhum veículo encontrado')).toBeDefined()
   })
 
   it('renderiza a versão mobile de veículos com cards e estatísticas', () => {

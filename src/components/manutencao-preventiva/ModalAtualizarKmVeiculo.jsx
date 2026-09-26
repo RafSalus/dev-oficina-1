@@ -16,17 +16,21 @@ export function ModalAtualizarKmVeiculo({ isOpen, onClose, veiculo, onAtualizado
 
   if (!isOpen || !veiculo) return null
 
-  const handleSalvar = (e) => {
+  const handleSalvar = async (e) => {
     e.preventDefault()
     if (!kmInput || !kmInput.trim()) {
       toast.error('Informe a quilometragem atual do veículo.')
       return
     }
 
-    atualizarHodometroVeiculo(veiculo.placa, kmInput.trim())
-    toast.success(`Quilometragem do veículo ${veiculo.placa} atualizada para ${kmInput} km!`)
-    if (onAtualizado) onAtualizado()
-    onClose()
+    try {
+      await atualizarHodometroVeiculo(veiculo.placa, kmInput.trim())
+      toast.success(`Quilometragem do veículo ${veiculo.placa} atualizada para ${kmInput} km!`)
+      if (onAtualizado) onAtualizado()
+      onClose()
+    } catch (err) {
+      toast.error(err.message || 'Erro ao atualizar quilometragem.')
+    }
   }
 
   return (

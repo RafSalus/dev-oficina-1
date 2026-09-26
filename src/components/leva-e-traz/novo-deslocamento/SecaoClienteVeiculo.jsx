@@ -14,6 +14,7 @@ export function SecaoClienteVeiculo({
   setNumeroOS,
   levarClienteEmbora,
   setLevarClienteEmbora,
+  carregandoClientes,
 }) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
@@ -30,9 +31,10 @@ export function SecaoClienteVeiculo({
             onChange={handleSelectCliente}
             options={opcoesClientes}
             styles={customSelectStyles}
-            placeholder="Pesquise por nome do cliente ou telefone..."
+            isLoading={carregandoClientes}
+            placeholder={carregandoClientes ? 'Carregando clientes...' : 'Pesquise por nome do cliente ou telefone...'}
             isSearchable
-            noOptionsMessage={() => 'Nenhum cliente encontrado'}
+            noOptionsMessage={() => (carregandoClientes ? 'Carregando clientes...' : 'Nenhum cliente encontrado')}
           />
         </div>
 

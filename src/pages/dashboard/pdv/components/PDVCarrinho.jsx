@@ -9,7 +9,7 @@ import {
   Plus,
   Receipt,
 } from '@phosphor-icons/react'
-import { MOCK_CLIENTES_VEICULOS } from '../../../../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from '../../../../hooks/useClientesCadastrados'
 import { customSelectStyles } from '../../../../components/suprimentos/customSelectStyles'
 import { formatMoeda } from '../pdvData'
 
@@ -30,6 +30,8 @@ export function PDVCarrinho({
   onRemoverItem,
   onFinalizarVenda,
 }) {
+  const { clientes: clientesCadastrados, carregando: carregandoClientes } = useClientesCadastrados({ incluirVeiculos: true })
+
   return (
     <div className="min-h-0 flex flex-col bg-white border border-[#e4e7ec] rounded-2xl overflow-hidden">
       {/* Cabeçalho do Carrinho / Identificação */}
@@ -60,10 +62,11 @@ export function PDVCarrinho({
                 onClienteSelecionadoChange?.(opt)
                 onVeiculoSelecionadoChange?.(null)
               }}
-              options={MOCK_CLIENTES_VEICULOS}
+              options={clientesCadastrados}
+              isLoading={carregandoClientes}
               styles={customSelectStyles}
               isClearable
-              placeholder="Cliente (opcional) — Consumidor Final"
+              placeholder={carregandoClientes ? 'Carregando clientes...' : 'Cliente (opcional) — Consumidor Final'}
             />
             {clienteSelecionado && (
               <Select

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
-import { gerarProximoCodigoCliente, gerarProximoCodigoVeiculo } from '../constants/mockClientesVeiculos'
 import { consultarCepApi } from '../services/cepService'
 import {
   FORM_CLIENTE_INICIAL,
@@ -35,8 +34,8 @@ export function useClienteForm({ isOpen, clienteParaEditar, onSalvar, onClose })
   useEffect(() => {
     setForm(
       clienteParaEditar
-        ? formDoCliente(clienteParaEditar, gerarProximoCodigoCliente())
-        : { ...FORM_CLIENTE_INICIAL, codigoCliente: gerarProximoCodigoCliente() }
+        ? formDoCliente(clienteParaEditar, '')
+        : { ...FORM_CLIENTE_INICIAL, codigoCliente: '' }
     )
     fipe.reiniciar()
     setAdicionandoVeiculo(false)
@@ -81,7 +80,7 @@ export function useClienteForm({ isOpen, clienteParaEditar, onSalvar, onClose })
   }
 
   const abrirInclusaoVeiculo = () => {
-    fipe.reiniciar(gerarProximoCodigoVeiculo(form.veiculos))
+    fipe.reiniciar('')
     setAdicionandoVeiculo(true)
   }
 
@@ -91,7 +90,7 @@ export function useClienteForm({ isOpen, clienteParaEditar, onSalvar, onClose })
       toast.warning(pendencia)
       return
     }
-    const codigo = fipe.veiculo.codigoVeiculo || gerarProximoCodigoVeiculo(form.veiculos)
+    const codigo = fipe.veiculo.codigoVeiculo || ''
     const novo = montarVeiculoCliente(fipe.veiculo, codigo)
     setForm((prev) => ({ ...prev, veiculos: [...prev.veiculos, novo] }))
     fipe.reiniciar()
@@ -104,15 +103,19 @@ export function useClienteForm({ isOpen, clienteParaEditar, onSalvar, onClose })
     toast.info('Veículo removido da lista.')
   }
 
-  const salvar = (e) => {
+  const salvar = async (e) => {
     e.preventDefault()
     const pendencia = validarCliente(form)
     if (pendencia) {
       toast[pendencia.tipo](pendencia.mensagem)
       return
     }
-    onSalvar(montarPayloadCliente(form, clienteParaEditar, form.codigoCliente || gerarProximoCodigoCliente()))
-    onClose()
+    try {
+      await onSalvar(montarPayloadCliente(form, clienteParaEditar, form.codigoCliente || ''))
+      onClose()
+    } catch {
+      // Erro reportado pelo repositório/workflow. Mantém o formulário aberto para correção (AC6).
+    }
   }
 
   const cancelar = () => {

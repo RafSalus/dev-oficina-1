@@ -56,9 +56,9 @@ export function SecaoIdentificacaoCliente({ cliente }) {
           </div>
           <input
             type="text"
-            value={form.codigoCliente}
+            value={form.codigoCliente || 'Gerado ao salvar'}
             readOnly
-            placeholder="0000166"
+            placeholder="Gerado ao salvar"
             title="Código gerado automaticamente pelo sistema"
             className="w-full px-3 py-2 text-sm bg-slate-100 border border-slate-300 rounded-md font-mono font-bold text-slate-700 select-none cursor-not-allowed outline-none mt-auto"
           />

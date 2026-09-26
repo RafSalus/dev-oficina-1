@@ -2,12 +2,8 @@
 // Regras do Sistema: Sem uso do caractere proibido ('&'), apenas 'e'
 // Mantém histórico completo de manutenção mesmo após a venda do veículo pelo antigo proprietário
 
-import {
-  carregarClientesCadastrados,
-  salvarClientesCadastrados,
-  salvarVeiculoNaFrota,
-  gerarProximoCodigoCliente,
-} from './mockClientesVeiculos'
+import * as clientesRepository from '../repositories/clientesRepository'
+import * as veiculosRepository from '../repositories/veiculosRepository'
 import {
   obterOrdensAbertas,
   obterOrdensFinalizadas,
@@ -156,7 +152,7 @@ export function obterHistoricoCompletoVeiculo(placa, veiculoEstacionado = null) 
  * Remove o veículo da frota ativa do antigo proprietário e adiciona aos Estacionados
  * Preserva 100% de todo o histórico de manutenções e especificações técnicas
  */
-export function estacionarVeiculo({ veiculo, dadosVenda }) {
+export async function estacionarVeiculo({ veiculo, dadosVenda }) {
   const estacionados = carregarVeiculosEstacionados()
   const placaFormatada = String(veiculo.placa || '').toUpperCase().trim()
 
@@ -167,7 +163,7 @@ export function estacionarVeiculo({ veiculo, dadosVenda }) {
   const novoEstacionado = {
     id: `estac-${Date.now()}`,
     placa: placaFormatada,
-    codigoVeiculo: veiculo.codigoVeiculo || `VEIC-${Math.floor(1000 + Math.random() * 9000)}`,
+    codigoVeiculo: veiculo.codigoVeiculo || '',
     marca: veiculo.marca || (veiculo.marcaModelo ? veiculo.marcaModelo.split(' ')[0] : ''),
     modelo: veiculo.modelo || (veiculo.marcaModelo ? veiculo.marcaModelo.split(' ').slice(1).join(' ') : ''),
     marcaModelo: veiculo.marcaModelo || `${veiculo.marca || ''} ${veiculo.modelo || ''}`.trim(),
@@ -198,21 +194,14 @@ export function estacionarVeiculo({ veiculo, dadosVenda }) {
   estacionados.unshift(novoEstacionado)
   salvarVeiculosEstacionados(estacionados)
 
-  // 4. Remove o veículo da frota ativa do antigo cliente nos cadastros
+  // 4. Remove o veículo da frota ativa chamando o repositório
   try {
-    const clientes = carregarClientesCadastrados()
-    const clientesAtualizados = clientes.map((cli) => {
-      if (!Array.isArray(cli.veiculos)) return cli
-      return {
-        ...cli,
-        veiculos: cli.veiculos.filter(
-          (v) => String(v.placa || '').toUpperCase().trim() !== placaFormatada && v.id !== veiculo.id && v.value !== veiculo.value
-        ),
-      }
-    })
-    salvarClientesCadastrados(clientesAtualizados)
+    const ident = veiculo.id || veiculo.value || veiculo.placa
+    if (ident) {
+      await veiculosRepository.excluirVeiculo(ident)
+    }
   } catch (e) {
-    console.error('Erro ao desvincular veículo do antigo cliente:', e)
+    console.error('Erro ao desvincular veículo da frota ativa no repositório:', e)
   }
 
   return novoEstacionado
@@ -223,7 +212,7 @@ export function estacionarVeiculo({ veiculo, dadosVenda }) {
  * O veículo sai da lista de Estacionados e passa a compor a frota ativa do novo cliente
  * Todo o histórico de manutenção é integralmente mantido
  */
-export function vincularVeiculoEstacionadoAoCliente({
+export async function vincularVeiculoEstacionadoAoCliente({
   veiculoEstacionadoId,
   clienteDestinoId = null,
   novoClienteData = null,
@@ -240,50 +229,26 @@ export function vincularVeiculoEstacionadoAoCliente({
 
   // 1. Caso seja o cadastro de um novo cliente na oficina
   if (novoClienteData) {
-    const proximoCodigo = gerarProximoCodigoCliente()
-    const novoClienteId = `cli-${Date.now()}`
-    const novoClienteObj = {
-      value: novoClienteId,
-      id: novoClienteId,
-      codigoCliente: proximoCodigo,
+    const salvo = await clientesRepository.salvarCliente({
+      ...novoClienteData,
       tipoPessoa: novoClienteData.tipoPessoa || 'F',
       nome: novoClienteData.nome.trim(),
-      documento: novoClienteData.documento || '',
-      rgIe: novoClienteData.rgIe || '',
-      telefone: novoClienteData.telefone || '',
-      email: novoClienteData.email || '',
-      cep: novoClienteData.cep || '',
-      logradouro: novoClienteData.logradouro || '',
-      numero: novoClienteData.numero || '',
-      complemento: novoClienteData.complemento || '',
-      bairro: novoClienteData.bairro || '',
-      cidade: novoClienteData.cidade || 'Apucarana',
-      uf: novoClienteData.uf || 'PR',
-      endereco: `${novoClienteData.logradouro || ''} ${novoClienteData.numero || ''} - ${novoClienteData.cidade || 'Apucarana'} - ${novoClienteData.uf || 'PR'}`.trim(),
-      ativo: true,
-      veiculos: [],
-    }
-
-    const clientesAtuais = carregarClientesCadastrados()
-    clientesAtuais.push(novoClienteObj)
-    salvarClientesCadastrados(clientesAtuais)
-
-    idDoClienteDestino = novoClienteId
-    nomeDoClienteDestino = novoClienteObj.nome
+    })
+    idDoClienteDestino = salvo.id
+    nomeDoClienteDestino = salvo.nome
   } else {
     // Cliente existente selecionado
-    const clientesAtuais = carregarClientesCadastrados()
-    const cliEncontrado = clientesAtuais.find((c) => (c.value || c.id) === idDoClienteDestino)
-    if (cliEncontrado) {
-      nomeDoClienteDestino = cliEncontrado.nome
-    }
+    try {
+      const cliEncontrado = await clientesRepository.obterClientePorId(idDoClienteDestino)
+      if (cliEncontrado) {
+        nomeDoClienteDestino = cliEncontrado.nome
+      }
+    } catch {}
   }
 
   // 2. Prepara o veículo para voltar à frota ativa com o novo cliente
   const veiculoParaFrota = {
-    id: `veic-${idDoClienteDestino}-${veiculoEstacionado.placa}`,
-    value: `veic-${idDoClienteDestino}-${veiculoEstacionado.placa}`,
-    codigoVeiculo: veiculoEstacionado.codigoVeiculo,
+    codigoVeiculo: veiculoEstacionado.codigoVeiculo || '',
     placa: veiculoEstacionado.placa,
     marca: veiculoEstacionado.marca,
     modelo: veiculoEstacionado.modelo,
@@ -296,12 +261,11 @@ export function vincularVeiculoEstacionadoAoCliente({
     renavam: veiculoEstacionado.renavam,
     ativo: true,
     clienteId: idDoClienteDestino,
-    // Preserva o histórico de manutenções no registro
     historicoManutencoes: veiculoEstacionado.historicoManutencoes || [],
   }
 
   // 3. Salva o veículo na frota ativa do novo cliente
-  salvarVeiculoNaFrota(veiculoParaFrota)
+  const salvoVeiculo = await veiculosRepository.salvarVeiculo(veiculoParaFrota)
 
   // 4. Remove o veículo da lista de Estacionados
   estacionados.splice(index, 1)
@@ -310,7 +274,7 @@ export function vincularVeiculoEstacionadoAoCliente({
   return {
     clienteId: idDoClienteDestino,
     clienteNome: nomeDoClienteDestino,
-    veiculo: veiculoParaFrota,
+    veiculo: salvoVeiculo,
   }
 }
 

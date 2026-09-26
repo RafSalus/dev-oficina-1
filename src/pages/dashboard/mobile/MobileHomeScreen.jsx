@@ -20,7 +20,7 @@ import {
 } from '@phosphor-icons/react'
 import { useAdminAuth } from '../../../context/AdminAuthContext'
 import { usePwaInstall } from '../../../hooks/usePwaInstall'
-import { MOCK_CLIENTES_VEICULOS } from '../../../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from '../../../hooks/useClientesCadastrados'
 
 const STATS = [
   { id: 'os', label: 'OS em Andamento', value: '—', icon: ClipboardText },
@@ -51,6 +51,7 @@ export function MobileHomeScreen() {
   const navigate = useNavigate()
   const { user } = useAdminAuth()
   const { canPromptInstall, showIosInstructions, isInstalled, promptInstall } = usePwaInstall()
+  const { clientes } = useClientesCadastrados({ incluirVeiculos: true })
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
   const userName = user?.user_metadata?.name || user?.user_metadata?.nome || 'Administrador'
@@ -62,14 +63,14 @@ export function MobileHomeScreen() {
   }, [])
 
   const proximosAtendimentos = useMemo(() => {
-    return MOCK_CLIENTES_VEICULOS.slice(0, 3).map((cliente, index) => ({
-      id: cliente.value,
+    return (clientes || []).slice(0, 3).map((cliente, index) => ({
+      id: cliente.value || cliente.id,
       nome: cliente.nome,
-      veiculo: cliente.veiculos?.[0]?.marcaModelo || 'Veículo não informado',
+      veiculo: cliente.veiculos?.[0]?.marcaModelo || (cliente.veiculos?.[0]?.marca ? `${cliente.veiculos[0].marca} ${cliente.veiculos[0].modelo || ''}`.trim() : 'Veículo não informado'),
       placa: cliente.veiculos?.[0]?.placa || '—',
       horario: ['08:30', '10:00', '14:30'][index] || '—',
     }))
-  }, [])
+  }, [clientes])
 
   const handleInstall = async () => {
     const accepted = await promptInstall()
@@ -193,20 +194,26 @@ export function MobileHomeScreen() {
         </div>
 
         <div className="bg-white rounded-2xl border border-[#e4e7ec] divide-y divide-[#f2f4f7] overflow-hidden">
-          {proximosAtendimentos.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-              <div className="flex flex-col items-center justify-center w-11 h-11 rounded-xl bg-[#f2f4f7] text-[#101828] shrink-0">
-                <Clock size={14} weight="bold" className="text-[#0284c7]" />
-                <span className="text-[9.5px] font-bold leading-tight mt-0.5">{item.horario}</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-[#101828] truncate">{item.nome}</p>
-                <p className="text-[11px] text-[#667085] truncate">
-                  {item.veiculo} • {item.placa}
-                </p>
-              </div>
+          {proximosAtendimentos.length === 0 ? (
+            <div className="p-4 text-center text-xs text-[#667085]">
+              Nenhum atendimento agendado no momento.
             </div>
-          ))}
+          ) : (
+            proximosAtendimentos.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex flex-col items-center justify-center w-11 h-11 rounded-xl bg-[#f2f4f7] text-[#101828] shrink-0">
+                  <Clock size={14} weight="bold" className="text-[#0284c7]" />
+                  <span className="text-[9.5px] font-bold leading-tight mt-0.5">{item.horario}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-[#101828] truncate">{item.nome}</p>
+                  <p className="text-[11px] text-[#667085] truncate">
+                    {item.veiculo} • {item.placa}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

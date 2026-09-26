@@ -36,12 +36,17 @@ function getStoredClientes() {
   }
 }
 
+function notificarAtualizacaoCadastros() {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent('dev_oficina_cadastros_updated'))
+    window.dispatchEvent(new Event('dev_oficina_clientes_v2_updated'))
+  }
+}
+
 function setStoredClientes(clientes) {
   try {
     localStorage.setItem(STORAGE_KEY_CLIENTES, JSON.stringify(clientes))
-    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-      window.dispatchEvent(new Event('dev_oficina_clientes_v2_updated'))
-    }
+    notificarAtualizacaoCadastros()
   } catch (err) {
     console.error('Erro ao gravar clientes no storage:', err)
   }
@@ -227,6 +232,7 @@ export async function salvarCliente(cliente) {
           )
         }
 
+        notificarAtualizacaoCadastros()
         return linhaParaCliente(resposta.data)
       } else {
         // INSERT: deixa o banco gerar id e codigo_cliente
@@ -235,6 +241,7 @@ export async function salvarCliente(cliente) {
 
         const resposta = await client.from('clientes').insert(payloadLinha).select('*, veiculos(*)').single()
         const data = await executarOperacao(resposta, contexto, { esperaLinhasAfetadas: true })
+        notificarAtualizacaoCadastros()
         return linhaParaCliente(data)
       }
     },
@@ -253,7 +260,7 @@ export async function salvarCliente(cliente) {
         }
       }
 
-      const id = cliente.id || cliente.value || `cli-${Date.now()}`
+      const id = cliente.id || cliente.value || `cli-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
       const index = lista.findIndex((c) => String(c.id) === String(id) || String(c.value) === String(id))
 
       let codigoFinal = cliente.codigoCliente
@@ -308,6 +315,7 @@ export async function excluirCliente(id) {
 
       const resposta = await client.from('clientes').delete().eq('id', id).select('id')
       await executarOperacao(resposta, contexto, { esperaLinhasAfetadas: true })
+      notificarAtualizacaoCadastros()
       return true
     },
     local: () => {

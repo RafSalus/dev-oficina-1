@@ -1,0 +1,103 @@
+schema: 1
+story: '2.6'
+story_title: 'Clientes e Veículos — Troca Atômica das Telas para os Repositórios Assíncronos'
+gate: PASS
+status_reason: >-
+  Troca atômica de todos os consumidores concluída com sucesso. Zero chamadas síncronas legadas restantes no código.
+  Todos os 12 critérios de aceitação foram cumpridos com paridade desktop/mobile, NFR17 respeitado em 100% dos arquivos (< 400 linhas),
+  e 264/264 testes passando no Vitest com build e linter limpos.
+reviewer: 'Quinn (@qa)'
+reviewed_revision: 'branch feat/2.6-troca-atomica-telas-clientes-veiculos'
+updated: '2026-09-26T14:30:00-03:00'
+
+scope:
+  hooks:
+    - src/hooks/useClientesCadastrados.js
+    - src/hooks/useFrotaVeiculos.js
+    - src/hooks/useClientesWorkflow.js
+    - src/hooks/useClienteForm.js
+    - src/hooks/useVeiculosWorkflow.js
+    - src/hooks/useVeiculoModalWorkflow.js
+    - src/hooks/useAgendamentoFormWorkflow.js
+    - src/hooks/usePreventivaWorkflow.js
+  components_and_pages:
+    - src/components/clientes/form/SecaoIdentificacaoCliente.jsx
+    - src/components/clientes/form/FormNovoVeiculoCliente.jsx
+    - src/components/veiculos/form/SecaoIdentificacaoVeiculo.jsx
+    - src/components/agenda/fila/ModalInserirFila.jsx
+    - src/components/estacionados/ModalEstacionarVeiculo.jsx
+    - src/components/estacionados/ModalVincularCliente.jsx
+    - src/components/leva-e-traz/ModalNovoDeslocamento.jsx
+    - src/components/leva-e-traz/novo-deslocamento/SecaoClienteVeiculo.jsx
+    - src/components/manutencao-preventiva/ModalAtualizarKmVeiculo.jsx
+    - src/components/secretaria/mobile/MobileSecretariaHomeScreen.jsx
+    - src/pages/dashboard/clientes/components/TabelaClientes.jsx
+    - src/pages/dashboard/clientes/mobile/MobileClientesPage.jsx
+    - src/pages/dashboard/clientes/mobile/MobileClienteFormModal.jsx
+    - src/pages/dashboard/clientes/mobile/form/MobileFormularioInclusaoVeiculo.jsx
+    - src/pages/dashboard/veiculos/components/TabelaVeiculos.jsx
+    - src/pages/dashboard/veiculos/mobile/MobileVeiculosPage.jsx
+    - src/pages/dashboard/agenda/mobile/MobileAgendaFilaFormModal.jsx
+    - src/pages/dashboard/nova-os/NovaOrdemServicoModal.jsx
+    - src/pages/dashboard/nova-os/prefillOsHelper.js
+    - src/pages/dashboard/nova-os/components/abas/AbaClienteVeiculo.jsx
+    - src/pages/dashboard/nova-os/components/abas/useClienteVeiculoSelecao.js
+    - src/pages/dashboard/nova-os/mobile/components/MobileSecaoCliente.jsx
+    - src/pages/dashboard/pdv/components/PDVCarrinho.jsx
+    - src/pages/mecanico/components/MecanicoClientes.jsx
+    - src/pages/dashboard/mobile/MobileHomeScreen.jsx
+  constants_and_repositories:
+    - src/constants/mockClientesVeiculos.js
+    - src/constants/mockVeiculosEstacionados.js
+    - src/constants/mockManutencaoPreventiva.js
+    - src/repositories/clientesRepository.js
+    - src/repositories/veiculosRepository.js
+  tests:
+    - tests/unit/useClientesCadastrados.test.js
+    - tests/unit/useFrotaVeiculos.test.js
+    - tests/unit/clientes-workflow.test.jsx
+    - tests/unit/veiculos-workflow.test.jsx
+    - tests/unit/estoque-cliente.test.jsx
+    - tests/unit/clientesRepository.test.js
+    - tests/unit/veiculosRepository.test.js
+
+evidence:
+  commands:
+    - cmd: 'grep -rn "carregarClientesCadastrados\|salvarClientesCadastrados\|gerarProximoCodigoCliente\|carregarTodosVeiculosDaFrota\|gerarProximoCodigoVeiculo\|salvarVeiculoNaFrota\|excluirVeiculoDaFrota" src/'
+      result: '0 ocorrências encontradas (exit code 1)'
+    - cmd: 'npm test'
+      result: '34 arquivos de teste passaram, 264 testes passaram, 0 falhas (13.84s)'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint (139 avisos aceitos pré-existentes)'
+    - cmd: 'npm run build'
+      result: 'Build de produção Vite concluído em 9.16s com sucesso'
+    - cmd: 'wc -l nos 43 arquivos modificados/criados'
+      result: 'Todos os arquivos possuem <= 400 linhas (NFR17 respeitado integralmente)'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'useClientesCadastrados e useFrotaVeiculos criados com reatividade via dev_oficina_cadastros_updated e storage.'}
+  AC2: {status: PASS, note: 'Todos os módulos de Cadastros, Agenda/Fila, Nova OS e Pátio migrados para repositórios assíncronos sem fallback silencioso para localStorage.'}
+  AC3: {status: PASS, note: 'PDVCarrinho, MecanicoClientes, MobileHomeScreen e MobileSecretariaHomeScreen exibem clientes e veículos reais via hook reativo.'}
+  AC4: {status: PASS, note: 'Veículos tratados como entidade independente com suporte a carregarClientes({ incluirVeiculos: true }) e persistência atômica.'}
+  AC5: {status: PASS, note: 'Formulários desktop e mobile indicam "Gerado ao salvar" e exibem o código sequencial real gerado pelo repositório/banco.'}
+  AC6: {status: PASS, note: 'Erros de duplicidade (23505), integridade referencial RESTRICT (23503) e concorrência exibidos amigavelmente via toast mantendo modais abertos.'}
+  AC7: {status: PASS, note: 'Estados de carregamento com spinners e banners de retry implementados em tabelas e seletores.'}
+  AC8: {status: PASS, note: 'Funções legadas síncronas removidas de mockClientesVeiculos.js; grep confirmou zero chamadas restantes.'}
+  AC9: {status: PASS, note: 'Paridade desktop e mobile 100% mantida através de hooks unificados de domínio.'}
+  AC10: {status: PASS, note: 'Testes adaptados e novos testes unitários adicionados; suíte roda sem dependência externa.'}
+  AC11: {status: PASS, note: 'Fluxos ponta a ponta verificados com validação de cliente e veículos.'}
+  AC12: {status: PASS, note: 'NFR17 rigorosamente mantido (arquivos <= 400 linhas) e pipelines verdes.'}
+
+nfr_validation:
+  security: {status: PASS, notes: 'Validação fail-closed sem vazamento de dados locais.'}
+  performance: {status: PASS, notes: 'Hooks compartilham estado e revalidam via CustomEvent leve sem polling desnecessário.'}
+  reliability: {status: PASS, notes: 'Tratamento de concorrência otimista (updated_at) e foreign keys RESTRICT preservados.'}
+  maintainability: {status: PASS, notes: 'Desacoplamento puro de prefillOsHelper para manter modais sob 400 linhas.'}
+
+recommendations:
+  immediate:
+    - 'Prosseguir com o commit da Story 2.6 e avançar para a Story 2.7 (Onda B - Produtos e Peças).'
+  future:
+    - 'Migrar Portal do Cliente (ClienteContext e ClienteEntrarPage) na Story 2.20c conforme ADR-007.'
+
+waiver: {active: false}

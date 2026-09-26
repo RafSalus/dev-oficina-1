@@ -32,7 +32,7 @@ describe('Clientes e Frotistas Decompostos e Workflow (Story 2.0d / ADR-003)', (
     expect(screen.getByText('Veículos na Base')).toBeDefined()
   })
 
-  it('filtra clientes pelo campo de busca textual no desktop', () => {
+  it('filtra clientes pelo campo de busca textual no desktop', async () => {
     render(
       <MemoryRouter>
         <ClientesPage />
@@ -44,7 +44,7 @@ describe('Clientes e Frotistas Decompostos e Workflow (Story 2.0d / ADR-003)', (
     )
     fireEvent.change(inputBusca, { target: { value: 'InexistenteXYZ123' } })
 
-    expect(screen.getByText('Nenhum cliente encontrado')).toBeDefined()
+    expect(await screen.findByText('Nenhum cliente encontrado')).toBeDefined()
   })
 
   it('renderiza a versão mobile de clientes com chips de métricas e lista de cards', () => {

@@ -13,7 +13,7 @@ import {
   criarNovoDeslocamento,
   carregarVeiculosDeApoio,
 } from '../../constants/mockLevaETraz'
-import { carregarClientesCadastrados } from '../../constants/mockClientesVeiculos'
+import { useClientesCadastrados } from '../../hooks/useClientesCadastrados'
 import { SecaoTipoServico } from './novo-deslocamento/SecaoTipoServico'
 import { SecaoClienteVeiculo } from './novo-deslocamento/SecaoClienteVeiculo'
 import { SecaoFornecedorPecas } from './novo-deslocamento/SecaoFornecedorPecas'
@@ -25,7 +25,7 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
   const prioridade = 'normal'
 
   // Clientes e Veículos da Oficina
-  const [clientesBase, setClientesBase] = useState([])
+  const { clientes: clientesBase, carregando: carregandoClientes } = useClientesCadastrados({ incluirVeiculos: true })
   const [clienteSelecionado, setClienteSelecionado] = useState(null)
   const [veiculoClienteSelecionado, setVeiculoClienteSelecionado] = useState(null)
   const [numeroOS, setNumeroOS] = useState('')
@@ -83,9 +83,6 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
 
   useEffect(() => {
     if (isOpen) {
-      const listaClientes = carregarClientesCadastrados()
-      setClientesBase(listaClientes)
-
       const listaApoio = carregarVeiculosDeApoio()
       setVeiculosApoioDisponiveis(listaApoio.length > 0 ? listaApoio : VEICULOS_APOIO_PADRAO)
       if (listaApoio.length > 0) {
@@ -293,6 +290,7 @@ export function ModalNovoDeslocamento({ isOpen, onClose, onSalvo }) {
             setNumeroOS={setNumeroOS}
             levarClienteEmbora={levarClienteEmbora}
             setLevarClienteEmbora={setLevarClienteEmbora}
+            carregandoClientes={carregandoClientes}
           />
         )}
 

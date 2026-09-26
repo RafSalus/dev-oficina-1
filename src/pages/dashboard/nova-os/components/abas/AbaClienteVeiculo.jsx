@@ -31,6 +31,7 @@ export function AbaClienteVeiculo({ formData, updateFormData }) {
     handleSalvarNovoVeiculo,
     somarDias,
     foneLimpo,
+    carregandoClientes,
   } = useClienteVeiculoSelecao(formData, updateFormData)
 
   return (
@@ -115,13 +116,14 @@ export function AbaClienteVeiculo({ formData, updateFormData }) {
           options={clientesOptions}
           value={selectedClienteOption}
           onChange={handleSelectCliente}
-          placeholder="Pesquise por nome, telefone, CPF ou placa..."
+          isLoading={carregandoClientes}
+          placeholder={carregandoClientes ? 'Carregando clientes...' : 'Pesquise por nome, telefone, CPF ou placa...'}
           isClearable
           isSearchable
           styles={selectStylesPortal}
           menuPortalTarget={document.body}
           menuPosition="fixed"
-          noOptionsMessage={() => 'Nenhum cliente localizado'}
+          noOptionsMessage={() => (carregandoClientes ? 'Carregando clientes...' : 'Nenhum cliente localizado')}
         />
 
         {formData.cliente && (
