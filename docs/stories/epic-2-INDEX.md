@@ -14,6 +14,7 @@
 |---|---|---|
 | [ADR-005](../architecture/project-decisions/adr-005-politica-acesso-dados-supabase.md) | Política de Acesso a Dados no Supabase — Fail-Closed, Escrita Atômica e Concorrência | Todas as stories 2.1–2.19 |
 | [ADR-006](../architecture/project-decisions/adr-006-tokens-publicos-e-storage.md) | Acesso Público por Token e Armazenamento de Mídia no Supabase Storage | Stories 2.17, 2.18 |
+| [ADR-008](../architecture/project-decisions/adr-008-auditoria-ator-e-lgpd.md) | Trilha de Auditoria — Classificação do Ator e Minimização/Retenção de Dados Pessoais (LGPD) | Stories 2.2b, 2.5–2.7, 2.17, 2.20a/c |
 | [ADR-007](../architecture/project-decisions/adr-007-autenticacao-cliente-por-cpf.md) | Autenticação do Cliente por CPF com Aprovação da Secretaria (OQ-4/G2.8) | Stories 2.20a, 2.20b, 2.20c |
 
 ---
@@ -33,12 +34,13 @@
 | [2.2](2.2.triggers-auditoria-e-updated-at.md) | Triggers de Auditoria Imutável e `updated_at` Automático | @data-engineer / @dev | 2.1 | **Done** |
 | [2.3](2.3.view-rpc-mecanicos-ativos.md) | View/RPC de Mecânicos Ativos + `funcionario_atual_id()` | @data-engineer / @dev | 2.1 | **Done** |
 | [2.4](2.4.correcao-testes-guards-e-ci-epic2.md) | Correção de `auth-guards.test.js` e Gate de CI do Epic 2 | @dev / @qa | 2.1 | **Done** |
+| [2.2b](2.2b.auditoria-ator-e-lgpd.md) | Auditoria: classificação do ator e minimização/retenção de dados pessoais (ADR-008) | @data-engineer / @dev | 2.2, ADR-008 | **Ready** |
 
 ### Onda B — Cadastros
 
 | Story | Título | Executor / QG | Dependências |
 |---|---|---|---|
-| [2.5](2.5.migracao-clientes-supabase.md) | Migração de Clientes para Supabase Postgres | @dev / @data-engineer | 2.1, 2.2 |
+| [2.5](2.5.migracao-clientes-supabase.md) | Migração de Clientes para Supabase Postgres — **NO-GO em 2026-09-26, em revisão pelo @sm** | @dev / @data-engineer | 2.1, 2.2, 2.2b |
 | [2.6](2.6.migracao-veiculos-supabase.md) | Migração de Veículos (com criação do repositório dedicado) | @dev / @data-engineer | 2.5, 2.2 |
 | [2.7](2.7.migracao-catalogos-pecas-servicos-terceiros.md) | Migração de Catálogos: Peças, Serviços e Terceiros (RLS FR25) | @dev / @data-engineer | 2.1, 2.2 |
 
