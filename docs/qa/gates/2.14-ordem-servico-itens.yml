@@ -1,0 +1,69 @@
+schema: 1
+story: '2.14'
+story_title: 'Migração do Núcleo da Ordem de Serviço (OS + Itens) para Supabase Postgres'
+gate: PASS
+status_reason: >-
+  Núcleo da Ordem de Serviço migrado com sucesso para Supabase Postgres.
+  Tabela única public.ordens_servico utilizada, unificando ordens abertas e finalizadas com leitura por filtros de status.
+  CHECK de status atualizado para a união dos valores confirmados do sistema (incluindo terceirizado e aguardando_pecas).
+  Sequence seq_numero_os gerando numeração sem colisão a partir de 2914 e id com default gen_random_uuid()::text.
+  Concorrência otimista implementada com checagem de updated_at retornando CONFLITO_EDICAO em colisões simultâneas.
+  RLS atualizada com política de INSERT para secretária em horário operacional D4 (mecânico mantido sem INSERT conforme planejado).
+  RPCs restritas public.aplicar_peca_na_os e public.devolver_peca_da_os implementadas com validação de status aprovado_execucao, catálogo, janela D4 e mecânico restrito à própria OS.
+  Mensagem enganosa de baixa de estoque corrigida em useLancamentosRapidosOS.js.
+  42 testes de OS passando (8 novos testes de integração Supabase/RPCs), suíte de regressão verde, 0 erros no lint, Vite build verde e arquivos <= 378 linhas (NFR17).
+reviewer: 'Dara (@data-engineer) / Quinn (@qa)'
+reviewed_revision: 'branch feat/2.14-ordem-servico-itens-schema-repositorio'
+updated: '2026-09-26T15:23:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926240000_ordens_servico_core_e_baixa_estoque.sql
+  repositories:
+    - src/repositories/ordensServicoRepository.js
+    - src/repositories/ordensServicoLocal.js
+    - src/repositories/ordensServicoSupabase.js
+    - src/repositories/mapeadores/ordensServico.js
+  hooks:
+    - src/hooks/useLancamentosRapidosOS.js
+  tests:
+    - tests/unit/ordensServicoRepository.supabase.test.js
+    - tests/unit/os-state-machine.test.js
+    - tests/unit/aprovacao-orcamento.test.jsx
+    - tests/unit/ordem-servico-utils.test.js
+
+evidence:
+  commands:
+    - cmd: 'npm test -- tests/unit/ordensServicoRepository.supabase.test.js tests/unit/os-state-machine.test.js tests/unit/aprovacao-orcamento.test.jsx tests/unit/ordem-servico-utils.test.js'
+      result: '4 arquivos de teste passaram, 42 testes aprovados, 0 falhas'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint'
+    - cmd: 'wc -l nos módulos modificados/criados'
+      result: 'ordensServicoRepository (205), ordensServicoLocal (378), ordensServicoSupabase (187), mapeador (109). Todos <= 378 linhas (NFR17).'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'ordensServicoRepository.js preserva superfície pública integral com interface assíncrona fail-closed.'}
+  AC2: {status: PASS, note: 'Unificação em tabela única: ordens abertas e finalizadas leem da mesma tabela via filtros de status.'}
+  AC3: {status: PASS, note: 'STATUS_ORCAMENTO preservado rigorosamente no front com em_diagnostico no índice 1.'}
+  AC4: {status: PASS, note: 'CHECK de status atualizado com a união dos conjuntos confirmados.'}
+  AC5: {status: PASS, note: 'Validação de transição mantida em osTransicaoValidation.js.'}
+  AC6: {status: PASS, note: 'Itens de peças, serviços e terceiros mantidos como JSONB.'}
+  AC7: {status: PASS, note: 'Snapshots de cliente e veículo persistidos imutavelmente na abertura da OS.'}
+  AC8: {status: PASS, note: 'Sequence seq_numero_os e id gen_random_uuid()::text criados.'}
+  AC9: {status: PASS, note: 'Concorrência otimista com checagem de updated_at retornando CONFLITO_EDICAO.'}
+  AC10: {status: PASS, note: 'RLS de INSERT concedida para secretária em horário operacional; mecânico marcado como pendente.'}
+  AC11: {status: PASS, note: 'RPC aplicar_peca_na_os implementada (status aprovado_execucao, catálogo, mecânico na própria OS, janela D4).'}
+  AC12: {status: PASS, note: 'RPC devolver_peca_da_os implementada para devolução manual explícita restrita a admin/secretaria.'}
+  AC13: {status: PASS, note: 'Mensagem enganosa de baixa de estoque corrigida no hook de lançamentos rápidos.'}
+  AC14: {status: PASS, note: 'Triggers de auditoria e updated_at ativas na tabela ordens_servico.'}
+  AC15: {status: PASS, note: 'Testes automatizados cobrem ciclo, fail-closed, concorrência, unificação e RPCs.'}
+  AC16: {status: PASS, note: 'Par mobile e portal do mecânico verificados sem alterações estruturais.'}
+  AC17: {status: PASS, note: 'Qualidade: zero erros de lint, testes verdes, arquivos <= 378 linhas (NFR17).'}
+
+nfr_validation:
+  NFR1: {status: PASS, note: 'Schema real em Postgres com integridade referencial.'}
+  NFR10: {status: PASS, note: 'Sequence dedicada elimina colisões sob concorrência.'}
+  NFR12: {status: PASS, note: 'Mecânico restrito à própria OS ao aplicar peças.'}
+  NFR16: {status: PASS, note: 'Auditoria completa em ordens_servico.'}
+  NFR17: {status: PASS, note: 'Todos os módulos <= 378 linhas (limite 400).'}
+  NFR20: {status: PASS, note: 'Concorrência otimista implementada em transições de status.'}

@@ -81,7 +81,7 @@ export function useLancamentosRapidosOS({ os, linkCliente, onAdicionarItem, onAt
         `"${nome}" não tem saldo suficiente no almoxarifado e foi marcada para Cotação. Mova a OS para "Cotação" no Kanban para disparar a cotação com fornecedores.`
       )
     } else {
-      toast.success(`Peça "${nome}" adicionada à OS #${os.numeroOS} (baixa do estoque interno).`)
+      toast.success(`Peça "${nome}" adicionada à OS #${os.numeroOS}.`)
     }
     setUltimaPecaAdicionada({ id: item.id, nome })
     peca.redefinir(PECA_VAZIA)
