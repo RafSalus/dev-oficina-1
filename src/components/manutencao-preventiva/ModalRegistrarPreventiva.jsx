@@ -16,7 +16,7 @@ import { customSelectStyles } from '../suprimentos/customSelectStyles'
 import {
   ITENS_PREVENTIVOS_CATALOGO,
   registrarExecucaoPreventiva,
-} from '../../constants/mockManutencaoPreventiva'
+} from '../../repositories/manutencaoPreventivaRepository'
 import { SecaoRecorrenciaPreventiva } from './registrar/SecaoRecorrenciaPreventiva'
 import { SecaoGarantiaPreventiva } from './registrar/SecaoGarantiaPreventiva'
 
@@ -118,7 +118,7 @@ export function ModalRegistrarPreventiva({
     }
   }
 
-  const handleSalvar = (e) => {
+  const handleSalvar = async (e) => {
     e.preventDefault()
 
     if (!veiculoSelecionado) {
@@ -141,26 +141,31 @@ export function ModalRegistrarPreventiva({
       return
     }
 
-    registrarExecucaoPreventiva({
-      placa: veiculoSelecionado.value,
-      itemId: itemSelecionado.value,
-      km: kmExecucao,
-      data: dataExecucao,
-      intervaloKm,
-      intervaloMeses,
-      mecanicoNome: mecanico?.value || '',
-      observacoes,
-      atualizarKmVeiculo,
-      garantiaPendente,
-      servicoOrigem,
-      prazoGarantiaLimite,
-    })
+    try {
+      await registrarExecucaoPreventiva({
+        placa: veiculoSelecionado.value,
+        veiculoId: veiculoSelecionado.veiculoOriginal?.id || null,
+        itemId: itemSelecionado.value,
+        km: kmExecucao,
+        data: dataExecucao,
+        intervaloKm,
+        intervaloMeses,
+        mecanicoNome: mecanico?.value || '',
+        observacoes,
+        atualizarKmVeiculo,
+        garantiaPendente,
+        servicoOrigem,
+        prazoGarantiaLimite,
+      })
 
-    toast.success(
-      `Manutenção preventiva registrada com sucesso para o veículo ${veiculoSelecionado.value}!`
-    )
-    if (onSalvo) onSalvo()
-    onClose()
+      toast.success(
+        `Manutenção preventiva registrada com sucesso para o veículo ${veiculoSelecionado.value}!`
+      )
+      if (onSalvo) onSalvo()
+      onClose()
+    } catch (err) {
+      toast.error(err.message || 'Erro ao registrar manutenção preventiva.')
+    }
   }
 
   return (

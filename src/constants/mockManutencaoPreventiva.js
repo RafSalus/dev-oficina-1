@@ -4,14 +4,11 @@
 
 import * as veiculosRepository from '../repositories/veiculosRepository'
 import { carregarVeiculosEstacionados } from './mockVeiculosEstacionados'
-import { obterHistoricoCompletoVeiculo } from './mockVeiculosEstacionados'
 
 export const CHAVE_STORAGE_PREVENTIVA = 'dev_oficina_manutencoes_preventivas'
 
-/**
- * Catálogo padrão de itens preventivos e receitas potenciais da oficina
- */
-export const ITENS_PREVENTIVOS_CATALOGO = []
+import { ITENS_PREVENTIVOS_CATALOGO } from './catalogoPreventivo'
+export { ITENS_PREVENTIVOS_CATALOGO }
 
 /**
  * Registros seed com manutenções preventivas para a frota ativa

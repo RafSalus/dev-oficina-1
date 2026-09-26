@@ -7,7 +7,7 @@ import {
   calcularSaudeVeiculo,
   carregarManutencoesPreventivas,
   ITENS_PREVENTIVOS_CATALOGO,
-} from '../constants/mockManutencaoPreventiva'
+} from '../repositories/manutencaoPreventivaRepository'
 
 export const FILTROS_STATUS_SAUDE = [
   { value: 'TODOS', label: 'Todos os Veículos' },
@@ -36,14 +36,26 @@ export function usePreventivaWorkflow() {
   const [veiculoParaAtualizar, setVeiculoParaAtualizar] = useState(null)
 
   const recarregarDados = useCallback(() => {
-    const listaPrev = carregarManutencoesPreventivas()
-    setPreventivas(listaPrev)
+    let ativo = true
+    Promise.resolve(carregarManutencoesPreventivas())
+      .then((listaPrev) => {
+        if (ativo) setPreventivas(listaPrev || [])
+      })
+      .catch((err) => {
+        console.error('Erro ao carregar manutenções preventivas:', err)
+      })
+    return () => {
+      ativo = false
+    }
   }, [])
 
   useEffect(() => {
-    recarregarDados()
+    const cleanup = recarregarDados()
     window.addEventListener('storage', recarregarDados)
-    return () => window.removeEventListener('storage', recarregarDados)
+    return () => {
+      if (cleanup) cleanup()
+      window.removeEventListener('storage', recarregarDados)
+    }
   }, [recarregarDados])
 
   const veiculosAtivos = useMemo(() => {

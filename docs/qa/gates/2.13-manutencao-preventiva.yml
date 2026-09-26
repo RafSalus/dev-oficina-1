@@ -1,0 +1,65 @@
+schema: 1
+story: '2.13'
+story_title: 'Migração de Manutenção Preventiva para Supabase Postgres'
+gate: PASS
+status_reason: >-
+  Módulo de Manutenção Preventiva migrado com sucesso para Supabase Postgres.
+  Nova tabela public.manutencoes_preventivas criada com chaves estrangeiras para veiculos(id) e funcionarios(id).
+  RPC restrita public.atualizar_hodometro_veiculo criada (SECURITY DEFINER) permitindo que mecânicos e secretárias atualizem km_atual em veiculos com validação contra regressão.
+  Repositório assíncrono manutencaoPreventivaRepository criado seguindo fail-closed (ADR-002), sem fallback silencioso para localStorage em modo remoto.
+  Catálogo de itens preventivos mantido como constante estática (AC2) extraído para src/constants/catalogoPreventivo.js.
+  Função pura calcularSaudeVeiculo preservada com dados reais do Postgres.
+  RLS implementada com public.papel_usuario() e horário operacional D4. Triggers trg_set_updated_at e trg_audit vinculadas.
+  Todos os testes unitários passando, 0 erros no lint, build Vite verde e arquivos <= 400 linhas (NFR17).
+reviewer: 'Dara (@data-engineer) / Quinn (@qa)'
+reviewed_revision: 'branch feat/2.13-manutencao-preventiva-schema-repositorio'
+updated: '2026-09-26T15:15:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926230000_manutencao_preventiva.sql
+  constants:
+    - src/constants/catalogoPreventivo.js
+    - src/constants/mockManutencaoPreventiva.js
+  repositories:
+    - src/repositories/manutencaoPreventivaRepository.js
+    - src/repositories/mapeadores/manutencaoPreventiva.js
+  hooks:
+    - src/hooks/usePreventivaWorkflow.js
+  components:
+    - src/components/manutencao-preventiva/ModalAtualizarKmVeiculo.jsx
+    - src/components/manutencao-preventiva/ModalRegistrarPreventiva.jsx
+  pages:
+    - src/pages/dashboard/manutencao-preventiva/ManutencaoPreventivaPage.jsx
+    - src/pages/dashboard/manutencao-preventiva/mobile/MobileManutencaoPreventivaPage.jsx
+  tests:
+    - tests/unit/manutencaoPreventivaRepository.test.js
+    - tests/unit/manutencao-preventiva-workflow.test.jsx
+
+evidence:
+  commands:
+    - cmd: 'npm test -- tests/unit/manutencaoPreventivaRepository.test.js tests/unit/manutencao-preventiva-workflow.test.jsx'
+      result: '2 arquivos de teste passaram, 12 testes aprovados, 0 falhas'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint'
+    - cmd: 'wc -l nos módulos modificados/criados'
+      result: 'Todos os arquivos <= 333 linhas (NFR17).'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'Tabela public.manutencoes_preventivas criada com id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text e FK para veiculos(id).'}
+  AC2: {status: PASS, note: 'Catálogo ITENS_PREVENTIVOS_CATALOGO avaliado e mantido como constante estática em código (catalogoPreventivo.js).'}
+  AC3: {status: PASS, note: 'Funções puras de cálculo de data (converterDataParaDate, adicionarMesesAData, calcularDiasRestantes) preservadas.'}
+  AC4: {status: PASS, note: 'manutencaoPreventivaRepository.js criado expondo carregarManutencoesPreventivas, carregarVeiculosAtivosPreventiva, registrarExecucaoPreventiva e atualizarHodometroVeiculo.'}
+  AC5: {status: PASS, note: 'calcularSaudeVeiculo preservada como função pura recebendo preventivas e veículos já carregados.'}
+  AC6: {status: PASS, note: 'RPC restrita public.atualizar_hodometro_veiculo(placa, novo_km, permitir_regressao) criada e integrada ao repositório.'}
+  AC7: {status: PASS, note: 'RLS aplicada: admin total; secretaria e mecanico SELECT e INSERT (secretaria sob D4).'}
+  AC8: {status: PASS, note: 'Triggers trg_set_updated_at e trg_audit vinculadas à tabela.'}
+  AC9: {status: PASS, note: 'Testes automatizados cobrem registro, cálculo de saúde, RPC de hodômetro, validações e fail-closed.'}
+  AC10: {status: PASS, note: 'Par mobile (MobileManutencaoPreventivaPage.jsx) validado e em paridade.'}
+  AC11: {status: PASS, note: 'Qualidade: zero erros no lint, testes verdes, arquivos <= 400 linhas.'}
+
+nfr_validation:
+  NFR1: {status: PASS, note: 'Persistência estruturada em Postgres com tipos consistentes.'}
+  NFR12: {status: PASS, note: 'Menor privilégio: mecânico atualiza hodômetro via RPC sem permissão de UPDATE genérico em veiculos.'}
+  NFR17: {status: PASS, note: 'Todos os arquivos <= 333 linhas (limite 400).'}
+  NFR18: {status: PASS, note: 'Paridade desktop/mobile preservada.'}

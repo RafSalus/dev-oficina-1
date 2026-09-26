@@ -3,7 +3,7 @@ import { Gauge, CheckCircle, X } from '@phosphor-icons/react'
 import { IMaskInput } from 'react-imask'
 import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
-import { atualizarHodometroVeiculo } from '../../constants/mockManutencaoPreventiva'
+import { atualizarHodometroVeiculo } from '../../repositories/manutencaoPreventivaRepository'
 
 export function ModalAtualizarKmVeiculo({ isOpen, onClose, veiculo, onAtualizado }) {
   const [kmInput, setKmInput] = useState('')
