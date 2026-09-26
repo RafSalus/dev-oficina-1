@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 // Testes de segurança do fluxo real de autenticação (AdminAuthProvider + ProtectedRoute).
+// As regras de rota em si (portais, horário, dispositivo, MFA, returnUrl) ficam em
+// auth-guards.test.jsx, que testa routeAccessRules.js diretamente (Story 2.4).
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'

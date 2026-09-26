@@ -27,8 +27,16 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      # Epic 2: toda a suíte roda sem segredos nem rede do Supabase. Sob Vitest os repositórios
+      # operam em modo 'local' (supabaseHelpers.js) e os testes de modo remoto mockam o
+      # supabase-js (getSupabaseDataClient/rpc). As variáveis vazias abaixo garantem que um
+      # segredo configurado no repositório nunca seja usado pelos testes. Testes SQL contra
+      # banco real (supabase/tests/*.test.sql) não rodam no CI.
       - name: Run Tests (Vitest)
         run: npm test
+        env:
+          VITE_SUPABASE_URL: ''
+          VITE_SUPABASE_ANON_KEY: ''
 
       - name: Build Application (Vite)
         run: npm run build

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { getSupabaseAdminClient, isSupabaseConfigured } from '../lib/supabase'
 import { MESSAGES } from '../constants/company'
 import { limparDadosDominioLocalStorage } from '../utils/storageCleaners'
+import { isHorarioOperacional } from '../components/auth/routeAccessRules'
 
 const AdminAuthContext = createContext(null)
 
@@ -330,19 +331,7 @@ export const DEVICE_TOKEN_KEY = 'dev_oficina_device_token'
  * no fuso horário oficial de Brasília (America/Sao_Paulo).
  */
 export function isHorarioOperacionalOficina() {
-  try {
-    const formatter = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      hour: 'numeric',
-      hourCycle: 'h23',
-    })
-    const hora = parseInt(formatter.format(new Date()), 10)
-    return hora >= 8 && hora < 19
-  } catch {
-    // Fallback defensivo usando hora local caso Intl falhe
-    const localHour = new Date().getHours()
-    return localHour >= 8 && localHour < 19
-  }
+  return isHorarioOperacional(new Date())
 }
 
 /**
