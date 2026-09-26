@@ -81,11 +81,11 @@ $$;
 -- 2. AC3 — UPDATE grava só o que mudou; só updated_at não gera linha
 -- ------------------------------------------------------------------------------
 SELECT set_config('request.jwt.claims', '', true);
--- Mudança real só de updated_at: desliga por instantes o BEFORE UPDATE que o regrava com now()
--- (dentro desta transação, desfeita no ROLLBACK). Não deve gerar linha de auditoria.
-ALTER TABLE public.clientes DISABLE TRIGGER trg_set_updated_at_clientes;
-UPDATE public.clientes SET updated_at = '2001-01-01' WHERE id = 't22b-cli';
-ALTER TABLE public.clientes ENABLE TRIGGER trg_set_updated_at_clientes;
+-- Mudança real só de updated_at: cliente inserido com updated_at antigo (o INSERT não passa
+-- pelo BEFORE UPDATE); o UPDATE abaixo faz o trigger gravar now(). Não deve gerar linha.
+INSERT INTO public.clientes (id, nome, cpf_cnpj, telefone, updated_at)
+VALUES ('t22b-cli2', 'Titular 2.2b B', '000.000.000-2c', '(43) 90000-2224', '2001-01-01');
+UPDATE public.clientes SET updated_at = updated_at WHERE id = 't22b-cli2';
 -- UPDATE sem mudança de valor: também não gera linha
 UPDATE public.clientes SET nome = nome WHERE id = 't22b-cli';
 
@@ -98,6 +98,12 @@ BEGIN
   SELECT count(*) INTO v_updates FROM public.audit_logs WHERE registro_id = 't22b-cli' AND operacao = 'UPDATE';
   IF v_updates <> 3 THEN
     RAISE EXCEPTION 'FALHA AC3: esperados 3 UPDATEs auditados (admin, service_role, anon), encontrados %', v_updates;
+  END IF;
+  IF (SELECT updated_at FROM public.clientes WHERE id = 't22b-cli2') < '2020-01-01' THEN
+    RAISE EXCEPTION 'FALHA pré-condição AC3: updated_at do cliente B deveria ter mudado';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.audit_logs WHERE registro_id = 't22b-cli2' AND operacao = 'UPDATE') THEN
+    RAISE EXCEPTION 'FALHA AC3: UPDATE que só muda updated_at não deveria gerar linha';
   END IF;
 
   SELECT * INTO v FROM public.audit_logs WHERE registro_id = 't22b-cli' AND operacao = 'UPDATE' AND valor_novo ? 'observacoes';
@@ -124,15 +130,32 @@ $$;
 -- OS do titular com snapshot (para verificar a anonimização do snapshot)
 INSERT INTO public.ordens_servico (id, numero_os, cliente_id, snapshot_cliente)
 VALUES ('t22b-os', 'OS-T22B', 't22b-cli', '{"nome":"Titular 2.2b","telefone":"(43) 90000-2222"}');
+-- UPDATE que troca só o snapshot: a linha da trilha fica sem cliente_id (diff do AC3)
+UPDATE public.ordens_servico
+SET snapshot_cliente = '{"nome":"Titular 2.2b","telefone":"(43) 90000-9999"}'
+WHERE id = 't22b-os';
 
-SELECT set_config('request.jwt.claims',
-  '{"sub":"88888888-8888-8888-8888-888888888888","role":"authenticated","app_metadata":{"role":"secretaria"}}', true);
+-- Recusas: secretaria, autenticado sem papel (SEC-001) e claims sem role (SEC-003)
+CREATE TEMP TABLE t22b_claims_recusadas (claims text) ON COMMIT DROP;
+INSERT INTO t22b_claims_recusadas VALUES
+  ('{"sub":"88888888-8888-8888-8888-888888888888","role":"authenticated","app_metadata":{"role":"secretaria"}}'),
+  ('{"sub":"99999999-9999-9999-9999-999999999999","role":"authenticated","app_metadata":{}}'),
+  ('{"sub":"99999999-9999-9999-9999-999999999999","role":"authenticated"}'),
+  ('{"sub":"99999999-9999-9999-9999-999999999999"}');
+GRANT SELECT ON t22b_claims_recusadas TO authenticated;
 SET LOCAL ROLE authenticated;
 DO $$
+DECLARE
+  c text;
 BEGIN
-  PERFORM public.anonimizar_titular_auditoria('clientes', 't22b-cli');
-  RAISE EXCEPTION 'FALHA AC5: secretaria não deveria anonimizar';
-EXCEPTION WHEN insufficient_privilege THEN NULL;
+  FOR c IN SELECT claims FROM t22b_claims_recusadas LOOP
+    PERFORM set_config('request.jwt.claims', c, true);
+    BEGIN
+      PERFORM public.anonimizar_titular_auditoria('clientes', 't22b-cli');
+      RAISE EXCEPTION 'FALHA AC5: anonimização deveria ser recusada para claims %', c;
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+  END LOOP;
 END;
 $$;
 RESET ROLE;
@@ -149,8 +172,8 @@ DECLARE
   v record;
   v_os record;
 BEGIN
-  IF (SELECT valor FROM t22b_resultado WHERE caso = 'anonimizadas')::int < 5 THEN
-    RAISE EXCEPTION 'FALHA AC5: esperadas >= 5 linhas anonimizadas (4 do cliente + 1 da OS), veio %',
+  IF (SELECT valor FROM t22b_resultado WHERE caso = 'anonimizadas')::int < 6 THEN
+    RAISE EXCEPTION 'FALHA AC5: esperadas >= 6 linhas anonimizadas (4 do cliente + 2 da OS), veio %',
       (SELECT valor FROM t22b_resultado WHERE caso = 'anonimizadas');
   END IF;
 
@@ -172,12 +195,18 @@ BEGIN
     RAISE EXCEPTION 'FALHA AC5: snapshot do cliente na OS deveria ser anonimizado (e o resto preservado): %', v_os.valor_novo;
   END IF;
 
+  SELECT * INTO v_os FROM public.audit_logs WHERE registro_id = 't22b-os' AND operacao = 'UPDATE';
+  IF v_os.valor_novo ->> 'snapshot_cliente' IS DISTINCT FROM '[anonimizado]'
+     OR v_os.valor_anterior ->> 'snapshot_cliente' IS DISTINCT FROM '[anonimizado]' THEN
+    RAISE EXCEPTION 'FALHA AC5 (LGPD-001): snapshot em UPDATE de OS sem cliente_id deveria ser anonimizado: %', v_os.valor_novo;
+  END IF;
+
   SELECT * INTO v FROM public.audit_logs WHERE registro_id = 't22b-cli' AND operacao = 'ANONIMIZACAO';
   IF v IS NULL OR v.usuario_papel IS DISTINCT FROM 'admin' THEN
     RAISE EXCEPTION 'FALHA AC5: a anonimização deveria ser registrada na trilha pelo admin';
   END IF;
 
-  RAISE NOTICE 'OK AC5: secretaria recusada; admin anonimiza cliente e snapshot da OS, com registro';
+  RAISE NOTICE 'OK AC5: recusada para secretaria, sem papel e claims sem role; admin anonimiza cliente e snapshots da OS (INSERT e UPDATE), com registro';
 END;
 $$;
 

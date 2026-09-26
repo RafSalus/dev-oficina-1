@@ -79,7 +79,9 @@ Ajustes feitos pelo `@data-engineer` ao implementar o §3.4, para a anonimizaç�
 - **Nome do titular:** `nome`, `nome_fantasia` e `razao_social` também são anonimizados, **só** quando a tabela é de pessoa (`clientes`, `funcionarios`, `cadastros_clientes`). Em `pecas`/`servicos`, `nome` é o nome do item e fica intacto. Sem isso a "anonimização" deixaria o titular identificável pelo nome.
 - **`telefone_secundario`** (coluna existente em `clientes`) entra na lista.
 - **Snapshot na OS:** ao anonimizar `('clientes', id)`, a função também anonimiza `snapshot_cliente` nas linhas de `ordens_servico` cujo `cliente_id` é o do titular — o snapshot fica nas linhas da OS, cujo `registro_id` é o id da OS.
-- **Quem pode chamar:** além do admin, `service_role` e processos sem JWT (`sistema`), porque os jobs de retenção do ADR-007 §3.9 também chamam a função (§5). Usuário autenticado sem papel admin recebe `insufficient_privilege`.
+- **Quem pode chamar:** além do admin, `service_role` e processos sem JWT (`sistema`), porque os jobs de retenção do ADR-007 §3.9 também chamam a função (§5). Qualquer outro ator — inclusive autenticado sem papel e claims sem `role` reconhecida (classificadas como `indefinido`) — recebe `insufficient_privilege`.
+- **`sistema` só sem claims:** `audit_ator()` classifica como `sistema` apenas conexões sem `request.jwt.claims`; claims presentes com `role` fora de `authenticated`/`anon`/`service_role` viram `indefinido`.
+- **Ratificação:** emenda ratificada pelo `@po` em 2026-09-26 (AC5 da Story 2.2b reescrito).
 - **Linhas legadas (§3.5):** como nenhuma RPC pública por token existia antes desta migration, **todas** as linhas `publico_token` já gravadas são reclassificadas para `sistema` (em produção era 1).
 
 ## 4. Consequências

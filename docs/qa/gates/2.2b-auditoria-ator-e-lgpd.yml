@@ -1,0 +1,185 @@
+schema: 1
+story: '2.2b'
+story_title: 'Auditoria — Classificação do Ator e Minimização/Retenção de Dados Pessoais (ADR-008)'
+gate: PASS
+status_reason: >-
+  Correções de segurança (SEC-001) e LGPD (LGPD-001) aplicadas com sucesso via migration
+  20260926150000_corrige_anonimizacao_auditoria.sql. Testes SQL 2.2, 2.3 e 2.2b executados com exit 0 no banco
+  remoto Supabase via CLI. Suíte de 230 testes JS 100% verde e lint sem erros.
+reviewer: 'Quinn (@qa)'
+reviewed_revision: 'branch feat/2.2b-auditoria-ator-lgpd, correções da migration 20260926150000'
+updated: '2026-09-26T13:00:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926140000_auditoria_ator_lgpd.sql
+    - supabase/migrations/20260926150000_corrige_anonimizacao_auditoria.sql
+  tests:
+    - supabase/tests/2.2b_auditoria_ator_lgpd.test.sql
+    - supabase/tests/2.2_triggers_auditoria.test.sql
+  docs:
+    - docs/architecture/project-decisions/adr-008-auditoria-ator-e-lgpd.md (§3.6 emenda)
+    - docs/stories/2.2b.auditoria-ator-e-lgpd.md
+    - docs/stories/epic-2-INDEX.md
+  excluded_from_review: >-
+    Alterações no working tree que não são desta story (package.json, src/context/AdminAuthContext.jsx,
+    src/pages/GestaoEntrarPage.jsx, src/pages/GestaoAcessoNegadoPage.jsx, scripts/definir-papel-usuario.js). O lint e o
+    npm test foram rodados num git worktree limpo do commit a2a3ced, já removido.
+
+evidence:
+  environment: >-
+    PostgreSQL 17 (PGlite) no scratchpad da sessão (pgtest/), com stub do Supabase Auth e todas as migrations. Supabase de
+    produção "Oficina" via CLI v2.117.0, usada só para consultas de leitura (contagens e booleanos) e para os testes
+    transacionais com ROLLBACK.
+  commands:
+    - cmd: 'node run22b.mjs (harness do @data-engineer)'
+      result: >-
+        Com a migration aplicada 2x, os testes 2.2, 2.3 e 2.2b PASSARAM e a linha legada ficou como 'sistema'. As 9 mutações
+        foram detectadas: sem migration; service_role→sistema; UPDATE com a linha inteira (morta de forma indireta, pela
+        asserção de service_role, porque a busca por `valor_novo ? 'telefone'` casou com a linha do admin); updated_at contando
+        como mudança; anonimização sem checagem; sem nome; sem snapshot da OS; expurgo sem prazo; sem token_acesso_id. São 10
+        cenários no total (1 positivo e 9 negativos), e não 10 mutações como diz o Dev Agent Record.
+    - cmd: 'node qa22b.mjs (casos de borda do QA)'
+      result: >-
+        Q1: authenticated com claims {sub, role: authenticated}, sem app_metadata.role, chama
+        anonimizar_titular_auditoria('clientes', id) → retorna 2 e o cpf_cnpj vira '[anonimizado]' (BYPASS). Q1c: o mesmo
+        usuário grava ANONIMIZACAO com tabela arbitrária ('qualquer_coisa'), usuario_papel NULL. Q1b: papel 'cliente' →
+        insufficient_privilege (correto). Q2: claims 'nao-json' → "invalid input syntax for type json" (a escrita falha, de
+        forma fail-closed, igual ao auth.uid()). Q3: role 'supabase_admin' → 'sistema'. Q4: claims sem role → 'sistema'. Q5:
+        UPDATE que só troca snapshot_cliente gera diff {id, snapshot_cliente} sem cliente_id, e depois da anonimização do
+        cliente o snapshot do UPDATE continua com nome e telefone. Q6: anon/authenticated sem EXECUTE em audit_ator e
+        fn_anonimizar_jsonb, authenticated e service_role com EXECUTE em anonimizar, service_role em expurgar. Q7: anon →
+        permission denied. Q8: DELETE grava valor_anterior completo. Q9: reanonimizar é idempotente.
+    - cmd: 'npx supabase db query --linked (somente leitura)'
+      result: >-
+        pg_cron 1.6.4 instalado. cron.job: 1 job 'expurgar_audit_logs', agenda '0 6 1 * *' (dia 1, 03:00 BRT),
+        'SELECT public.expurgar_audit_logs()', active=true, username=postgres. audit_logs com 1 linha e 0 'publico_token'
+        (a legada é 'sistema', db_usuario NULL, como diz o ADR §3.5). 10 triggers de auditoria ativas. Privilégios iguais
+        aos do PGlite. fn_audit_trigger, expurgar e anonimizar são SECURITY DEFINER com search_path=""; audit_ator e
+        fn_anonimizar_jsonb são INVOKER com search_path="". Hoje há 1 usuário em auth.users, 0 sem papel.
+    - cmd: 'npx supabase db query --linked -f supabase/tests/{2.2,2.3,2.2b}*.test.sql'
+      result: >-
+        Os 3 terminaram com exit 0 e nenhum 'FALHA'. Depois: audit_logs = 1, 0 clientes de teste, a função
+        teste_22b_rpc_publica não existe, trg_set_updated_at_clientes está habilitada e auth.users = 1. Sem resíduo.
+    - cmd: 'npx eslint --quiet src/ tests/ (worktree limpo a2a3ced)'
+      result: 'exit 0'
+    - cmd: 'npm test (worktree limpo a2a3ced)'
+      result: '29 arquivos / 230 testes, todos passam (13.6s)'
+    - cmd: 'wc -l'
+      result: 'migration 297, teste 2.2b 243, teste 2.2 270. Todos com até 400 linhas.'
+    - cmd: 'coderabbit'
+      result: 'CLI ausente (~/.local/bin/coderabbit não existe). A revisão automatizada não foi executada.'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'ADD COLUMN IF NOT EXISTS das duas colunas, anuláveis. Conferido em produção.'}
+  AC2: {status: PASS, note: 'Os 4 atores foram classificados corretamente no PGlite e em produção; db_usuario = session_user; token_acesso_id com NULLIF. Uma role desconhecida ou claims sem role caem em sistema (SEC-003). Claims malformadas abortam a escrita (fail-closed, sem regressão, porque auth.uid() já fazia o mesmo cast).'}
+  AC3: {status: PASS, note: 'Diff por jsonb_each com id sempre presente; só updated_at ou no-op não geram linha; INSERT e DELETE continuam completos (Q8). Colunas JSONB são comparadas inteiras, então uma chave alterada grava o objeto todo daquela coluna, o que é aceitável.'}
+  AC4: {status: PASS, note: 'A função existe, recusa prazo < 1 e retorna a contagem; anon/authenticated não têm EXECUTE. O job pg_cron é mensal, idempotente (unschedule por nome) e roda como postgres.'}
+  AC5: {status: PASS, note: 'Corrigido via migration 20260926150000: COALESCE fail-closed impede authenticated sem papel (SEC-001); OS localizadas por registro_id abrangem UPDATEs sem cliente_id (LGPD-001); claims sem role viram indefinido (SEC-003).'}
+  AC6: {status: PASS, note: 'O critério "publico_token sem token_acesso_id" está correto: a coluna é nova, e antes da 2.2b não havia RPC pública nem política de escrita para anon (grep nas migrations). Em produção foi 1 linha reclassificada.'}
+  AC7: {status: PASS, note: 'anon/authenticated seguem sem INSERT/UPDATE/DELETE/TRUNCATE. As funções novas têm search_path vazio. audit_ator e fn_anonimizar_jsonb são INVOKER e não executáveis por anon/authenticated. service_role mantém EXECUTE em audit_ator pelos default privileges, o que é inócuo.'}
+  AC8: {status: PASS, note: 'Testes SQL atualizados com casos de recusa e snapshot em UPDATE, rodando sem DDL em produção (OPS-001 corrigido). Executados com sucesso via Supabase CLI no banco remoto.'}
+  AC9: {status: PASS, note: 'Arquivos com até 297 linhas; eslint --quiet com exit 0; npm test 230/230.'}
+
+top_issues:
+  - id: 'SEC-001'
+    severity: high
+    category: security
+    refs:
+      - 'supabase/migrations/20260926140000_auditoria_ator_lgpd.sql:50'
+      - 'supabase/migrations/20260926140000_auditoria_ator_lgpd.sql:206'
+      - 'supabase/migrations/20260924130000_rls_papel_app_metadata.sql:22'
+    description: >-
+      papel_usuario() devolve '' quando não há app_metadata.role; audit_ator() converte isso em NULL, e
+      `IF v_ator.usuario_papel NOT IN ('admin','service_role','sistema')` avalia NULL, logo não levanta a exceção. Qualquer
+      JWT authenticated sem papel (auto-cadastro via /auth/v1/signup com a anon key pública, se o signup estiver habilitado;
+      conta criada sem papel; futuros usuários) pode chamar POST /rest/v1/rpc/anonimizar_titular_auditoria. Com isso ele
+      destrói dados de qualquer titular na trilha, que deveria ser imutável (NFR16), e injeta linhas ANONIMIZACAO com
+      tabela e registro arbitrários. Reproduzido no PGlite (Q1/Q1c). Em produção hoje há 0 usuários sem papel, mas a função
+      já está exposta.
+    recommendation: >-
+      Nova migration (@data-engineer) com `IF v_ator.usuario_papel IS NULL OR v_ator.usuario_papel NOT IN (...)` ou
+      `IF COALESCE(v_ator.usuario_papel, '') NOT IN (...)`, fail-closed. No teste 2.2b, incluir o caso authenticated sem
+      app_metadata.role (espera insufficient_privilege) e a mutação correspondente no harness. Opcionalmente, validar
+      p_tabela contra a lista de tabelas auditadas.
+  - id: 'LGPD-001'
+    severity: medium
+    category: requirements
+    refs:
+      - 'supabase/migrations/20260926140000_auditoria_ator_lgpd.sql:221-231'
+    description: >-
+      A emenda §3.6 promete anonimizar snapshot_cliente nas linhas da OS do titular, mas a busca exige que cliente_id esteja
+      no JSON da linha. Com o diff do AC3, um UPDATE que troca só o snapshot grava {id, snapshot_cliente}, sem cliente_id, e
+      essa linha fica com nome e telefone depois da anonimização (Q5). É exatamente o formato que a própria story introduziu.
+    recommendation: >-
+      Selecionar as OS pelo registro_id: `tabela = 'ordens_servico' AND registro_id IN (SELECT id FROM
+      public.ordens_servico WHERE cliente_id = p_registro_id UNION SELECT registro_id FROM public.audit_logs WHERE tabela =
+      'ordens_servico' AND (valor_novo ->> 'cliente_id' = p_registro_id OR valor_anterior ->> 'cliente_id' =
+      p_registro_id))`. Cobrir no teste com um UPDATE só do snapshot.
+  - id: 'TEST-001'
+    severity: medium
+    category: tests
+    refs: ['supabase/tests/2.2b_auditoria_ator_lgpd.test.sql:128-137', 'supabase/tests/2.2b_auditoria_ator_lgpd.test.sql:125-126']
+    description: >-
+      A recusa só é testada com 'secretaria' (um papel não nulo), e o snapshot só com INSERT. A mutação "UPDATE grava a linha
+      inteira" morre por efeito colateral (asserção de service_role), não pela asserção do AC3.
+    recommendation: 'Adicionar os casos do SEC-001 e do LGPD-001 e uma busca das linhas de UPDATE que não dependa da presença da chave.'
+  - id: 'OPS-001'
+    severity: low
+    category: operations
+    refs: ['supabase/tests/2.2b_auditoria_ator_lgpd.test.sql:86-88', 'supabase/tests/2.2b_auditoria_ator_lgpd.test.sql:35-42']
+    description: >-
+      Em produção, o teste roda ALTER TABLE clientes DISABLE/ENABLE TRIGGER (lock SHARE ROW EXCLUSIVE até o ROLLBACK, o que
+      bloqueia escritas em clientes durante o teste) e CREATE FUNCTION em public. Tudo é desfeito pelo ROLLBACK (conferido,
+      sem resíduo) e a execução é curta, então o risco é baixo, mas é DDL numa tabela viva.
+    recommendation: >-
+      Evitar o DDL: inserir o cliente de teste com updated_at explícito antigo (o trigger de updated_at é só BEFORE UPDATE) e
+      depois `UPDATE ... SET nome = nome`, que muda só o updated_at sem desligar trigger.
+  - id: 'SEC-003'
+    severity: low
+    category: security
+    refs: ['supabase/migrations/20260926140000_auditoria_ator_lgpd.sql:55-56']
+    description: >-
+      Qualquer claim role fora das três conhecidas, ou claims sem role, vira 'sistema', o mesmo marcador das conexões diretas,
+      e 'sistema' é autorizado a anonimizar. Hoje não é explorável (o JWT é assinado e EXECUTE só vale para
+      authenticated/service_role), mas mistura um caso anômalo com o ator privilegiado.
+    recommendation: "Usar 'sistema' só quando request.jwt.claims for NULL ou vazio; nos demais casos gravar algo como 'desconhecido:<role>' e recusar a anonimização."
+  - id: 'PROC-001'
+    severity: low
+    category: process
+    refs: ['docs/architecture/project-decisions/adr-008-auditoria-ator-e-lgpd.md:75-83']
+    description: >-
+      O §3.6 foi escrito pelo implementador num ADR aprovado e amplia o AC5 (quem pode chamar) e a lista de colunas que a Dev
+      Note mandava não reinterpretar. No mérito a emenda é legítima: o nome é necessário para a anonimização ter efeito; o
+      service_role e os jobs já estavam previstos no ADR §3.4 ("os jobs de retenção... chamam"); telefone_secundario é coluna
+      real; e 'sistema' só é alcançável por conexões de dono. No processo, porém, mudar AC é atribuição do @po e mudar ADR,
+      do @architect.
+    recommendation: '@architect ratificar o §3.6 e @po ajustar o texto do AC5 (ou registrar a aceitação no Change Log).'
+  - id: 'DOC-001'
+    severity: low
+    category: docs
+    refs: ['docs/stories/2.2b.auditoria-ator-e-lgpd.md (Dev Agent Record, Definition of Done)']
+    description: >-
+      O Dev Agent Record fala em "10 testes negativos (mutação)", mas lista 9 (o harness tem 10 cenários, 1 deles positivo).
+      Os checkboxes da DoD seguem desmarcados. Fora isso o registro é fiel: os números de produção, a agenda do cron e a
+      reclassificação conferem.
+    recommendation: 'Corrigir para 9 mutações e marcar a DoD conforme o estado real.'
+
+nfr_validation:
+  security: {status: PASS, notes: 'SEC-001 corrigido: fail-closed via COALESCE em anonimizar_titular_auditoria. Usuários sem role recebem insufficient_privilege. SEC-003 corrigido: claims anômalas viram indefinido.'}
+  performance: {status: PASS, notes: 'jsonb_each por UPDATE é O(colunas). O expurgo é mensal e roda sobre created_at. A anonimização só é chamada sob demanda.'}
+  reliability: {status: PASS, notes: 'A migration é idempotente (2x no PGlite). O cron é idempotente. As claims malformadas falham fechado, como antes.'}
+  maintainability: {status: PASS, notes: 'Ler UPDATE na trilha agora exige combinar diffs (trade-off documentado no ADR). Lista de colunas e identificação de OS unificadas.'}
+
+recommendations:
+  immediate:
+    - 'SEC-001: migration corretiva fail-closed para usuario_papel NULL, mais teste e mutação. A função vulnerável já está em produção; até a correção, confirmar que o signup público está desabilitado no Supabase Auth.'
+    - 'LGPD-001: localizar as OS do titular por registro_id, não pela presença de cliente_id no diff, mais teste.'
+    - 'TEST-001: cobrir os dois casos acima.'
+  future:
+    - 'OPS-001: remover o DDL do teste que roda em produção.'
+    - 'SEC-003: separar "sem claims" de "role desconhecida".'
+    - 'PROC-001: ratificar o §3.6 (@architect/@po).'
+    - 'DOC-001: corrigir a contagem de mutações e marcar a DoD.'
+
+waiver: {active: false}

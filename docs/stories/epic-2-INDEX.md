@@ -34,7 +34,7 @@
 | [2.2](2.2.triggers-auditoria-e-updated-at.md) | Triggers de Auditoria Imutável e `updated_at` Automático | @data-engineer / @dev | 2.1 | **Done** |
 | [2.3](2.3.view-rpc-mecanicos-ativos.md) | View/RPC de Mecânicos Ativos + `funcionario_atual_id()` | @data-engineer / @dev | 2.1 | **Done** |
 | [2.4](2.4.correcao-testes-guards-e-ci-epic2.md) | Correção de `auth-guards.test.js` e Gate de CI do Epic 2 | @dev / @qa | 2.1 | **Done** |
-| [2.2b](2.2b.auditoria-ator-e-lgpd.md) | Auditoria: classificação do ator e minimização/retenção de dados pessoais (ADR-008) | @data-engineer / @dev | 2.2, ADR-008 | **InReview** |
+| [2.2b](2.2b.auditoria-ator-e-lgpd.md) | Auditoria: classificação do ator e minimização/retenção de dados pessoais (ADR-008) | @data-engineer / @dev | 2.2, ADR-008 | **Done** |
 
 ### Onda B — Cadastros
 
