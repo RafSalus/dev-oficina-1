@@ -1,177 +1,155 @@
 schema: 1
 story: '2.15'
 story_title: 'Requisições de Peças do Mecânico para Supabase Postgres (Nova Tabela)'
-gate: FAIL
+gate: CONCERNS
 status_reason: >-
-  Banco, RLS D5 e repositório estão corretos e bem testados, mas pedirPecaParaOS virou async e o único
-  consumidor (MecanicoDashboardPage.handleRequisitarPeca) não aguarda o resultado: em falha o toast diz
-  "Nada foi salvo" e mesmo assim a peça é gravada na OS como "Requisitada pelo Mecânico" (fail-closed
-  quebrado na UI). Além disso, o mecânico consegue inserir requisição já "atendida" com atendido_por_id de outro funcionário.
+  Os dois bloqueios do gate anterior foram corrigidos e comprovados por mutação: a página só marca a peça na OS se a
+  requisição foi gravada (REL-001) e o servidor controla status/atendimento/nome no INSERT do mecânico (SEC-001).
+  Restam só achados low: REL-002 declarado como não corrigido, a correção de MNT-002 sem teste e dois detalhes novos
+  no fluxo de atendimento.
 reviewer: 'Quinn (@qa)'
-reviewed_revision: 'commit:e3c7f03 (sobre f3f905e e 1e665a4), branch feat/2.15-requisicoes-pecas-supabase'
-updated: '2026-09-26T16:10:00-03:00'
+reviewed_revision: 'commit:6dce631 (correções sobre e3c7f03), branch feat/2.15-requisicoes-pecas-supabase'
+updated: '2026-09-26T16:40:00-03:00'
+revision: 2
+
+history:
+  - revision: 1
+    reviewed_revision: 'commit:e3c7f03'
+    gate: FAIL
+    reason: 'REL-001 (high): handleRequisitarPeca não aguardava pedirPecaParaOS; SEC-001 (medium): INSERT forjado de status/atendimento.'
+  - revision: 2
+    reviewed_revision: 'commit:6dce631'
+    gate: CONCERNS
+    reason: 'REL-001, SEC-001, TEST-001, MNT-001, MNT-002, MNT-003 corrigidos; DOC-001 parcial; REL-002 aberto; novos achados só low.'
 
 scope:
-  migrations:
-    - supabase/migrations/20260926250000_requisicoes_pecas.sql
-    - 'supabase/migrations/20260926200000…230000 (correção fn_audit_trigger, commit f3f905e)'
-  repositories:
-    - src/repositories/requisicoesPecasRepository.js
-    - src/repositories/mapeadores/requisicoesPecas.js
-  context:
-    - src/context/MecanicoContext.jsx
-  consumers_reviewed:
+  diff: 'git diff e3c7f03..6dce631'
+  changed:
     - src/pages/mecanico/MecanicoDashboardPage.jsx
-    - src/pages/mecanico/components/MecanicoVisaoGeral.jsx
-    - src/pages/mecanico/components/MecanicoHeaderMetricas.jsx
-  tests:
+    - src/repositories/requisicoesPecasRepository.js
+    - supabase/migrations/20260926250000_requisicoes_pecas.sql
     - supabase/tests/2.15_requisicoes_pecas.test.sql
-    - tests/unit/requisicoesPecasRepository.test.js
-    - tests/unit/mecanico-requisicoes-context.test.jsx
-  test_support:
-    - scripts/sql-test-support/stub_supabase_auth.sql
+    - tests/unit/mecanico-pedir-peca-pagina.test.jsx
+    - docs/stories/2.15.requisicoes-pecas-supabase.md
+
+previous_findings:
+  REL-001: {status: RESOLVIDO, note: 'MecanicoDashboardPage.jsx:227-242 faz await e `if (!requisicao) return` antes de tocar pecasOS. O teste da página real falha nas 3 mutações do QA (guard removido; sem await; arquivo de e3c7f03).'}
+  SEC-001: {status: RESOLVIDO, note: 'Migration :61-86 força status aguardando_separacao, zera atendido_por_id/atendido_em/motivo_recusa e deriva solicitante_nome de funcionarios. Teste SQL cobre, com 2 mutações detectadas. A sonda do QA confirmou isso também para o solicitante_id de outro mecânico.'}
+  TEST-001: {status: RESOLVIDO, note: 'Teste da página (2 casos), INSERT forjado, autenticado sem papel e registro de atendimento no SQL.'}
+  MNT-001: {status: RESOLVIDO, note: 'O trigger BEFORE UPDATE (migration :94-121) registra atendido_em=now() e atendido_por_id da sessão; o repositório não envia mais o relógio do cliente. A mutação é detectada.'}
+  MNT-002: {status: RESOLVIDO_SEM_TESTE, note: 'requisicoesPecasRepository.js:110 recusa status falsy. Com a linha revertida, os 12 testes do repositório continuam verdes (TEST-002).'}
+  MNT-003: {status: RESOLVIDO, note: 'REVOKE ineficaz removido. SECURITY DEFINER agora justificado: lê funcionarios.nome, que o mecânico não pode ler.'}
+  REL-002: {status: ABERTO, note: 'Declarado como não corrigido no Dev Agent Record; carregandoRequisicoes segue sem consumidor.'}
+  DOC-001: {status: PARCIAL, note: 'Cabeçalho do teste SQL corrigido (psql local; alerta de que --linked é produção). O Debug Log (story:132) ainda diz "5/5 mutações" e lista 6 (DOC-002).'}
 
 top_issues:
-  - id: 'REL-001'
-    severity: high
-    finding: >-
-      src/pages/mecanico/MecanicoDashboardPage.jsx:227-260 — handleRequisitarPeca chama pedirPecaParaOS (agora
-      async, retorna null em erro) sem await e, incondicionalmente, adiciona a peça em osAtiva.pecasOS com
-      statusRequisicao 'Requisitada pelo Mecânico' (salvarOrdemAberta + recarregarOrdens). Em falha remota
-      (RLS, rede, mecânico sem vínculo) o usuário vê "Nada foi salvo" e, ao mesmo tempo, a OS mostra a peça
-      como requisitada — a requisição não existe no banco e ninguém a atende. Regressão introduzida pela
-      mudança síncrono → assíncrono; contraria AC2/AC3 (fail-closed, mesma semântica para a UI) e NFR14.
-    suggested_action: >-
-      Tornar handleRequisitarPeca async: `const req = await pedirPecaParaOS({...}); if (!req) return;` antes de
-      mexer em pecasOS; opcionalmente desabilitar o botão durante o envio. Adicionar teste (componente ou
-      integração) cobrindo o caminho de falha: pecasOS inalterado e nenhum toast de sucesso.
-  - id: 'SEC-001'
-    severity: medium
-    finding: >-
-      supabase/migrations/20260926250000_requisicoes_pecas.sql:58-70 e :127-132 — no INSERT o mecânico controla
-      status, atendido_por_id, atendido_em, motivo_recusa e solicitante_nome. Sonda em PG17: mecânico inseriu
-      {status: 'atendida', atendido_por_id: <outro funcionário>, solicitante_nome: 'Outro Nome'} com sucesso.
-      O teste SQL só verifica que o mecânico não faz UPDATE de status; o INSERT contorna essa regra e forja
-      atendimento atribuído a terceiro (a trilha de auditoria registra o ator real, o que limita o dano).
-    suggested_action: >-
-      No trigger BEFORE INSERT, para papel 'mecanico' forçar status := 'aguardando_separacao' e zerar
-      atendido_por_id/atendido_em/motivo_recusa (ou restringir no WITH CHECK da política de INSERT do mecânico).
-      Opcional: derivar solicitante_nome de funcionarios.nome no próprio trigger (aí o SECURITY DEFINER passa a
-      ter função). Acrescentar asserção no teste SQL e a mutação correspondente no harness.
-  - id: 'TEST-001'
-    severity: medium
-    finding: >-
-      Nenhum teste exercita o consumidor real (handleRequisitarPeca) — por isso REL-001 passou com 359/359
-      verdes. O teste de contexto valida o fail-closed só dentro do MecanicoContext. O teste SQL não cobre
-      INSERT forjado de status/atendimento nem conta autenticada sem papel (a sonda confirmou negação).
-    suggested_action: >-
-      Teste do fluxo de requisição na página (falha e sucesso); no SQL, casos "mecânico insere status atendida"
-      e "authenticated sem papel" (INSERT/SELECT negados).
-  - id: 'MNT-001'
-    severity: low
-    finding: >-
-      atendido_por_id nunca é preenchido e atendido_em vem do relógio do cliente
-      (src/repositories/requisicoesPecasRepository.js:115-117).
-    suggested_action: >-
-      Trigger BEFORE UPDATE que, ao mudar para 'atendida'/'recusada', grava atendido_por_id =
-      funcionario_atual_id() e atendido_em = now(); o repositório deixa de enviar atendido_em.
-  - id: 'MNT-002'
-    severity: low
-    finding: >-
-      src/repositories/mapeadores/requisicoesPecas.js:18-22 — statusParaCodigo(undefined/'') devolve
-      'aguardando_separacao'; logo atualizarStatusRequisicao(id) sem status reabre a requisição em silêncio
-      em vez de recusar a chamada.
-    suggested_action: 'Em atualizarStatusRequisicao, exigir status explícito (falsy → erro).'
-  - id: 'MNT-003'
-    severity: low
-    finding: >-
-      migration :58-72 — SECURITY DEFINER é desnecessário (papel_usuario/funcionario_atual_id já são DEFINER)
-      e o REVOKE EXECUTE FROM PUBLIC é ineficaz (default privileges concedem a anon/authenticated;
-      has_function_privilege = true). Não é explorável: search_path vazio, só atribui NEW.solicitante_id a
-      partir da sessão e chamada direta falha ("trigger functions can only be called as triggers").
-    suggested_action: 'Trocar para SECURITY INVOKER (ou manter e justificar se SEC-001 passar a ler funcionarios).'
   - id: 'REL-002'
     severity: low
     finding: >-
-      carregandoRequisicoes é exposto mas nenhum consumidor o usa: contadores de MecanicoHeaderMetricas e
-      MecanicoVisaoGeral mostram "0" até a carga terminar (o "flash" citado nos Riscos da story).
-    suggested_action: 'Exibir placeholder/skeleton enquanto carregandoRequisicoes for true.'
-  - id: 'DOC-001'
+      src/context/MecanicoContext.jsx expõe carregandoRequisicoes, mas nenhuma tela o usa. Os contadores de
+      MecanicoHeaderMetricas/MecanicoVisaoGeral mostram "0" até a carga terminar. Já constava no gate anterior e o Dev
+      Agent Record o declara como não corrigido.
+    suggested_action: 'Mostrar placeholder/skeleton enquanto carregandoRequisicoes for true (pode ir para o backlog).'
+  - id: 'TEST-002'
     severity: low
     finding: >-
-      supabase/tests/2.15_requisicoes_pecas.test.sql:4-6 sugere `db query --linked` (que hoje é PRODUÇÃO) e o
-      teste insere em auth.users; o Dev Agent Record fala em "5/5 mutações" mas lista 6 cenários (o harness
-      executa 6, todos detectados).
-    suggested_action: 'Indicar banco local/dev no cabeçalho do teste; corrigir a contagem no registro.'
+      A correção MNT-002 (src/repositories/requisicoesPecasRepository.js:110) não tem teste. O QA reverteu para
+      `statusParaCodigo(status)` e tests/unit/requisicoesPecasRepository.test.js continuou 12/12 verde.
+    suggested_action: 'Adicionar o caso `atualizarStatusRequisicao(id)` / `(id, "")` → rejeita com ErroRepositorio sem chamar o banco.'
+  - id: 'MNT-004'
+    severity: low
+    finding: >-
+      supabase/migrations/20260926250000_requisicoes_pecas.sql:101-113 — o trigger de atendimento só cuida de
+      atendido_em/atendido_por_id. Quando a requisição passa de recusada para atendida, motivo_recusa continua preenchido
+      (sonda do QA: status 'atendida' com motivo_recusa 'sem estoque'). O repositório só grava motivo_recusa ao recusar.
+      Sem consumidor de UI hoje, porque não existe tela da secretaria.
+    suggested_action: 'No mesmo trigger, zerar motivo_recusa quando NEW.status <> ''recusada'' (ou fazer isso no repositório).'
+  - id: 'REL-003'
+    severity: low
+    finding: >-
+      src/pages/mecanico/components/MecanicoPedirPecas.jsx:110-113 — o botão "Pedir Peça" não fica desabilitado
+      durante o envio, que agora é assíncrono. Um duplo clique cria 2 requisições e adiciona a peça 2x em pecasOS.
+      Além disso, handleRequisitarPeca (MecanicoDashboardPage.jsx:256-260) usa o osAtiva capturado antes do await.
+    suggested_action: 'Estado "enviando" que desabilita o botão; opcionalmente reler a OS ativa após o await.'
+  - id: 'DOC-002'
+    severity: low
+    finding: >-
+      docs/stories/2.15.requisicoes-pecas-supabase.md:132 ainda diz "5/5 mutações" listando 6 (resto de DOC-001). A File
+      List (:160-161) mantém as contagens antigas: migration "137L" (hoje 180) e teste SQL "163L" (hoje 196).
+    suggested_action: 'Atualizar o Debug Log e as contagens da File List (@dev).'
+
+regression_checks:
+  - check: 'O trigger de UPDATE (trg_requisicoes_pecas_atendimento) interfere no UPDATE da secretaria?'
+    result: >-
+      Não. A secretaria atende e recusa normalmente (atendido_por_id = o funcionário dela, atendido_em = now()). Quando
+      só observacoes muda, o atendimento é preservado e a tentativa de forjar atendido_por_id/atendido_em é ignorada.
+      Ao reabrir, os campos são limpos. Secretaria sem vínculo de funcionário também atende (atendido_por_id NULL).
+      A ordem dos BEFORE UPDATE (alfabética: atendimento → set_updated_at) não causa conflito, e a auditoria continua
+      registrando. Efeito colateral aceitável: admin não consegue corrigir atendido_por_id sem mudar o status.
+  - check: 'solicitante_nome via SECURITY DEFINER vaza algo?'
+    result: >-
+      Não. Para o mecânico o solicitante_id é forçado para ele próprio, então ele só lê o próprio nome (sonda:
+      solicitante_id de funcionário inativo/oculto → gravou q-mec/"Q Mec"). Para papel NULL e para secretaria, o INSERT
+      é barrado pela RLS depois do trigger, com mensagem genérica que não expõe a linha. Só o admin (que já lê
+      funcionarios) grava outro solicitante. search_path vazio e nomes qualificados. EXECUTE continua concedido a
+      anon/authenticated por default privileges, mas a chamada direta falha ("trigger functions can only be called as
+      triggers").
+  - check: 'Importação/carga por admin ou service_role'
+    result: 'INSERT de admin mantém status/atendimento informados, mas solicitante_nome passa a vir do cadastro (comportamento desejado).'
+  - check: 'Outros consumidores de pedirPecaParaOS/atualizarStatusRequisicao'
+    result: 'pedirPecaParaOS: só MecanicoDashboardPage. atualizarStatusRequisicao: nenhum consumidor em src (sem tela da secretaria).'
 
 evidence:
   commands:
     - cmd: 'node run215.mjs (PGlite / PostgreSQL 17)'
       result: >-
-        base 18 migrations; migration 2.15 aplicada 2x + teste PASSOU; 6/6 mutações detectadas (sem migration;
-        INSERT com solicitante NULL; trigger respeitando solicitante do cliente; mecânico vê todas; sem auditoria;
-        secretaria sem UPDATE)
+        base 18 migrations; 2.15 aplicada 2x + teste PASSOU; 9/9 mutações detectadas: sem migration; solicitante NULL;
+        trigger respeitando solicitante do cliente; mecânico vê todas; SEC-001 status/atendimento; SEC-001 nome do cliente;
+        MNT-001 sem registro de atendimento; sem auditoria; secretaria sem UPDATE
     - cmd: 'node runall.mjs (cadeia completa de 19 migrations)'
       result: '5/5 testes SQL verdes: 2.15, 2.2, 2.2b, 2.3, 2.5'
-    - cmd: 'node qa215.mjs (sonda adversarial do QA)'
+    - cmd: 'mutações REL-001 feitas pelo QA numa cópia do projeto no scratchpad (repo intocado)'
       result: >-
-        mecânico INSERT com status atendida/atendido_por_id de terceiro: ACEITO (SEC-001); mecânico DELETE: 0 linhas;
-        authenticated sem papel: SELECT 0 / INSERT negado por RLS; secretaria DELETE: 0 linhas; secretaria altera
-        solicitante_id: aceito (conforme AC4); chamada direta da função de trigger: erro; FK de OS inexistente: erro;
-        nenhuma chamada a função inexistente nos corpos plpgsql da cadeia
-    - cmd: 'node qaaudit.mjs (smoke de fn_audit_trigger nas tabelas 2.10–2.13)'
-      result: >-
-        agenda_fila_espera, veiculos_estacionados, frota_apoio, leva_e_traz_deslocamentos: 1 linha de auditoria cada;
-        agenda_agendamentos e manutencoes_preventivas não exercitadas (dados sintéticos violaram CHECK/FK, não auditoria)
+        base 2/2 verdes. M1 sem `if (!requisicao) return`, M2 sem `await` e M3 com o arquivo de e3c7f03: nos três casos o
+        teste "requisição falhou: não marca nada na OS" FALHA (salvarOrdemAberta chamado 1x)
+    - cmd: 'mutação MNT-002 feita pelo QA (reverter linha 110 do repositório)'
+      result: 'requisicoesPecasRepository.test.js 12/12 verde, ou seja, mutação NÃO detectada (TEST-002)'
+    - cmd: 'node qa215b.mjs / qa215c.mjs (sondas adversariais de regressão do QA)'
+      result: 'ver regression_checks; único defeito novo: motivo_recusa residual (MNT-004)'
     - cmd: 'npm test'
-      result: '44 arquivos / 359 testes verdes'
-    - cmd: 'npx eslint --quiet src/ tests/ ; npm run lint'
-      result: '0 erros (132 warnings no repositório, nenhum novo; os 2 do MecanicoContext.jsx:3 são preexistentes)'
+      result: '45 arquivos / 361 testes verdes'
+    - cmd: 'npx eslint --quiet src/ tests/'
+      result: '0 erros (exit 0)'
     - cmd: 'wc -l'
-      result: 'migration 137, teste SQL 163, repositório 146, mapeador 75, MecanicoContext 168, testes 183/75; todos <= 400'
-    - cmd: 'npx supabase db query --linked (somente leitura)'
-      result: >-
-        produção em 20260926160000 (10 migrations); requisicoes_pecas inexistente; fn_audit/fn_audit_log inexistentes
-        e fn_audit_trigger existente; authenticated com USAGE em seq_codigo_cliente/seq_codigo_veiculo
-
-fix_commit_f3f905e:
-  verdict: 'Correto e suficiente'
-  note: >-
-    Produção confirma que fn_audit()/fn_audit_log() nunca existiram e fn_audit_trigger() existe. A cadeia completa sobe
-    em banco limpo; a varredura dos corpos plpgsql não encontrou outras chamadas quebradas; a 240000 (2.14) não tinha o
-    defeito. O stub de sequences espelha a produção. Observação: não há testes SQL para 2.7–2.14, então o comportamento
-    em tempo de execução dessas migrations segue sem cobertura automatizada (fora do escopo desta story).
-
-d4_decision:
-  verdict: 'Correta, sem lacuna'
-  note: >-
-    ADR-005 §2.10 (linha 163) e PRD v1.5 (linha 115) listam "requisições" explicitamente fora da janela D4 até decisão
-    do proprietário. A justificativa do Dev ("o AC4 não exige") está certa, mas a base mais forte é o próprio ADR/PRD.
+      result: 'migration 180, teste SQL 196, repositório 146, MecanicoDashboardPage 395 (perto do limite de 400), teste da página 85'
+  production: 'Nenhum acesso à produção nesta revisão; nada aplicado nem executado lá.'
 
 acceptance_criteria:
-  AC1: {status: PASS, note: 'Tabela, FKs, id TEXT uuid; status em código no banco e rótulo na UI via mapeador (valores confirmados pelo @po).'}
-  AC2: {status: PASS, note: 'Repositório fail-closed, sem fallback em falha; MecanicoContext sem localStorage para requisições.'}
-  AC3: {status: FAIL, note: 'Parâmetros mantidos e autoria forçada pela sessão no banco, mas o retorno virou Promise e o consumidor não foi adaptado (REL-001).'}
-  AC4: {status: PASS, note: 'D5 comprovado (INSERT/SELECT só próprias, sem vínculo recusado, secretaria SELECT/UPDATE sem INSERT, admin total, anon nada). Ressalva SEC-001.'}
-  AC5: {status: PASS, note: 'fn_set_updated_at e fn_audit_trigger anexadas; auditoria por papel verificada no teste.'}
-  AC6: {status: PASS, note: 'atendida sem efeito no estoque; teste garante ausência de outros triggers.'}
-  AC7: {status: CONCERNS, note: 'Cobertura boa no repositório/contexto/SQL, mas sem teste do consumidor (TEST-001).'}
-  AC8: {status: CONCERNS, note: 'Consumidores identificados corretamente, mas a verificação não detectou REL-001.'}
-  AC9: {status: PASS, note: 'lint 0 erros, 359 testes verdes, arquivos <= 400 linhas.'}
+  AC1: {status: PASS, note: 'Sem alteração desde a revisão 1.'}
+  AC2: {status: PASS, note: 'Fail-closed agora vale também no consumidor da página.'}
+  AC3: {status: PASS, note: 'A página aguarda o retorno e aborta se for null; o servidor controla autoria, status e nome no INSERT do mecânico.'}
+  AC4: {status: PASS, note: 'D5 mantida; autenticado sem papel coberto no teste SQL.'}
+  AC5: {status: PASS, note: 'Auditoria e updated_at preservados com o novo trigger.'}
+  AC6: {status: PASS, note: 'A lista de triggers permitidos foi atualizada no teste; nenhum gatilho de estoque.'}
+  AC7: {status: PASS, note: 'Consumidor real testado e mutações cobrindo as correções; ressalva TEST-002 (low).'}
+  AC8: {status: PASS, note: 'Consumidor adaptado e verificado.'}
+  AC9: {status: PASS, note: 'lint 0 erros, 361 testes verdes, arquivos <= 400 linhas.'}
 
 nfr_validation:
-  security: {status: CONCERNS, note: 'RLS D5 sólida; INSERT do mecânico aceita campos de atendimento (SEC-001).'}
-  reliability: {status: FAIL, note: 'Fail-closed quebrado na página do mecânico (REL-001).'}
-  performance: {status: PASS, note: 'Índices em os, solicitante, status e created_at.'}
-  maintainability: {status: PASS, note: 'Código limpo, mapeador isolado, migration idempotente com rollback documentado.'}
+  security: {status: PASS, note: 'SEC-001 resolvido; SECURITY DEFINER justificado e sem vazamento.'}
+  reliability: {status: CONCERNS, note: 'Fail-closed restaurado; restam REL-002 (flash do contador) e REL-003 (duplo clique).'}
+  performance: {status: PASS, note: 'Triggers O(1), com lookup por PK em funcionarios.'}
+  maintainability: {status: PASS, note: 'Ressalvas MNT-004/DOC-002 são low.'}
 
 waiver: { active: false }
 
+decisions:
+  - '[AUTO-DECISION] PASS ou CONCERNS? → CONCERNS (motivo: nenhum high/medium aberto, mas há 5 achados low reais, entre eles REL-002, que é risco citado na própria story, e uma correção sem teste; vale registrar e rastrear).'
+
 recommendations:
-  must_fix:
-    - 'REL-001: aguardar pedirPecaParaOS e abortar a atualização da OS quando retornar null (+ teste).'
-    - 'SEC-001: travar status/atendimento no INSERT do mecânico (+ asserção SQL e mutação).'
+  must_fix: []
   should_fix:
-    - 'TEST-001, MNT-001, MNT-002'
+    - 'TEST-002: teste para atualizarStatusRequisicao sem status.'
+    - 'MNT-004: limpar motivo_recusa ao sair de recusada.'
   nice_to_have:
-    - 'MNT-003, REL-002, DOC-001'
+    - 'REL-002, REL-003, DOC-002'

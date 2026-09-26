@@ -153,9 +153,11 @@ describe('Requisições de peças (Story 2.15)', () => {
       )
     })
 
-    it('recusa status inválido antes de chamar o banco', async () => {
+    it('recusa status inválido ou ausente antes de chamar o banco', async () => {
       const { from } = mockarSupabase({ data: LINHA_DB, error: null })
       await expect(atualizarStatusRequisicao('req-uuid-1', 'Voando')).rejects.toBeInstanceOf(ErroRepositorio)
+      await expect(atualizarStatusRequisicao('req-uuid-1')).rejects.toBeInstanceOf(ErroRepositorio)
+      await expect(atualizarStatusRequisicao('req-uuid-1', '')).rejects.toBeInstanceOf(ErroRepositorio)
       expect(from).not.toHaveBeenCalled()
     })
   })

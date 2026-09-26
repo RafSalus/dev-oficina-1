@@ -72,4 +72,26 @@ describe('MecanicoContext — requisições de peças via repositório (Story 2.
     expect(result.current.requisicoesPecas).toHaveLength(0)
     expect(toast.error).toHaveBeenCalledWith('Você não tem permissão para esta operação.')
   })
+
+  it('duplo clique: o segundo pedido durante o envio é ignorado (uma requisição só)', async () => {
+    const { result } = renderHook(() => useMecanico(), { wrapper })
+    await waitFor(() => expect(result.current.carregandoRequisicoes).toBe(false))
+
+    let primeiro, segundo
+    await act(async () => {
+      ;[primeiro, segundo] = await Promise.all([
+        result.current.pedirPecaParaOS(PEDIDO),
+        result.current.pedirPecaParaOS(PEDIDO),
+      ])
+    })
+
+    expect(primeiro).not.toBeNull()
+    expect(segundo).toBeNull()
+    expect(await repo.carregarRequisicoesPecas()).toHaveLength(1)
+
+    await act(async () => {
+      await result.current.pedirPecaParaOS(PEDIDO)
+    })
+    expect(await repo.carregarRequisicoesPecas()).toHaveLength(2)
+  })
 })

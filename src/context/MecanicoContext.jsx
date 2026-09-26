@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { MOCK_MECANICOS } from '../constants/mecanicos'
 import { obterOrdensAbertas, atualizarStatusOrdem } from '../pages/dashboard/orcamento/mockOrdensAbertas'
 import { toast } from 'sonner'
@@ -118,7 +118,11 @@ export function MecanicoProvider({ children }) {
 
   // Pedir peça para a OS (Requisitar ao almoxarifado). No Supabase o solicitante é resolvido
   // pela sessão (funcionario_atual_id); em falha nada é gravado localmente (fail-closed).
+  // Trava de envio: um segundo clique enquanto o primeiro está em andamento é ignorado (REL-003)
+  const enviandoRequisicaoRef = useRef(false)
   const pedirPecaParaOS = async ({ numeroOS, veiculo, pecaNome, codigoPeca, quantidade = 1, urgencia = 'normal' }) => {
+    if (enviandoRequisicaoRef.current) return null
+    enviandoRequisicaoRef.current = true
     try {
       const novaReq = await criarRequisicaoPeca({
         numeroOS,
@@ -136,6 +140,8 @@ export function MecanicoProvider({ children }) {
       console.error('Erro ao requisitar peça:', err)
       toast.error(err?.message || 'Não foi possível enviar a requisição. Nada foi salvo.')
       return null
+    } finally {
+      enviandoRequisicaoRef.current = false
     }
   }
 
