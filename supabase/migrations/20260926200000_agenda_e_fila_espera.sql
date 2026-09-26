@@ -84,13 +84,13 @@ DROP TRIGGER IF EXISTS trg_audit_agenda_agendamentos ON public.agenda_agendament
 CREATE TRIGGER trg_audit_agenda_agendamentos
   AFTER INSERT OR UPDATE OR DELETE ON public.agenda_agendamentos
   FOR EACH ROW
-  EXECUTE FUNCTION public.fn_audit_log();
+  EXECUTE FUNCTION public.fn_audit_trigger();
 
 DROP TRIGGER IF EXISTS trg_audit_agenda_fila_espera ON public.agenda_fila_espera;
 CREATE TRIGGER trg_audit_agenda_fila_espera
   AFTER INSERT OR UPDATE OR DELETE ON public.agenda_fila_espera
   FOR EACH ROW
-  EXECUTE FUNCTION public.fn_audit_log();
+  EXECUTE FUNCTION public.fn_audit_trigger();
 
 -- 5. RPC Transacional: aplicar_cascata_atrasos_agenda -------------------------
 -- Aplica recálculo de cascata de atrasos atômico (tudo ou nada) com checagem de concorrência

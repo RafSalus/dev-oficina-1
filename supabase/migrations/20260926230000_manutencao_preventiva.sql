@@ -54,7 +54,7 @@ DROP TRIGGER IF EXISTS trg_manutencoes_preventivas_audit ON public.manutencoes_p
 CREATE TRIGGER trg_manutencoes_preventivas_audit
     AFTER INSERT OR UPDATE OR DELETE ON public.manutencoes_preventivas
     FOR EACH ROW
-    EXECUTE FUNCTION public.fn_audit();
+    EXECUTE FUNCTION public.fn_audit_trigger();
 
 -- 3. Habilitação de RLS e Políticas -------------------------------------------
 ALTER TABLE public.manutencoes_preventivas ENABLE ROW LEVEL SECURITY;

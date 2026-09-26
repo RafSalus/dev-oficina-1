@@ -49,7 +49,7 @@ DROP TRIGGER IF EXISTS trg_audit ON public.veiculos_estacionados;
 CREATE TRIGGER trg_audit
     AFTER INSERT OR UPDATE OR DELETE ON public.veiculos_estacionados
     FOR EACH ROW
-    EXECUTE FUNCTION public.fn_audit();
+    EXECUTE FUNCTION public.fn_audit_trigger();
 
 -- ==============================================================================
 -- RLS (FR25 / ADR-005 §2.10)

@@ -124,7 +124,7 @@ DROP TRIGGER IF EXISTS trg_audit ON public.frota_apoio;
 CREATE TRIGGER trg_audit
     AFTER INSERT OR UPDATE OR DELETE ON public.frota_apoio
     FOR EACH ROW
-    EXECUTE FUNCTION public.fn_audit();
+    EXECUTE FUNCTION public.fn_audit_trigger();
 
 DROP TRIGGER IF EXISTS trg_set_updated_at ON public.leva_e_traz_deslocamentos;
 CREATE TRIGGER trg_set_updated_at
@@ -136,7 +136,7 @@ DROP TRIGGER IF EXISTS trg_audit ON public.leva_e_traz_deslocamentos;
 CREATE TRIGGER trg_audit
     AFTER INSERT OR UPDATE OR DELETE ON public.leva_e_traz_deslocamentos
     FOR EACH ROW
-    EXECUTE FUNCTION public.fn_audit();
+    EXECUTE FUNCTION public.fn_audit_trigger();
 
 -- ==============================================================================
 -- RLS (FR25 / ADR-005 §2.10)
