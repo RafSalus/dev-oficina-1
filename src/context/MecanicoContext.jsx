@@ -2,11 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import { MOCK_MECANICOS } from '../constants/mecanicos'
 import { obterOrdensAbertas, atualizarStatusOrdem } from '../pages/dashboard/orcamento/mockOrdensAbertas'
 import { toast } from 'sonner'
+import {
+  carregarRequisicoesPecas,
+  criarRequisicaoPeca,
+} from '../repositories/requisicoesPecasRepository'
 
 const STORAGE_KEY_MECANICO_ATIVO = 'dev_oficina_mecanico_ativo'
 const STORAGE_KEY_PECAS_DANIFICADAS = 'dev_oficina_pecas_danificadas'
 const STORAGE_KEY_FERRAMENTAS_DANIFICADAS = 'dev_oficina_ferramentas_danificadas'
-const STORAGE_KEY_REQUISICOES_PECAS = 'dev_oficina_requisicoes_pecas'
 
 const MecanicoContext = createContext(null)
 
@@ -41,14 +44,27 @@ export function MecanicoProvider({ children }) {
     return []
   })
 
-  // Requisições de Peças ao Almoxarifado
-  const [requisicoesPecas, setRequisicoesPecas] = useState(() => {
-    try {
-      const salvo = localStorage.getItem(STORAGE_KEY_REQUISICOES_PECAS)
-      if (salvo) return JSON.parse(salvo)
-    } catch {}
-    return []
-  })
+  // Requisições de Peças ao Almoxarifado (Story 2.15: repositório assíncrono, D5 no banco)
+  const [requisicoesPecas, setRequisicoesPecas] = useState([])
+  const [carregandoRequisicoes, setCarregandoRequisicoes] = useState(true)
+
+  useEffect(() => {
+    let cancelado = false
+    carregarRequisicoesPecas()
+      .then((lista) => {
+        if (!cancelado) setRequisicoesPecas(lista)
+      })
+      .catch((err) => {
+        console.error('Erro ao carregar requisições de peças:', err)
+        if (!cancelado) toast.error(err?.message || 'Não foi possível carregar as requisições de peças.')
+      })
+      .finally(() => {
+        if (!cancelado) setCarregandoRequisicoes(false)
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [])
 
   // Trocar mecânico logado
   const trocarMecanico = (mecanicoValor) => {
@@ -100,28 +116,27 @@ export function MecanicoProvider({ children }) {
     toast.success('Chamado de ferramenta com defeito aberto com sucesso!')
   }
 
-  // Pedir peça para a OS (Requisitar ao almoxarifado)
-  const pedirPecaParaOS = ({ numeroOS, veiculo, pecaNome, codigoPeca, quantidade = 1, urgencia = 'normal' }) => {
-    const novaReq = {
-      id: `req-${Date.now()}`,
-      dataHora: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      numeroOS,
-      veiculo,
-      pecaNome,
-      codigoPeca,
-      quantidade,
-      urgencia,
-      mecanicoNome: mecanicoAtivo.nome,
-      status: 'Aguardando Separação',
+  // Pedir peça para a OS (Requisitar ao almoxarifado). No Supabase o solicitante é resolvido
+  // pela sessão (funcionario_atual_id); em falha nada é gravado localmente (fail-closed).
+  const pedirPecaParaOS = async ({ numeroOS, veiculo, pecaNome, codigoPeca, quantidade = 1, urgencia = 'normal' }) => {
+    try {
+      const novaReq = await criarRequisicaoPeca({
+        numeroOS,
+        veiculo,
+        pecaNome,
+        codigoPeca,
+        quantidade,
+        urgencia,
+        mecanicoNome: mecanicoAtivo?.nome || '',
+      })
+      setRequisicoesPecas((prev) => [novaReq, ...prev])
+      toast.success(`Requisição da peça "${pecaNome}" enviada ao Almoxarifado para a OS #${numeroOS}!`)
+      return novaReq
+    } catch (err) {
+      console.error('Erro ao requisitar peça:', err)
+      toast.error(err?.message || 'Não foi possível enviar a requisição. Nada foi salvo.')
+      return null
     }
-    setRequisicoesPecas((prev) => {
-      const updated = [novaReq, ...prev]
-      try {
-        localStorage.setItem(STORAGE_KEY_REQUISICOES_PECAS, JSON.stringify(updated))
-      } catch {}
-      return updated
-    })
-    toast.success(`Requisição da peça "${pecaNome}" enviada ao Almoxarifado para a OS #${numeroOS}!`)
   }
 
   return (
@@ -135,6 +150,7 @@ export function MecanicoProvider({ children }) {
         ferramentasDanificadas,
         adicionarFerramentaDanificada,
         requisicoesPecas,
+        carregandoRequisicoes,
         pedirPecaParaOS,
       }}
     >
