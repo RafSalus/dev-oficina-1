@@ -1,0 +1,63 @@
+schema: 1
+story: '2.9'
+story_title: 'Migração de Compras (Pedidos) e Cotações para Supabase Postgres'
+gate: PASS
+status_reason: >-
+  Módulo de Compras (Pedidos) e Cotações migrado com sucesso para Supabase Postgres.
+  Sequences dedicadas aplicadas no banco por trigger garantem numeração sequencial sem padrão client-side.
+  RPCs transacionais receber_pedido_compra e aprovar_cotacao_gerar_pedido asseguram operações atômicas sem corridas.
+  Mapeamento de status bidirecional trata a divergência CANCELADA <-> cancelada no repositório (AC3).
+  RLS FR25 aplicada (admin total, secretaria SELECT/INSERT/UPDATE sob em_horario_operacional(), DELETE restrito ao admin).
+  Zero políticas para o papel anon (regressão temporária aceita e declarada para Story 2.17).
+  Fail-closed implementado via executarRepositorio/executarOperacao, 299/299 testes passando, lint zerado e NFR17 respeitado (< 380 linhas em todos os arquivos).
+reviewer: 'Dara (@data-engineer) / Quinn (@qa)'
+reviewed_revision: 'branch feat/2.9-compras-cotacoes-schema-repositorio'
+updated: '2026-09-26T14:42:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926190000_compras_cotacoes_e_pedidos.sql
+  repositories:
+    - src/repositories/comprasRepository.js
+    - src/repositories/mapeadores/compras.js
+  tests:
+    - tests/unit/comprasRepository.test.js
+
+evidence:
+  commands:
+    - cmd: 'npm test'
+      result: '37 arquivos de teste passaram, 299 testes aprovados, 0 falhas (14.73s)'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint'
+    - cmd: 'npm run build'
+      result: 'Build de produção Vite concluído com sucesso em 9.21s'
+    - cmd: 'wc -l nos módulos modificados/criados'
+      result: 'comprasRepository (239), mapeadores/compras (186), migration (376), unit test (352). Todos < 380 linhas (NFR17).'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'comprasRepository mantém as 11 assinaturas públicas delegando a compras_pedidos e compras_cotacoes com padrão fail-closed.'}
+  AC2: {status: PASS, note: 'Mapeamento de compras_pedidos completo, incluindo numero_pedido por sequence, fornecedor_id, status CHECK, itens JSONB e valor_total.'}
+  AC3: {status: PASS, note: 'Mapeamento de compras_cotacoes completo, com sequence e divergência CANCELADA <-> cancelada mapeada explicitamente no repositório.'}
+  AC4: {status: PASS, note: 'receberCompraNoEstoque() delega para a RPC transacional receber_pedido_compra (atualização do pedido + Kardex + anotação em OS).'}
+  AC5: {status: PASS, note: 'aprovarCotacaoEGerarPedidoCompra() delega para a RPC transacional aprovar_cotacao_gerar_pedido (atualização cotação + geração do pedido por sequence).'}
+  AC6: {status: PASS, note: 'RLS FR25 aplicada: admin total, secretaria SELECT/INSERT/UPDATE, DELETE exclusivo de admin.'}
+  AC7: {status: PASS, note: 'Janela operacional D4 aplicada via public.em_horario_operacional() às políticas de secretaria.'}
+  AC8: {status: PASS, note: 'Isolamento de acesso público mantido: compras_cotacoes sem política anon; regressão temporária declarada até Story 2.17.'}
+  AC9: {status: PASS, note: '13 testes unitários novos em tests/unit/comprasRepository.test.js cobrindo CRUD, RPCs, fail-closed e mapeamento de status.'}
+  AC10: {status: PASS, note: 'Par mobile (MobileComprasPage.jsx) verificado e preservado sem quebras de interface.'}
+  AC11: {status: PASS, note: 'Triggers trg_set_updated_at e trg_audit confirmadas ativas nas tabelas de compras.'}
+  AC12: {status: PASS, note: 'Qualidade: zero erros de lint, 299/299 testes verdes, build verde, NFR17 respeitado.'}
+
+nfr_validation:
+  security: {status: PASS, notes: 'RLS FR25 estrita: sem acesso anônimo, DELETE exclusivo admin, janela comercial D4 aplicada à secretaria.'}
+  performance: {status: PASS, notes: 'Sequences dedicadas no Postgres eliminam lock por scan max() client-side.'}
+  reliability: {status: PASS, notes: 'Transacionalidade atômica via RPCs para recebimento e aprovação evita inconsistências parciais.'}
+  maintainability: {status: PASS, notes: 'Repositório limpo (239 linhas) e mapeadores dedicados (186 linhas) garantem alta manutenibilidade.'}
+
+recommendations:
+  immediate:
+    - 'Comitar a Story 2.9 localmente e avançar para a Wave D: Story 2.10 (Agenda e Fila de Espera).'
+  future:
+    - 'Implementar o token público dedicado por fornecedor na Story 2.17 (ADR-006) para reabilitar o portal de cotação pública.'
+
+waiver: {active: false}
