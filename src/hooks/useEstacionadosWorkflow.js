@@ -4,7 +4,7 @@ import {
   carregarVeiculosEstacionados,
   excluirVeiculoEstacionado,
   obterHistoricoCompletoVeiculo,
-} from '../constants/mockVeiculosEstacionados'
+} from '../repositories/veiculosEstacionadosRepository'
 
 export const FILTRO_SITUACAO_OPCOES = [
   { value: 'TODOS', label: 'Todas as Situações' },
@@ -26,15 +26,29 @@ export function useEstacionadosWorkflow() {
   const [veiculoSelecionado, setVeiculoSelecionado] = useState(null)
 
   const recarregarEstacionados = useCallback(() => {
-    const lista = carregarVeiculosEstacionados()
-    setEstacionados(lista)
+    let cancelado = false
+    carregarVeiculosEstacionados()
+      .then((lista) => {
+        if (!cancelado && Array.isArray(lista)) {
+          setEstacionados(lista)
+        }
+      })
+      .catch((err) => {
+        console.error('Erro ao carregar veículos estacionados:', err)
+      })
+    return () => {
+      cancelado = true
+    }
   }, [])
 
   useEffect(() => {
-    recarregarEstacionados()
+    const cleanup = recarregarEstacionados()
     const handleStorage = () => recarregarEstacionados()
     window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
+    return () => {
+      if (cleanup) cleanup()
+      window.removeEventListener('storage', handleStorage)
+    }
   }, [recarregarEstacionados])
 
   // Extrai montadoras presentes nos veículos estacionados
@@ -132,9 +146,9 @@ export function useEstacionadosWorkflow() {
   }, [])
 
   const handleExcluir = useCallback(
-    (veiculo) => {
+    async (veiculo) => {
       try {
-        excluirVeiculoEstacionado(veiculo.id)
+        await excluirVeiculoEstacionado(veiculo.id)
         recarregarEstacionados()
         toast.success(`Veículo placa ${veiculo.placa} removido dos estacionados.`)
       } catch {

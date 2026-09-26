@@ -10,7 +10,7 @@ import {
   Trash,
   X,
 } from '@phosphor-icons/react'
-import { obterHistoricoCompletoVeiculo } from '../../../../constants/mockVeiculosEstacionados'
+import { obterHistoricoCompletoVeiculo } from '../../../../repositories/veiculosEstacionadosRepository'
 import { useEstacionadosWorkflow } from '../../../../hooks/useEstacionadosWorkflow'
 import { ModalHistoricoManutencao } from '../../../../components/estacionados/ModalHistoricoManutencao'
 import { ModalVincularCliente } from '../../../../components/estacionados/ModalVincularCliente'

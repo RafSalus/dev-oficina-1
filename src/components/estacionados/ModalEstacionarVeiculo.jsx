@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
 import { customSelectStyles } from '../suprimentos/customSelectStyles'
 import { useFrotaVeiculos } from '../../hooks/useFrotaVeiculos'
-import { estacionarVeiculo } from '../../constants/mockVeiculosEstacionados'
+import { estacionarVeiculo } from '../../repositories/veiculosEstacionadosRepository'
 
 export function ModalEstacionarVeiculo({
   isOpen,

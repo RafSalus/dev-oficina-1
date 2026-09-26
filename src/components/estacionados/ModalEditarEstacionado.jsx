@@ -11,7 +11,7 @@ import {
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
-import { atualizarVeiculoEstacionado } from '../../constants/mockVeiculosEstacionados'
+import { atualizarVeiculoEstacionado } from '../../repositories/veiculosEstacionadosRepository'
 
 export function ModalEditarEstacionado({
   isOpen,
@@ -47,13 +47,13 @@ export function ModalEditarEstacionado({
 
   if (!isOpen || !veiculo) return null
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     try {
       const atualizado = {
         ...veiculo,
         ...formData,
       }
-      atualizarVeiculoEstacionado(atualizado)
+      await atualizarVeiculoEstacionado(atualizado)
       toast.success(`Informações do veículo ${veiculo.placa} atualizadas com sucesso!`)
       if (onEdicaoConcluida) {
         onEdicaoConcluida()

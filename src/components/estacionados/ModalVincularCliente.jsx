@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
 import { customSelectStyles } from '../suprimentos/customSelectStyles'
 import { useClientesCadastrados } from '../../hooks/useClientesCadastrados'
-import { vincularVeiculoEstacionadoAoCliente } from '../../constants/mockVeiculosEstacionados'
+import { vincularVeiculoEstacionadoAoCliente } from '../../repositories/veiculosEstacionadosRepository'
 
 export function ModalVincularCliente({ isOpen, onClose, veiculo, onVinculoConcluido }) {
   const [abaAtiva, setAbaAtiva] = useState('existente') // 'existente' ou 'novo'

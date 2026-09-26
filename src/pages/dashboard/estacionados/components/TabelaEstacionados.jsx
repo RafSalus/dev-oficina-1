@@ -8,7 +8,7 @@ import {
   PencilSimple,
   Trash,
 } from '@phosphor-icons/react'
-import { obterHistoricoCompletoVeiculo } from '../../../../constants/mockVeiculosEstacionados'
+import { obterHistoricoCompletoVeiculo } from '../../../../repositories/veiculosEstacionadosRepository'
 import { formatarTelefone } from '../../../../utils/fiscalValidators'
 
 export function TabelaEstacionados({

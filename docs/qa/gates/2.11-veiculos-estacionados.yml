@@ -1,0 +1,70 @@
+schema: 1
+story: '2.11'
+story_title: 'Migração de Veículos Estacionados (Pátio) para Supabase Postgres'
+gate: PASS
+status_reason: >-
+  Módulo de Veículos Estacionados migrado com sucesso para Supabase Postgres.
+  Nova tabela public.veiculos_estacionados criada com FKs reais para veiculos e clientes.
+  ID gerado exclusivamente pelo Postgres via gen_random_uuid()::text.
+  Preservação completa do histórico acumulado de manutenções na venda do veículo e na revinculação a novo proprietário comprovada por testes unitários.
+  RLS FR25 aplicada (admin total, secretária com SELECT/INSERT/UPDATE sob janela operacional D4 das 08h às 19h; mecânico e anônimo sem acesso).
+  Triggers trg_set_updated_at e trg_audit vinculadas.
+  12/12 testes passando na suíte de estacionados, 319/319 testes no projeto, lint zerado, build Vite verde e NFR17 respeitado (todos os arquivos <= 396 linhas).
+reviewer: 'Dara (@data-engineer) / Quinn (@qa)'
+reviewed_revision: 'branch feat/2.11-veiculos-estacionados-schema-repositorio'
+updated: '2026-09-26T15:01:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926210000_veiculos_estacionados.sql
+  repositories:
+    - src/repositories/veiculosEstacionadosRepository.js
+    - src/repositories/mapeadores/veiculosEstacionados.js
+  hooks:
+    - src/hooks/useEstacionadosWorkflow.js
+  components:
+    - src/components/estacionados/ModalEstacionarVeiculo.jsx
+    - src/components/estacionados/ModalEditarEstacionado.jsx
+    - src/components/estacionados/ModalVincularCliente.jsx
+    - src/components/estacionados/ModalHistoricoManutencao.jsx
+  pages:
+    - src/pages/dashboard/estacionados/components/TabelaEstacionados.jsx
+    - src/pages/dashboard/estacionados/mobile/MobileEstacionadosPage.jsx
+  tests:
+    - tests/unit/veiculosEstacionadosRepository.test.js
+    - tests/unit/estacionados-workflow.test.jsx
+
+evidence:
+  commands:
+    - cmd: 'npm test'
+      result: '39 arquivos de teste passaram, 319 testes aprovados, 0 falhas (17.52s)'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint'
+    - cmd: 'npm run build'
+      result: 'Build de produção Vite concluído com sucesso em 9.84s'
+    - cmd: 'wc -l nos módulos modificados/criados'
+      result: 'veiculosEstacionadosRepository (234), mapeadores (78), migration (106), modalVincular (396). Todos <= 396 linhas (NFR17).'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'Tabela public.veiculos_estacionados criada cobrindo campos de venda, comprador, antigo dono e historico_manutencoes JSONB.'}
+  AC2: {status: PASS, note: 'Regra de negócio de preservação do histórico de manutenções comprovadamente mantida na venda e na revinculação ao novo cliente.'}
+  AC3: {status: PASS, note: 'veiculosEstacionadosRepository.js criado com métodos assíncronos, fail-closed sem fallback e ID gerado no banco.'}
+  AC4: {status: PASS, note: 'Telas desktop/mobile e modais (Estacionar, Editar, Vincular, Histórico) consomem veiculosEstacionadosRepository.'}
+  AC5: {status: PASS, note: 'RLS FR25 aplicada: admin total, secretaria com restrições; acesso do mecânico omitido conforme proposta aprovada.'}
+  AC6: {status: PASS, note: 'Janela operacional D4 aplicada via public.em_horario_operacional() às políticas de secretaria.'}
+  AC7: {status: PASS, note: 'Triggers trg_set_updated_at e trg_audit vinculadas na migration.'}
+  AC8: {status: PASS, note: 'Testes automatizados cobrem estacionar, vincular, histórico, fail-closed, concorrência otimista e ID no banco.'}
+  AC9: {status: PASS, note: 'Par mobile (MobileEstacionadosPage.jsx) validado e em paridade total com o desktop.'}
+  AC10: {status: PASS, note: 'Qualidade: zero erros de lint, 319/319 testes verdes, build verde, NFR17 respeitado.'}
+
+nfr_validation:
+  security: {status: PASS, notes: 'RLS FR25 rigorosa, sem acesso de mecânico nem anon, janela comercial D4 para secretaria.'}
+  performance: {status: PASS, notes: 'Índices dedicados criados para busca por placa, data e antigo cliente.'}
+  reliability: {status: PASS, notes: 'Preservação de histórico 100% íntegra através de snapshots estruturados em JSONB.'}
+  maintainability: {status: PASS, notes: 'Arquitetura modular limpa e desacoplada em repositório, mapeadores e hook.'}
+
+recommendations:
+  immediate:
+    - 'Comitar a Story 2.11 localmente e avançar para a Story 2.12 (Leva e Traz / Frota de Apoio).'
+
+waiver: {active: false}

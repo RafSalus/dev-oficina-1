@@ -14,7 +14,7 @@ import {
   X,
 } from '@phosphor-icons/react'
 import { ModalRedimensionavel } from '../suprimentos/ModalRedimensionavel'
-import { obterHistoricoCompletoVeiculo } from '../../constants/mockVeiculosEstacionados'
+import { obterHistoricoCompletoVeiculo } from '../../repositories/veiculosEstacionadosRepository'
 
 export function ModalHistoricoManutencao({ isOpen, onClose, veiculo }) {
   const [modoImpressao, setModoImpressao] = useState(false)
