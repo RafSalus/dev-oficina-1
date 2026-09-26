@@ -1,0 +1,61 @@
+schema: 1
+story: '2.7'
+story_title: 'Migração dos Catálogos de Peças, Serviços e Terceiros para Supabase Postgres'
+gate: PASS
+status_reason: >-
+  Migração dos catálogos de Peças, Serviços e Terceiros para Supabase concluída com sucesso.
+  RLS FR25 aplicada (Secretaria com INSERT/UPDATE sob janela operacional D4, sem DELETE), sem políticas anon.
+  Padrão fail-closed sem fallback implementado, 276/276 testes passando no Vitest, lint zerado e NFR17 respeitado em todos os módulos (< 230 linhas).
+reviewer: 'Dara (@data-engineer) / Quinn (@qa)'
+reviewed_revision: 'branch feat/2.7-produtos-pecas-schema-repositorio'
+updated: '2026-09-26T14:35:00-03:00'
+
+scope:
+  migrations:
+    - supabase/migrations/20260926170000_rls_fr25_suprimentos.sql
+  repositories:
+    - src/repositories/suprimentosRepository.js
+    - src/repositories/pecasRepository.js
+    - src/repositories/servicosRepository.js
+    - src/repositories/terceirosRepository.js
+    - src/repositories/mapeadores/suprimentos.js
+  tests:
+    - tests/unit/suprimentosRepository.test.js
+    - tests/unit/repositories.test.js
+
+evidence:
+  commands:
+    - cmd: 'npm test'
+      result: '35 arquivos de teste passaram, 276 testes aprovados, 0 falhas (14.31s)'
+    - cmd: 'npm run lint'
+      result: '0 erros de lint'
+    - cmd: 'npm run build'
+      result: 'Build de produção Vite concluído com sucesso em 8.91s'
+    - cmd: 'wc -l nos módulos modificados/criados'
+      result: 'suprimentosRepository (9), pecasRepository (216), servicosRepository (214), terceirosRepository (199), suprimentos mappers (226), migration (80). Todos < 230 linhas.'
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'suprimentosRepository mantém assinaturas públicas completas delegando aos repositórios assíncronos modulares.'}
+  AC2: {status: PASS, note: 'Mapeamento bidirecional completo de pecas, servicos e terceiros em src/repositories/mapeadores/suprimentos.js.'}
+  AC3: {status: PASS, note: 'Preservado comportamento de integridade de estoqueAtual delegando ao Kardex (Story 2.8).'}
+  AC4: {status: PASS, note: 'RLS FR25 implementado via migration: admin total, secretaria INSERT/UPDATE, mecanico SELECT, DELETE exclusivo de admin. Nenhuma política anon.'}
+  AC5: {status: PASS, note: 'Janela operacional D4 (em_horario_operacional()) aplicada às políticas de escrita da secretaria.'}
+  AC6: {status: PASS, note: 'Código duplicado (erro 23505) mapeado para ErroRepositorio com código DUPLICADO e mensagem amigável.'}
+  AC7: {status: PASS, note: 'Testes cobrindo CRUD completo, modo local isolado e fail-closed em tests/unit/suprimentosRepository.test.js.'}
+  AC8: {status: PASS, note: 'Pares mobile verificados sem quebras de contrato.'}
+  AC9: {status: PASS, note: 'Triggers trg_set_updated_at e trg_audit confirmadas ativas nas três tabelas.'}
+  AC10: {status: PASS, note: 'Qualidade: zero erros no eslint, 100% testes verdes, NFR17 respeitado.'}
+
+nfr_validation:
+  security: {status: PASS, notes: 'RLS FR25 rigorosa: sem escrita anônima, sem DELETE para secretaria, janela comercial D4 aplicada.'}
+  performance: {status: PASS, notes: 'Mapeadores puros e leves, queries com or e ordenação indexada.'}
+  reliability: {status: PASS, notes: 'Padrão fail-closed em todas as chamadas assíncronas ao Supabase com tratamento otimista de updated_at.'}
+  maintainability: {status: PASS, notes: 'Separação modular em pecasRepository, servicosRepository e terceirosRepository garante sustentabilidade arquitetural.'}
+
+recommendations:
+  immediate:
+    - 'Prosseguir com o commit da Story 2.7 e avançar para a Story 2.8 (Kardex e Movimentações de Estoque).'
+  future:
+    - 'Trigger de proteção de estoque_atual contra UPDATE fora do Kardex será introduzida na Story 2.8 conforme ADR-005 §2.5.'
+
+waiver: {active: false}
