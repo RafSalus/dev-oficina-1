@@ -1,0 +1,168 @@
+schema: 1
+story: '2.4'
+story_title: 'Correção da Suíte de Testes de Guards de Autenticação e Gate de CI do Epic 2'
+gate: CONCERNS
+status_reason: >-
+  Os ACs 1 a 6 foram verificados de forma independente. O comportamento do ProtectedRoute é equivalente ao de main, as 12 mutações
+  do QA em routeAccessRules.js foram detectadas e a suíte passa 225/225 sem .env, sem variáveis e sem rede. O veredito é CONCERNS
+  porque a ligação do ProtectedRoute/AdminAuthContext com as regras continua pouco testada: 7 de 8 mutações nessa camada sobreviveram.
+reviewer: 'Quinn (@qa)'
+reviewed_revision: 'commit:6927314 (branch feat/2.4-testes-guards-ci), diff main...HEAD'
+updated: '2026-09-26T11:50:00-03:00'
+
+scope:
+  source:
+    - src/components/auth/routeAccessRules.js
+    - src/components/auth/ProtectedRoute.jsx
+    - src/context/AdminAuthContext.jsx
+  tests:
+    - tests/unit/auth-guards.test.jsx (renomeado de auth-guards.test.js)
+    - tests/unit/auth-seguranca.test.jsx
+    - tests/unit/supabase-connection.test.js
+  ci:
+    - .github/workflows/ci.yml
+  docs:
+    - docs/stories/2.4.correcao-testes-guards-e-ci-epic2.md
+    - docs/stories/epic-2-INDEX.md
+  excluded_from_review: >-
+    Alterações no working tree que não são desta story (package.json, src/pages/GestaoEntrarPage.jsx,
+    src/pages/GestaoAcessoNegadoPage.jsx, image.png, scripts/definir-papel-usuario.js). Todas as medições foram feitas em
+    worktrees limpos do commit 6927314 e de main (63cba48), sem .env e com node_modules por symlink.
+
+evidence:
+  environment: >-
+    git worktree do commit 6927314 e de main no scratchpad da sessão. Nenhum dos dois tem .env (arquivo ignorado pelo git),
+    o que reproduz a condição do CI. Vitest 4.1.11. O isolamento de rede foi feito com unshare -rn.
+  commands:
+    - cmd: "VITE_SUPABASE_URL='' VITE_SUPABASE_ANON_KEY='' VITE_SUPABASE_PUBLISHABLE_KEY='' npx vitest run (commit 6927314)"
+      result: '29 arquivos / 225 testes, todos passam. real 0m12.3s (NFR5 < 60s).'
+    - cmd: "o mesmo comando em main (63cba48)"
+      result: >-
+        1 arquivo falha (tests/unit/supabase-connection.test.js), com 4 failed e 200 passed de 204. Confirma que o CI de main já
+        quebrava sem .env, como o Dev Agent Record afirma.
+    - cmd: 'unshare -rn npx vitest run (commit 6927314, sem rede), com e sem o .env real'
+      result: '225/225 nos dois casos. Nenhum teste depende de rede, nem mesmo quando há credenciais reais configuradas.'
+    - cmd: 'npx vitest run com o .env real (commit 6927314)'
+      result: '225/225. A suíte fica verde com ou sem credenciais.'
+    - cmd: 'npm run lint (commit 6927314 e main)'
+      result: '0 erros e 129 warnings nos dois. Nenhum warning novo. 3.6s. npx eslint --quiet src/ tests/ deu exit 0.'
+    - cmd: 'wc -l'
+      result: >-
+        routeAccessRules.js 142, ProtectedRoute.jsx 68, AdminAuthContext.jsx 369, auth-guards.test.jsx 246,
+        auth-seguranca.test.jsx 121, supabase-connection.test.js 116, ci.yml 45. Todos com até 400 linhas.
+    - cmd: 'mut.sh: 20 mutações do QA, suíte completa por mutação, código restaurado após cada uma'
+      result: >-
+        routeAccessRules.js, 12/12 mortas: hora > 8; hora <= 19; sem bypass do admin; ordem dispositivo antes de horário;
+        cliente sempre liberado; unconfigured liberado fora de dev; sem checagem de sessão; MFA configurar/verificar trocados;
+        login sem returnUrl; allowedRoles sem bypass do admin; secretária aceita no portal do mecânico; secretária na
+        Gestão enviada para acesso-negado. ProtectedRoute.jsx, 1/7 mortas (só o cliente forjado 'x'). Sobreviveram: troca
+        dos argumentos isHorario/isDispositivo; returnUrl sem location.search; returnUrl sem encodeURIComponent; isDev: true;
+        motivo do bloqueio fixo em 'horario'; onLogout ausente. AdminAuthContext.jsx: isHorarioOperacionalOficina() retornando
+        true sobreviveu.
+    - cmd: 'sonda de ambiente (arquivo de teste temporário, removido)'
+      result: >-
+        Com VITE_SUPABASE_URL/ANON_KEY vazias e SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY exportadas no processo, o Vitest
+        expõe as variáveis sem prefixo em import.meta.env, e src/lib/supabase.js resulta em isSupabaseConfigured=true.
+    - cmd: 'coderabbit'
+      result: 'CLI ausente (~/.local/bin/coderabbit não existe). A revisão automatizada não foi executada.'
+
+equivalence_analysis:
+  summary: >-
+    O ProtectedRoute de 6927314 é observavelmente equivalente ao de main, comparando ramo a ramo: isLoading leva ao spinner
+    antes de qualquer decisão; returnUrl = encodeURIComponent(pathname + search); cliente é checado primeiro, por truthiness
+    do marcador do localStorage, que é lido só quando portal === 'cliente'; unconfigured && DEV libera; status fora de
+    aal2/mfa_* vai para /gestao/entrar?returnUrl; mfa_setup vai para /gestao/mfa/configurar e mfa_verify para
+    /gestao/mfa/verificar; Gestão: admin liberado, secretaria para /secretaria/dashboard, mecanico para /mecanico/dashboard e
+    os demais para acesso-negado; secretaria/mecânico: papel errado vai para acesso-negado, admin tem bypass, e para
+    colaborador o horário é checado antes do dispositivo; allowedRoles com bypass do admin; senão libera.
+  horario_dispositivo_antecipados: >-
+    Sem efeito observável. isHorarioOperacionalOficina() e isDispositivoAutorizado() passam a ser chamadas em toda
+    renderização pós-loading, inclusive para admin, cliente e Gestão. As duas são leituras sem efeito colateral com
+    try/catch interno (Intl com fallback; localStorage.getItem com catch que retorna false), então não lançam exceção nem mudam
+    estado. O custo é um Intl.DateTimeFormat e um getItem por renderização, desprezível.
+  adminauthcontext_delegacao: >-
+    Sem ciclo: routeAccessRules.js não importa nada, e o grafo AdminAuthContext -> routeAccessRules <- ProtectedRoute ->
+    AdminAuthContext é acíclico. O comportamento é idêntico, inclusive o fallback (data.getHours() sobre o mesmo new Date()).
+    Há uma inversão de camada (o contexto importa de components/auth), ver MNT-001.
+  caso_mecanico_gestao: >-
+    Correto. Em main, ProtectedRoute.jsx:95 faz `if (isMecanico) return <Navigate to="/mecanico/dashboard" replace />`. A
+    expectativa antiga (/gestao/acesso-negado) só passava porque validava a cópia local de evaluateRouteAccess. A nova
+    expectativa documenta o comportamento real, sem alterá-lo.
+
+acceptance_criteria:
+  AC1: {status: PASS, note: 'routeAccessRules.js exporta isHorarioOperacional, avaliarAcessoRota e lerClienteAtivo, que o teste importa. Não restou lógica redefinida no teste. A renomeação para .jsx é justificada (testes de renderização com JSX).'}
+  AC2: {status: PASS, note: 'Equivalência verificada ramo a ramo contra main (ver equivalence_analysis). A regra de horário ficou em um único lugar (AdminAuthContext delega). O ProtectedRoute foi de 146 para 68 linhas.'}
+  AC3: {status: PASS, note: 'Os 15 casos antigos (6 de horário e 9 de guards) existem com o mesmo título ou título equivalente e passam contra o código real. A única mudança de expectativa (mecânico na Gestão) está correta frente a main:95. Foram adicionados 15 casos. As mutações do QA no módulo puro morreram 12/12. A camada de ligação do ProtectedRoute continua fraca (TEST-001).'}
+  AC4: {status: PASS, note: 'A decisão de manter os arquivos separados é adequada: auth-seguranca simula o supabase-js (derivação de papel/MFA a partir de app_metadata, sessão forjada), e auth-guards simula o contexto (regras de rota). Não há fixtures compartilhadas, e cada cabeçalho referencia o outro arquivo.'}
+  AC5: {status: PASS, note: 'O CI já rodava npm test. A suíte agora passa sem .env, sem variáveis e sem rede (unshare -rn), e main falhava 4 testes nessa condição. supabase-connection usa vi.mock do supabase-js + stubEnv/resetModules, com unstubAllEnvs e clearAllMocks no afterEach, e o isolamento é por arquivo. As credenciais de produção que estavam fixadas no teste foram removidas. O CI zera só 2 das 6 variáveis lidas (REL-001).'}
+  AC6: {status: PASS, note: 'Lint com 0 erros e 129 warnings, iguais a main. npm test 12.3s. Todos os arquivos com até 400 linhas.'}
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    category: tests
+    refs:
+      - 'tests/unit/auth-guards.test.jsx:192-245'
+      - 'src/components/auth/ProtectedRoute.jsx:54-58'
+      - 'src/components/auth/ProtectedRoute.jsx:65'
+      - 'src/context/AdminAuthContext.jsx:333-335'
+    description: >-
+      A lógica pura está bem protegida, mas a ligação do ProtectedRoute com ela não está. Sobreviveram estas mutações: (a) trocar
+      isHorarioOperacionalOficina() por isDispositivoAutorizado() nos argumentos (o teste "mostra o bloqueio de horário" só
+      verifica que o conteúdo sumiu, não qual bloqueio aparece); (b) motivo do BloqueioHorarioView fixo em 'horario'; (c)
+      returnUrl sem location.search ou sem encodeURIComponent (os testes de renderização checam só o path de destino); (d) isDev:
+      true fixo, que é fail-open em produção com Supabase não configurado e fica invisível porque DEV=true no Vitest; (e) onLogout
+      ausente; (f) isHorarioOperacionalOficina() retornando true (o auth-guards mocka o AdminAuthContext, e nenhum teste exercita
+      a delegação). O objetivo declarado da story (uma regressão no ProtectedRoute/AdminAuthContext ser detectada) fica atendido
+      no módulo de regras, mas não na camada de ligação.
+    recommendation: >-
+      Nos testes de renderização: verificar o texto específico do BloqueioHorarioView para 'horario' e 'dispositivo' (com
+      horario=true e dispositivo=false); navegar para uma rota com query (ex.: /gestao/area?x=1) e verificar o returnUrl
+      recebido pela tela de login (useLocation().search); cobrir unconfigured com vi.stubEnv('DEV', false); clicar no botão de
+      sair do bloqueio e verificar signOut. Adicionar 1 ou 2 testes diretos de isHorarioOperacionalOficina com
+      vi.useFakeTimers/setSystemTime (07:59 e 08:00 BRT) sem mockar o AdminAuthContext.
+  - id: 'REL-001'
+    severity: low
+    category: ci
+    refs: ['.github/workflows/ci.yml:30-39', 'src/lib/supabase.js:3-15']
+    description: >-
+      O comentário do CI afirma que as variáveis vazias "garantem que um segredo configurado no repositório nunca seja usado
+      pelos testes", mas src/lib/supabase.js também lê SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, SUPABASE_PUBLISHABLE_KEY e
+      SUPABASE_ANON_KEY. A sonda do QA confirmou que o Vitest expõe variáveis sem prefixo: com SUPABASE_URL e
+      SUPABASE_PUBLISHABLE_KEY no ambiente, isSupabaseConfigured fica true mesmo com as duas VITE_* vazias. Hoje não há risco
+      real, porque o workflow não injeta segredos e a suíte ficou verde e sem rede mesmo com o .env real.
+    recommendation: 'Zerar as 6 variáveis no passo de testes (ou pelo menos VITE_SUPABASE_URL e SUPABASE_URL), ou suavizar o comentário.'
+  - id: 'MNT-001'
+    severity: low
+    category: code
+    refs: ['src/context/AdminAuthContext.jsx:5']
+    description: >-
+      O contexto de autenticação passou a importar de src/components/auth/routeAccessRules.js, uma dependência invertida (camada
+      de contexto dependendo de pasta de componente). Não gera ciclo hoje, mas qualquer import futuro de AdminAuthContext dentro de
+      routeAccessRules criaria um.
+    recommendation: 'Numa story futura, mover as regras puras para um módulo neutro (ex.: src/auth/ ou src/utils/) ou documentar no cabeçalho que routeAccessRules.js não pode importar nada do app.'
+  - id: 'DOC-001'
+    severity: low
+    category: docs
+    refs: ['docs/stories/2.4.correcao-testes-guards-e-ci-epic2.md (Definition of Done)']
+    description: >-
+      Os checkboxes da Definition of Done continuam desmarcados, embora Tasks e Dev Agent Record indiquem conclusão (repete o
+      DOC-001 da 2.3). O Dev Agent Record fala em 139 warnings de lint, e o QA mediu 129 no commit (a diferença provavelmente vem
+      de arquivos fora da story no working tree).
+    recommendation: '@dev/@po marcarem a DoD de acordo com o estado real.'
+
+nfr_validation:
+  security: {status: CONCERNS, notes: 'Comportamento fail-closed preservado (unconfigured só libera em DEV; papel vindo do contexto). As credenciais de produção fixadas no teste antigo foram removidas. A ressalva é que a mutação isDev: true (fail-open em produção) não é detectada (TEST-001d).'}
+  performance: {status: PASS, notes: 'Suíte em 12.3s e lint em 3.6s. As chamadas antecipadas de horário/dispositivo custam um Intl.DateTimeFormat e um getItem por renderização.'}
+  reliability: {status: PASS, notes: 'A suíte agora é determinística e independente de .env e rede. Em main ela falhava 4 testes sem .env.'}
+  maintainability: {status: PASS, notes: 'Decisão pura com contrato explícito ({acao, destino|motivo}), fronteira pura x efeito documentada e componente fino. Ver MNT-001.'}
+
+recommendations:
+  immediate: []
+  future:
+    - 'TEST-001: reforçar os testes de renderização do ProtectedRoute (motivo do bloqueio, returnUrl com query, DEV=false, signOut) e testar isHorarioOperacionalOficina sem mock.'
+    - 'REL-001: zerar todas as variáveis Supabase lidas por src/lib/supabase.js no passo de testes do CI.'
+    - 'MNT-001: mover routeAccessRules para um módulo neutro de camada.'
+    - 'DOC-001: marcar a DoD.'
+
+waiver: {active: false}

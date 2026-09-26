@@ -5,8 +5,8 @@
 // cliente Supabase — camadas diferentes, sem fixtures compartilhadas.
 import React from 'react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import {
   avaliarAcessoRota,
   isHorarioOperacional,
@@ -190,12 +190,17 @@ describe('Story 1.1 / 2.4: Proteção de Rotas e Guards de Horário/Dispositivo 
   })
 
   describe('ProtectedRoute consome as regras reais', () => {
+    function TelaLogin() {
+      const { search } = useLocation()
+      return <p>Tela de login {search}</p>
+    }
+
     const renderizar = (portal, rota = `/${portal}/area`) =>
       render(
         <MemoryRouter initialEntries={[rota]}>
           <Routes>
-            <Route path={rota} element={<ProtectedRoute portal={portal}><p>Conteúdo protegido</p></ProtectedRoute>} />
-            <Route path="/gestao/entrar" element={<p>Tela de login</p>} />
+            <Route path={rota.split('?')[0]} element={<ProtectedRoute portal={portal}><p>Conteúdo protegido</p></ProtectedRoute>} />
+            <Route path="/gestao/entrar" element={<TelaLogin />} />
             <Route path="/mecanico/dashboard" element={<p>Dashboard do mecânico</p>} />
             <Route path="/cliente/entrar" element={<p>Login do cliente</p>} />
           </Routes>
@@ -203,11 +208,13 @@ describe('Story 1.1 / 2.4: Proteção de Rotas e Guards de Horário/Dispositivo 
       )
 
     beforeEach(() => {
-      authMock.estado = { status: 'aal2', role: 'secretaria', isLoading: false, signOut: () => {} }
+      authMock.estado = { status: 'aal2', role: 'secretaria', isLoading: false, signOut: vi.fn() }
       authMock.horario = true
       authMock.dispositivo = true
       localStorage.clear()
     })
+
+    afterEach(() => vi.unstubAllEnvs())
 
     it('libera a secretária no expediente', () => {
       renderizar('secretaria')
@@ -218,6 +225,21 @@ describe('Story 1.1 / 2.4: Proteção de Rotas e Guards de Horário/Dispositivo 
       authMock.horario = false
       renderizar('secretaria')
       expect(screen.queryByText('Conteúdo protegido')).toBeNull()
+      expect(screen.getByText('Acesso Fora do Horario Operacional')).toBeDefined()
+    })
+
+    it('mostra o bloqueio de dispositivo no expediente, em aparelho não pareado', () => {
+      authMock.dispositivo = false
+      renderizar('secretaria')
+      expect(screen.getByText('Dispositivo Nao Autorizado')).toBeDefined()
+      expect(screen.queryByText('Acesso Fora do Horario Operacional')).toBeNull()
+    })
+
+    it('o botão "Sair da Conta" do bloqueio chama o signOut da sessão', () => {
+      authMock.horario = false
+      renderizar('secretaria')
+      fireEvent.click(screen.getByText('Sair da Conta'))
+      expect(authMock.estado.signOut).toHaveBeenCalledTimes(1)
     })
 
     it('redireciona o mecânico que tenta abrir a Gestão', () => {
@@ -226,10 +248,26 @@ describe('Story 1.1 / 2.4: Proteção de Rotas e Guards de Horário/Dispositivo 
       expect(screen.getByText('Dashboard do mecânico')).toBeDefined()
     })
 
-    it('redireciona sessão inexistente para o login', () => {
+    it('redireciona sessão inexistente para o login preservando rota e query', () => {
       authMock.estado = { ...authMock.estado, status: 'unauthenticated', role: null }
+      renderizar('gestao', '/gestao/area?aba=2&x=1')
+      const esperado = `?returnUrl=${encodeURIComponent('/gestao/area?aba=2&x=1')}`
+      expect(screen.getByText(`Tela de login ${esperado}`)).toBeDefined()
+    })
+
+    it('fail-closed: Supabase não configurado fora do servidor de dev exige login', () => {
+      vi.stubEnv('DEV', false)
+      authMock.estado = { ...authMock.estado, status: 'unconfigured', role: null }
       renderizar('gestao')
-      expect(screen.getByText('Tela de login')).toBeDefined()
+      expect(screen.queryByText('Conteúdo protegido')).toBeNull()
+      expect(screen.getByText(/Tela de login/)).toBeDefined()
+    })
+
+    it('Supabase não configurado no servidor de dev libera (modo offline)', () => {
+      vi.stubEnv('DEV', true)
+      authMock.estado = { ...authMock.estado, status: 'unconfigured', role: null }
+      renderizar('gestao')
+      expect(screen.getByText('Conteúdo protegido')).toBeDefined()
     })
 
     it('usa o marcador do localStorage no portal do cliente', () => {
@@ -241,6 +279,24 @@ describe('Story 1.1 / 2.4: Proteção de Rotas e Guards de Horário/Dispositivo 
       authMock.estado = { ...authMock.estado, isLoading: true }
       renderizar('secretaria')
       expect(screen.getByText('Verificando credenciais de acesso...')).toBeDefined()
+    })
+  })
+
+  describe('AdminAuthContext.isHorarioOperacionalOficina (implementação real)', () => {
+    afterEach(() => vi.useRealTimers())
+
+    it('delega para a mesma regra de horário usada nos guards', async () => {
+      const real = await vi.importActual('../../src/context/AdminAuthContext')
+      vi.useFakeTimers()
+
+      vi.setSystemTime(new Date('2026-09-21T11:00:00Z')) // 08:00 BRT
+      expect(real.isHorarioOperacionalOficina()).toBe(true)
+
+      vi.setSystemTime(new Date('2026-09-21T22:00:00Z')) // 19:00 BRT
+      expect(real.isHorarioOperacionalOficina()).toBe(false)
+
+      vi.setSystemTime(new Date('2026-09-21T10:59:00Z')) // 07:59 BRT
+      expect(real.isHorarioOperacionalOficina()).toBe(false)
     })
   })
 })
