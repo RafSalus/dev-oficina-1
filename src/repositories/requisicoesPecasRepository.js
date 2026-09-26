@@ -107,14 +107,14 @@ export async function criarRequisicaoPeca(dados) {
  * @returns {Promise<Object>} requisição atualizada
  */
 export async function atualizarStatusRequisicao(id, status, { motivoRecusa } = {}) {
-  const codigo = statusParaCodigo(status)
+  const codigo = status ? statusParaCodigo(status) : null
   const contexto = { ...CONTEXTO, operacao: 'atualizarStatus' }
   if (!id || !codigo) {
     throw new ErroRepositorio(CODIGOS_ERRO.ERRO_DESCONHECIDO, `Status de requisição inválido: ${status}`, { contexto })
   }
   const campos = { status: codigo }
+  // atendido_em/atendido_por_id são registrados pelo banco (trigger), não pelo cliente
   if (codigo === 'recusada') campos.motivo_recusa = motivoRecusa || null
-  if (codigo === 'atendida') campos.atendido_em = new Date().toISOString()
 
   return executarRepositorio({
     contexto,

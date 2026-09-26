@@ -224,13 +224,14 @@ export function MecanicoDashboardPage() {
     })
   }, [buscaEstoque, categoriaEstoque])
 
-  const handleRequisitarPeca = (peca) => {
+  const handleRequisitarPeca = async (peca) => {
     if (!osAtiva) {
       toast.error('Selecione uma Ordem de Serviço ativa primeiro.')
       return
     }
 
-    pedirPecaParaOS({
+    // Só marca a peça na OS se a requisição foi de fato gravada (fail-closed, Story 2.15)
+    const requisicao = await pedirPecaParaOS({
       numeroOS: osAtiva.numeroOS,
       veiculo: `${osAtiva.marcaModelo} (${osAtiva.placa})`,
       pecaNome: peca.nome,
@@ -238,6 +239,7 @@ export function MecanicoDashboardPage() {
       quantidade: qtdPedir,
       urgencia: urgenciaPedir,
     })
+    if (!requisicao) return
 
     // Adiciona também na lista de peças da OS ativa se não existir
     const novaPecaOS = {

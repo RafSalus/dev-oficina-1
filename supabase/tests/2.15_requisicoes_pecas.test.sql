@@ -3,7 +3,8 @@
 --
 -- Transacional com ROLLBACK no final: nada persiste. Prefira banco local/dev: dentro da
 -- transação o teste cria contas sintéticas em auth.users para os mecânicos.
--- Uso: supabase db query --linked -f supabase/tests/2.15_requisicoes_pecas.test.sql
+-- Uso (local/dev): psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/2.15_requisicoes_pecas.test.sql
+-- Atenção: "supabase db query --linked -f ..." roda no projeto vinculado, que hoje é PRODUÇÃO.
 -- Qualquer asserção falha interrompe com RAISE EXCEPTION 'FALHA ...'.
 -- ==============================================================================
 
@@ -28,7 +29,10 @@ SELECT set_config('request.jwt.claims',
 SET LOCAL ROLE authenticated;
 INSERT INTO public.requisicoes_pecas (numero_os, peca_nome, quantidade, urgencia, solicitante_nome)
 VALUES ('T215-OS', 'T215 Pastilha', 2, 'urgente', 'T215 Mecânico A');
-INSERT INTO t215 SELECT 'a_ve', to_jsonb(count(*)) FROM public.requisicoes_pecas WHERE peca_nome LIKE 'T215%';
+-- INSERT forjado (SEC-001): status já atendido, atendente de outro funcionário e nome falso
+INSERT INTO public.requisicoes_pecas (numero_os, peca_nome, status, atendido_por_id, atendido_em, motivo_recusa, solicitante_nome)
+VALUES ('T215-OS', 'T215 Forjada', 'atendida', 't215-mec-b', now(), 'x', 'Nome Falso');
+INSERT INTO t215 SELECT 'a_ve', to_jsonb(count(*)) FROM public.requisicoes_pecas WHERE peca_nome IN ('T215 Pastilha', 'T215 Forjada');
 RESET ROLE;
 
 -- 2. Mecânico B tenta gravar em nome de A e tenta ver as de A (D5)
@@ -52,8 +56,14 @@ BEGIN
      OR v.id IS NULL OR v.created_at IS NULL THEN
     RAISE EXCEPTION 'FALHA AC1/AC3: requisição de A com solicitante/status/id incorretos: % / %', v.solicitante_id, v.status;
   END IF;
-  IF (SELECT valor FROM t215 WHERE caso = 'a_ve') <> to_jsonb(1) THEN
-    RAISE EXCEPTION 'FALHA AC4: mecânico A deveria ver a própria requisição';
+  IF (SELECT valor FROM t215 WHERE caso = 'a_ve') <> to_jsonb(2) THEN
+    RAISE EXCEPTION 'FALHA AC4: mecânico A deveria ver as 2 próprias requisições';
+  END IF;
+  SELECT * INTO v FROM public.requisicoes_pecas WHERE peca_nome = 'T215 Forjada';
+  IF v.status IS DISTINCT FROM 'aguardando_separacao' OR v.atendido_por_id IS NOT NULL OR v.atendido_em IS NOT NULL
+     OR v.motivo_recusa IS NOT NULL OR v.solicitante_nome IS DISTINCT FROM 'T215 Mecânico A' THEN
+    RAISE EXCEPTION 'FALHA AC3 (SEC-001): INSERT do mecânico aceitou campos controlados pelo servidor: % / % / %',
+      v.status, v.atendido_por_id, v.solicitante_nome;
   END IF;
   IF (SELECT valor FROM t215 WHERE caso = 'b_ve_antes') <> to_jsonb(0) THEN
     RAISE EXCEPTION 'FALHA AC4 (D5): mecânico B viu requisição de A';
@@ -83,6 +93,26 @@ BEGIN
   INSERT INTO public.requisicoes_pecas (peca_nome) VALUES ('T215 Órfã');
   RAISE EXCEPTION 'FALHA AC4: mecânico sem vínculo criou requisição';
 EXCEPTION WHEN insufficient_privilege THEN NULL;
+END;
+$$;
+RESET ROLE;
+
+SELECT set_config('request.jwt.claims',
+  '{"sub":"a1515151-0000-0000-0000-00000000000a","role":"authenticated","app_metadata":{}}', true);
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE
+  n int;
+BEGIN
+  SELECT count(*) INTO n FROM public.requisicoes_pecas;
+  IF n > 0 THEN
+    RAISE EXCEPTION 'FALHA AC4: autenticado sem papel leu % requisições', n;
+  END IF;
+  BEGIN
+    INSERT INTO public.requisicoes_pecas (peca_nome) VALUES ('T215 Sem papel');
+    RAISE EXCEPTION 'FALHA AC4: autenticado sem papel criou requisição';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
 END;
 $$;
 RESET ROLE;
@@ -121,11 +151,14 @@ RESET ROLE;
 
 DO $$
 BEGIN
-  IF (SELECT valor FROM t215 WHERE caso = 'sec_ve') <> to_jsonb(2) THEN
-    RAISE EXCEPTION 'FALHA AC4: secretaria deveria ver as 2 requisições';
+  IF (SELECT valor FROM t215 WHERE caso = 'sec_ve') <> to_jsonb(3) THEN
+    RAISE EXCEPTION 'FALHA AC4: secretaria deveria ver as 3 requisições';
   END IF;
   IF (SELECT status FROM public.requisicoes_pecas WHERE peca_nome = 'T215 Pastilha') <> 'atendida' THEN
     RAISE EXCEPTION 'FALHA AC4: secretaria deveria conseguir atender';
+  END IF;
+  IF (SELECT atendido_em FROM public.requisicoes_pecas WHERE peca_nome = 'T215 Pastilha') IS NULL THEN
+    RAISE EXCEPTION 'FALHA MNT-001: atendido_em deveria ser registrado pelo servidor';
   END IF;
   RAISE NOTICE 'OK AC4: secretaria vê todas e atende; não cria; anon sem acesso';
 END;
@@ -152,8 +185,8 @@ BEGIN
   IF to_regclass('public.estoque_movimentacoes') IS NOT NULL
      AND EXISTS (SELECT 1 FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
                  WHERE c.relname = 'requisicoes_pecas' AND NOT t.tgisinternal
-                   AND t.tgname NOT IN ('trg_requisicoes_pecas_solicitante', 'trg_set_updated_at_requisicoes_pecas',
-                                        'trg_audit_requisicoes_pecas')) THEN
+                   AND t.tgname NOT IN ('trg_requisicoes_pecas_solicitante', 'trg_requisicoes_pecas_atendimento',
+                                        'trg_set_updated_at_requisicoes_pecas', 'trg_audit_requisicoes_pecas')) THEN
     RAISE EXCEPTION 'FALHA AC6: trigger inesperada em requisicoes_pecas (atendida não deve mexer no estoque)';
   END IF;
   RAISE NOTICE 'OK AC5/AC6: auditoria por papel, updated_at e nenhum gatilho de estoque';

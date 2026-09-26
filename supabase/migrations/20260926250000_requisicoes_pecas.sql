@@ -15,6 +15,7 @@
 --   BEGIN;
 --   DROP TABLE IF EXISTS public.requisicoes_pecas;
 --   DROP FUNCTION IF EXISTS public.fn_requisicoes_pecas_set_solicitante();
+--   DROP FUNCTION IF EXISTS public.fn_requisicoes_pecas_registrar_atendimento();
 --   COMMIT;
 -- ==============================================================================
 
@@ -52,9 +53,11 @@ CREATE INDEX IF NOT EXISTS idx_requisicoes_pecas_created_at ON public.requisicoe
 COMMENT ON TABLE public.requisicoes_pecas IS
     'Pedidos de peças dos mecânicos ao almoxarifado/secretaria durante a execução da OS (Story 2.15).';
 
--- 2. Autoria pela sessão (AC3) ---------------------------------------------------------------
--- Para o mecânico, o solicitante é SEMPRE o funcionário da sessão (não aceita valor do cliente).
--- Admin/secretaria/service_role podem registrar em nome de alguém (ou deixar a sessão resolver).
+-- 2. Autoria pela sessão (AC3) e campos controlados pelo servidor ---------------------------
+-- Para o mecânico, o solicitante é SEMPRE o funcionário da sessão e o nome vem do cadastro;
+-- a requisição nasce em 'aguardando_separacao', sem dados de atendimento (não aceita valores
+-- do cliente). SECURITY DEFINER é necessário para ler o nome em funcionarios, que o mecânico
+-- não lê. Admin/secretaria/service_role podem registrar em nome de alguém.
 CREATE OR REPLACE FUNCTION public.fn_requisicoes_pecas_set_solicitante()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -62,20 +65,60 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    IF public.papel_usuario() = 'mecanico' OR NEW.solicitante_id IS NULL THEN
+    IF public.papel_usuario() = 'mecanico' THEN
         NEW.solicitante_id := public.funcionario_atual_id();
+        NEW.status := 'aguardando_separacao';
+        NEW.atendido_por_id := NULL;
+        NEW.atendido_em := NULL;
+        NEW.motivo_recusa := NULL;
+    ELSIF NEW.solicitante_id IS NULL THEN
+        NEW.solicitante_id := public.funcionario_atual_id();
+    END IF;
+
+    IF NEW.solicitante_id IS NOT NULL THEN
+        NEW.solicitante_nome := COALESCE(
+            (SELECT f.nome FROM public.funcionarios AS f WHERE f.id = NEW.solicitante_id),
+            NEW.solicitante_nome
+        );
     END IF;
     RETURN NEW;
 END;
 $$;
-
-REVOKE EXECUTE ON FUNCTION public.fn_requisicoes_pecas_set_solicitante() FROM PUBLIC;
 
 DROP TRIGGER IF EXISTS trg_requisicoes_pecas_solicitante ON public.requisicoes_pecas;
 CREATE TRIGGER trg_requisicoes_pecas_solicitante
     BEFORE INSERT ON public.requisicoes_pecas
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_requisicoes_pecas_set_solicitante();
+
+-- Atendimento/recusa: quem e quando vêm do servidor, não do relógio ou da escolha do cliente
+CREATE OR REPLACE FUNCTION public.fn_requisicoes_pecas_registrar_atendimento()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+    IF NEW.status IS DISTINCT FROM OLD.status THEN
+        IF NEW.status IN ('atendida', 'recusada') THEN
+            NEW.atendido_em := now();
+            NEW.atendido_por_id := public.funcionario_atual_id();
+        ELSE
+            NEW.atendido_em := NULL;
+            NEW.atendido_por_id := NULL;
+        END IF;
+    ELSE
+        NEW.atendido_em := OLD.atendido_em;
+        NEW.atendido_por_id := OLD.atendido_por_id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_requisicoes_pecas_atendimento ON public.requisicoes_pecas;
+CREATE TRIGGER trg_requisicoes_pecas_atendimento
+    BEFORE UPDATE ON public.requisicoes_pecas
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_requisicoes_pecas_registrar_atendimento();
 
 -- 3. updated_at e auditoria (AC5) ------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_set_updated_at_requisicoes_pecas ON public.requisicoes_pecas;
