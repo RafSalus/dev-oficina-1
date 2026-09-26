@@ -26,6 +26,9 @@
 |---|---|---|---|---|
 | [2.0](2.0.saneamento-arquitetural-e-decomposicao-monolitos.md) | Saneamento Arquitetural, Eliminação de Código Fantasma e Decomposição de Monólitos | @dev / @architect | Nenhuma | **Done** |
 | [2.0b](2.0b.decomposicao-telas-mobile-e-pdv.md) | Decomposição das Telas Mobile de Suprimentos, do PDV e da Nova OS Mobile (ARCH-001) | @dev / @architect | 2.0 | **Done** |
+| [2.0c](2.0c.decomposicao-patio-e-logistica.md) | Decomposição do Pátio e Logística (Lote 1 de Arquitetura) | @dev / @architect | 2.0, 2.0b | **Done** |
+| [2.0d](2.0d.decomposicao-clientes-e-veiculos.md) | Decomposição de Clientes e Veículos (Lote 2 de Arquitetura) | @dev / @architect | 2.0c | **Done** |
+| [2.0e](2.0e.decomposicao-agenda-e-fila.md) | Decomposição da Agenda Dinâmica e Fila de Espera (Lote 3 de Arquitetura) | @dev / @architect | 2.0d | **InReview** |
 | [2.1](2.1.fundacao-repositorio-supabase.md) | Fundação do Cliente Supabase e Camada de Repositório Assíncrona (fail-closed, ADR-005) | @dev / @architect | Nenhuma | **Done** |
 | [2.2](2.2.triggers-auditoria-e-updated-at.md) | Triggers de Auditoria Imutável e `updated_at` Automático | @data-engineer / @dev | 2.1 | **Ready** |
 | [2.3](2.3.view-rpc-mecanicos-ativos.md) | View/RPC de Mecânicos Ativos + `funcionario_atual_id()` | @data-engineer / @dev | 2.1 | **Ready** |

@@ -4,7 +4,7 @@ import { IMaskInput } from 'react-imask'
 import { X, ShieldCheck, CheckCircle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { carregarClientesCadastrados } from '../../../../constants/mockClientesVeiculos'
-import { ordenarFilaPorPrioridadeEChegada } from '../../../../constants/agendaData'
+import { construirItemFila, inserirNaFila } from '../../../../hooks/useFilaEsperaWorkflow'
 import {
   mobileSelectStyles,
   inputBaseClass,
@@ -75,25 +75,18 @@ export function MobileAgendaFilaFormModal({ isOpen, onClose, fila = [], onAtuali
       return
     }
 
-    const agora = new Date()
-    const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`
-
-    const novoItem = {
-      id: `fila-${Date.now()}`,
-      clienteNome: clienteNome.trim(),
-      clienteTelefone: clienteTelefone.trim(),
-      veiculoModelo: veiculoModelo.trim(),
-      veiculoPlaca: (veiculoPlaca || '').toUpperCase().trim(),
-      motivo: motivo.trim(),
+    const { item, horaAtual } = construirItemFila({
+      clienteNome,
+      clienteTelefone,
+      veiculoModelo,
+      veiculoPlaca,
+      motivo,
       prioridade,
-      horaChegada: horaAtual,
-      dataChegada: agora.toISOString().slice(0, 10),
-      mecanicoPreferencialId: mecanicoPreferencialId || null,
-      tempoEstimadoMinutos: Number(tempoEstimadoMinutos) || 45,
-    }
+      mecanicoPreferencialId,
+      tempoEstimadoMinutos,
+    })
 
-    const novaLista = ordenarFilaPorPrioridadeEChegada([novoItem, ...fila])
-    onAtualizarFila(novaLista)
+    onAtualizarFila(inserirNaFila(fila, item))
 
     toast.success(
       prioridade === 'GARANTIA'
